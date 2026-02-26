@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Audit Trail Component</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom Scrollbar for the timeline area */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen flex items-center justify-center p-4 md:p-8">
+<!-- Audit Trail Container -->
+<div class="w-full max-w-4xl bg-white dark:bg-[#1a2232] rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+<!-- Header Section -->
+<div class="p-6 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-[#1a2232] z-10">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+                        Audit Trail
+                        <span class="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">Order #49281</span>
+</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Track changes and history for this record.</p>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+<button class="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-400 transition-colors group relative" title="Filter by Type">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+<button class="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-400 transition-colors group relative" title="Filter by Date">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+</button>
+<button class="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-400 transition-colors group relative" title="Search User">
+<span class="material-symbols-outlined text-[20px]">person_search</span>
+</button>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span>Export CSV</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Timeline Content -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50 dark:bg-[#111722] relative">
+<!-- Timeline Line -->
+<div class="absolute left-[47px] top-6 bottom-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+<div class="space-y-6 relative">
+<!-- Timeline Item 1: Status Change (Latest) -->
+<div class="relative group">
+<div class="flex gap-4">
+<!-- Icon Column -->
+<div class="relative z-10 flex-none w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-[20px]">local_shipping</span>
+</div>
+<!-- Content Column -->
+<div class="flex-1 bg-white dark:bg-[#1a2232] rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+<div class="p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Status Change</span>
+<span class="text-xs text-slate-400 dark:text-slate-500">• 2 mins ago</span>
+</div>
+<h3 class="text-sm font-semibold text-slate-900 dark:text-white">Status updated to 'Shipped'</h3>
+<div class="flex items-center gap-2 mt-2">
+<div class="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] text-white font-bold">SA</div>
+<span class="text-sm text-slate-500 dark:text-slate-400">System Admin</span>
+</div>
+</div>
+<div class="flex items-center">
+<button class="text-xs font-medium text-primary hover:text-blue-400 flex items-center gap-1 transition-colors">
+                                        View Details <span class="material-symbols-outlined text-[14px]">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Timeline Item 2: Field Update (Active State / Expanded) -->
+<div class="relative group">
+<div class="flex gap-4">
+<!-- Icon Column -->
+<div class="relative z-10 flex-none w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-[20px]">edit</span>
+</div>
+<!-- Content Column -->
+<div class="flex-1 bg-white dark:bg-[#1a2232] rounded-lg border border-primary/50 dark:border-primary/50 shadow-md overflow-hidden ring-1 ring-primary/20">
+<!-- Header -->
+<div class="p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-[#1e2636]">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 uppercase tracking-wider">Update</span>
+<span class="text-xs text-slate-400 dark:text-slate-500">• 2 hours ago</span>
+</div>
+<h3 class="text-sm font-semibold text-slate-900 dark:text-white">Quantity Adjusted</h3>
+<div class="flex items-center gap-2 mt-2">
+<div class="w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center text-[10px] text-white font-bold">JD</div>
+<span class="text-sm text-slate-500 dark:text-slate-400">Jane Doe</span>
+</div>
+</div>
+<div class="flex items-center">
+<button class="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1 transition-colors">
+                                        Hide Delta <span class="material-symbols-outlined text-[14px]">expand_less</span>
+</button>
+</div>
+</div>
+<!-- Delta Content (Expanded) -->
+<div class="p-0">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-[#111722] text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+<th class="px-4 py-2 w-1/3">Field Name</th>
+<th class="px-4 py-2 w-1/3 text-rose-600 dark:text-rose-400">Old Value</th>
+<th class="px-4 py-2 w-1/3 text-emerald-600 dark:text-emerald-400">New Value</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-700/50">
+<tr>
+<td class="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300">Quantity</td>
+<td class="px-4 py-3 text-sm font-mono text-slate-500 dark:text-slate-400 line-through decoration-rose-500/50">50</td>
+<td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-white font-bold">45</td>
+</tr>
+<tr>
+<td class="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300">Notes</td>
+<td class="px-4 py-3 text-sm font-mono text-slate-500 dark:text-slate-400">Standard pack...</td>
+<td class="px-4 py-3 text-sm font-mono text-slate-900 dark:text-white font-bold">Standard packaging requested</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<!-- Timeline Item 3: System Event -->
+<div class="relative group">
+<div class="flex gap-4">
+<!-- Icon Column -->
+<div class="relative z-10 flex-none w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[20px]">verified_user</span>
+</div>
+<!-- Content Column -->
+<div class="flex-1 bg-white dark:bg-[#1a2232] rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
+<div class="p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 uppercase tracking-wider">Verification</span>
+<span class="text-xs text-slate-400 dark:text-slate-500">• Yesterday 4:00 PM</span>
+</div>
+<h3 class="text-sm font-semibold text-slate-900 dark:text-white">Payment Verified</h3>
+<div class="flex items-center gap-2 mt-2">
+<div class="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center text-[10px] text-white font-bold">
+<span class="material-symbols-outlined text-[12px]">smart_toy</span>
+</div>
+<span class="text-sm text-slate-500 dark:text-slate-400">FinanceBot</span>
+</div>
+</div>
+<div class="flex items-center">
+<button class="text-xs font-medium text-primary hover:text-blue-400 flex items-center gap-1 transition-colors">
+                                        View Delta <span class="material-symbols-outlined text-[14px]">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Timeline Item 4: Creation (Oldest) -->
+<div class="relative group">
+<div class="flex gap-4">
+<!-- Icon Column -->
+<div class="relative z-10 flex-none w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400 text-[20px]">add_circle</span>
+</div>
+<!-- Content Column -->
+<div class="flex-1 bg-white dark:bg-[#1a2232] rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden opacity-70 group-hover:opacity-100 transition-opacity">
+<div class="p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 uppercase tracking-wider">Created</span>
+<span class="text-xs text-slate-400 dark:text-slate-500">• Oct 12, 2023</span>
+</div>
+<h3 class="text-sm font-semibold text-slate-900 dark:text-white">Record Created</h3>
+<div class="flex items-center gap-2 mt-2">
+<div class="w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center text-[10px] text-white font-bold">JD</div>
+<span class="text-sm text-slate-500 dark:text-slate-400">Jane Doe</span>
+</div>
+</div>
+<div class="flex items-center">
+<button class="text-xs font-medium text-primary hover:text-blue-400 flex items-center gap-1 transition-colors">
+                                        View Details <span class="material-symbols-outlined text-[14px]">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Load More -->
+<div class="mt-8 flex justify-center relative z-10">
+<button class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-[#1f2937] border border-slate-200 dark:border-slate-600 rounded-full shadow-sm hover:shadow transition-all">
+<span class="material-symbols-outlined text-[18px]">history</span>
+                    Load older entries
+                </button>
+</div>
+</div>
+<!-- Footer Info -->
+<div class="p-3 bg-slate-50 dark:bg-[#111722] border-t border-slate-200 dark:border-slate-700 text-center">
+<p class="text-xs text-slate-400 dark:text-slate-500">Showing latest 4 of 28 events. All times in UTC.</p>
+</div>
+</div>
+</body></html>

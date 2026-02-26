@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# Pre-commit hook: bloquea archivos de 0 bytes no permitidos
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR" || exit 0
+
+# Ejecutar verificador priorizando 'py -3' vía cmd.exe (evita alias de WindowsApps)
+STATUS=0
+cmd.exe /c "py -3 scripts\\check_zero_byte_files.py" || STATUS=$?
+
+if [ $STATUS -ne 0 ] && command -v python3 >/dev/null 2>&1; then
+  python3 scripts/check_zero_byte_files.py || STATUS=$?
+fi
+
+if [ $STATUS -ne 0 ] && command -v python >/dev/null 2>&1; then
+  python scripts/check_zero_byte_files.py || STATUS=$?
+fi
+
+if [ $STATUS -ne 0 ]; then
+  echo "\nPre-commit: verificador fallo (posible archivo de 0 bytes o Python no disponible)." 1>&2
+  echo "Ejecuta manualmente: py -3 scripts/check_zero_byte_files.py --all" 1>&2
+  exit $STATUS
+fi
+
+exit 0

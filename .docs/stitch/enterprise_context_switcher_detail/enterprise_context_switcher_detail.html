@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Enterprise Context Switcher</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2233",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col relative overflow-hidden">
+<!-- Top Navigation (Background Layer) -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-surface-dark px-10 py-3 relative z-10">
+<div class="flex items-center gap-4 text-slate-900 dark:text-white">
+<div class="size-8 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_6_543)">
+<path d="M42.1739 20.1739L27.8261 5.82609C29.1366 7.13663 28.3989 10.1876 26.2002 13.7654C24.8538 15.9564 22.9595 18.3449 20.6522 20.6522C18.3449 22.9595 15.9564 24.8538 13.7654 26.2002C10.1876 28.3989 7.13663 29.1366 5.82609 27.8261L20.1739 42.1739C21.4845 43.4845 24.5355 42.7467 28.1133 40.548C30.3042 39.2016 32.6927 37.3073 35 35C37.3073 32.6927 39.2016 30.3042 40.548 28.1133C42.7467 24.5355 43.4845 21.4845 42.1739 20.1739Z" fill="currentColor"></path>
+<path clip-rule="evenodd" d="M7.24189 26.4066C7.31369 26.4411 7.64204 26.5637 8.52504 26.3738C9.59462 26.1438 11.0343 25.5311 12.7183 24.4963C14.7583 23.2426 17.0256 21.4503 19.238 19.238C21.4503 17.0256 23.2426 14.7583 24.4963 12.7183C25.5311 11.0343 26.1438 9.59463 26.3738 8.52504C26.5637 7.64204 26.4411 7.31369 26.4066 7.24189C26.345 7.21246 26.143 7.14535 25.6664 7.1918C24.9745 7.25925 23.9954 7.5498 22.7699 8.14278C20.3369 9.32007 17.3369 11.4915 14.4142 14.4142C11.4915 17.3369 9.32007 20.3369 8.14278 22.7699C7.5498 23.9954 7.25925 24.9745 7.1918 25.6664C7.14534 26.143 7.21246 26.345 7.24189 26.4066ZM29.9001 10.7285C29.4519 12.0322 28.7617 13.4172 27.9042 14.8126C26.465 17.1544 24.4686 19.6641 22.0664 22.0664C19.6641 24.4686 17.1544 26.465 14.8126 27.9042C13.4172 28.7617 12.0322 29.4519 10.7285 29.9001L21.5754 40.747C21.6001 40.7606 21.8995 40.931 22.8729 40.7217C23.9424 40.4916 25.3821 39.879 27.0661 38.8441C29.1062 37.5904 31.3734 35.7982 33.5858 33.5858C35.7982 31.3734 37.5904 29.1062 38.8441 27.0661C39.879 25.3821 40.4916 23.9425 40.7216 22.8729C40.931 21.8995 40.7606 21.6001 40.747 21.5754L29.9001 10.7285ZM29.2403 4.41187L43.5881 18.7597C44.9757 20.1473 44.9743 22.1235 44.6322 23.7139C44.2714 25.3919 43.4158 27.2666 42.252 29.1604C40.8128 31.5022 38.8165 34.012 36.4142 36.4142C34.012 38.8165 31.5022 40.8128 29.1604 42.252C27.2666 43.4158 25.3919 44.2714 23.7139 44.6322C22.1235 44.9743 20.1473 44.9757 18.7597 43.5881L4.41187 29.2403C3.29027 28.1187 3.08209 26.5973 3.21067 25.2783C3.34099 23.9415 3.8369 22.4852 4.54214 21.0277C5.96129 18.0948 8.43335 14.7382 11.5858 11.5858C14.7382 8.43335 18.0948 5.9613 21.0277 4.54214C22.4852 3.8369 23.9415 3.34099 25.2783 3.21067C26.5973 3.08209 28.1187 3.29028 29.2403 4.41187Z" fill="currentColor" fill-rule="evenodd"></path>
+</g>
+<defs>
+<clippath id="clip0_6_543"><rect fill="white" height="48" width="48"></rect></clippath>
+</defs>
+</svg>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">ERP Suite</h2>
+<!-- Breadcrumb / Context Display -->
+<div class="hidden md:flex items-center ml-8 text-sm text-slate-500 dark:text-slate-400">
+<span class="mr-2">Organization</span>
+<span class="material-symbols-outlined text-[16px] mr-2">chevron_right</span>
+<span class="font-medium text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Acme Corp</span>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="hidden lg:flex items-center gap-9">
+<a class="text-slate-900 dark:text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-slate-900 dark:text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Reports</a>
+<a class="text-slate-900 dark:text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Settings</a>
+</nav>
+<div class="flex gap-2">
+<button class="flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<button class="flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">help</span>
+</button>
+<div class="relative group">
+<button class="bg-center bg-no-repeat bg-cover rounded-full size-10 ring-2 ring-transparent hover:ring-primary transition-all" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAdTdH8MePIamZEeUIKbJBlB87BncNkAdWEt40o5LxIBmTsbCEDcR45r1iC5JFjA8Iv4pccF9lbELYo5TYJjjaRPsCt6b8EvcNznMPMD0nKfHBPLOk5TM1vsVUNt9I6gfksJmze49D9ngVGsDVYlyUeN7XDqfzF6FfpHVlSc1YH7ZAkj-ER1Y1gTpg3AnLy-4LyPQDON_J5NUlh8qXCZlcRQRCtOUtPUI9PanuuiOA7X6nfYCNePKn-jS3TRDaQ-TszdT-mNmyFQjU");'></button>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Background (Blurred/Dimmed effect for context) -->
+<main class="flex-1 p-10 opacity-30 pointer-events-none filter blur-sm transition-all duration-300">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-white dark:bg-surface-dark p-6 rounded-lg shadow-sm h-48"></div>
+<div class="bg-white dark:bg-surface-dark p-6 rounded-lg shadow-sm h-48"></div>
+<div class="bg-white dark:bg-surface-dark p-6 rounded-lg shadow-sm h-48"></div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-6 rounded-lg shadow-sm h-96 w-full"></div>
+</main>
+<!-- Context Switcher Overlay -->
+<div class="fixed inset-0 z-50 flex items-start justify-center pt-24 sm:pt-32 px-4">
+<!-- Backdrop -->
+<div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
+<!-- Modal Content -->
+<div class="relative w-full max-w-2xl bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+<!-- Modal Header -->
+<div class="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-xl font-bold text-slate-900 dark:text-white">Select Organization</h2>
+<span class="text-xs font-medium px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded text-center min-w-[24px]">ESC</span>
+</div>
+<!-- Search Input -->
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+</div>
+<input autofocus="" class="block w-full rounded-lg border-0 py-3 pl-10 pr-4 text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 ring-1 ring-inset ring-slate-200 dark:ring-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 transition-all" placeholder="Search by name or source ID..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+<span class="text-xs text-slate-400 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5">⌘K</span>
+</div>
+</div>
+</div>
+<!-- List Container -->
+<div class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
+<!-- Section: Current -->
+<div>
+<h3 class="px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Current Context</h3>
+<div class="group flex items-center gap-4 p-3 rounded-lg bg-primary/5 border border-primary/20 cursor-default">
+<div class="shrink-0 relative">
+<div class="size-12 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-primary border border-slate-200 dark:border-slate-700 shadow-sm">
+<span class="font-bold text-lg">AC</span>
+</div>
+<div class="absolute -bottom-1 -right-1 size-4 bg-green-500 rounded-full border-2 border-white dark:border-surface-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-white font-bold">check</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<p class="text-sm font-semibold text-slate-900 dark:text-white truncate">Acme Corp</p>
+<span class="inline-flex items-center rounded-md bg-green-50 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-inset ring-green-600/20">Active</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">src_001</span>
+<span class="text-xs text-slate-400">•</span>
+<span class="text-xs text-slate-500">Last accessed just now</span>
+</div>
+</div>
+<div class="shrink-0">
+<span class="material-symbols-outlined text-primary">radio_button_checked</span>
+</div>
+</div>
+</div>
+<!-- Section: Recent / Available -->
+<div>
+<h3 class="px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Available Organizations</h3>
+<div class="space-y-1">
+<!-- Item 1 -->
+<button class="w-full group flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left focus:outline-none focus:bg-slate-50 dark:focus:bg-slate-800/50 focus:ring-2 focus:ring-primary/20">
+<div class="shrink-0">
+<div class="size-12 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/30">
+<span class="material-symbols-outlined">factory</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<p class="text-sm font-medium text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors">Beta Industries</p>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">src_002</span>
+</div>
+</div>
+<div class="shrink-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
+<span class="text-xs font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full">Switch</span>
+</div>
+</button>
+<!-- Item 2 -->
+<button class="w-full group flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left focus:outline-none focus:bg-slate-50 dark:focus:bg-slate-800/50 focus:ring-2 focus:ring-primary/20">
+<div class="shrink-0">
+<div class="size-12 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-800/30">
+<span class="font-bold text-lg">GG</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<p class="text-sm font-medium text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors">Globex Global</p>
+<span class="inline-flex items-center rounded-md bg-yellow-50 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-600/20">Maintenance</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">src_099</span>
+</div>
+</div>
+<div class="shrink-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
+<span class="text-xs font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full">Switch</span>
+</div>
+</button>
+<!-- Item 3 (Locked) -->
+<div class="w-full flex items-center gap-4 p-3 rounded-lg opacity-60 bg-slate-50/50 dark:bg-slate-900/20 cursor-not-allowed">
+<div class="shrink-0">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Stark Enterprise</p>
+<span class="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-400 ring-1 ring-inset ring-slate-500/10">Locked</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="text-xs font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">src_042</span>
+<span class="text-[10px] text-slate-400 italic">Access restricted</span>
+</div>
+</div>
+</div>
+<!-- Item 4 -->
+<button class="w-full group flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left focus:outline-none focus:bg-slate-50 dark:focus:bg-slate-800/50 focus:ring-2 focus:ring-primary/20">
+<div class="shrink-0">
+<div class="size-12 rounded-lg bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-600 dark:text-teal-400 border border-teal-100 dark:border-teal-800/30">
+<span class="material-symbols-outlined">hub</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<p class="text-sm font-medium text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors">Massive Dynamic</p>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">src_105</span>
+</div>
+</div>
+<div class="shrink-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
+<span class="text-xs font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full">Switch</span>
+</div>
+</button>
+</div>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+<div class="flex items-center gap-4">
+<button class="font-medium text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+                        Manage Organizations
+                    </button>
+<div class="h-3 w-px bg-slate-300 dark:bg-slate-700"></div>
+<button class="font-medium text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors">
+                        View Audit Log
+                    </button>
+</div>
+<button class="font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">logout</span>
+                    Sign out of all
+                </button>
+</div>
+</div>
+</div>
+</body></html>

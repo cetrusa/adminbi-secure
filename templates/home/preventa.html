@@ -1,0 +1,548 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}
+Informe de Preventa
+{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_bimbo.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+{% include 'includes/datepicker_range.html' %}
+<div class="container-fluid py-4 bg-light">
+    {% if messages %}
+    <div class="alert alert-warning" role="alert">
+        {% for message in messages %}
+        <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-1 text-danger fw-bold">Dashboard de Preventa</h1>
+            <p class="text-muted small mb-0">Informe Operativo - Ejecutivo Bimbo.</p>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-3" id="pv-summary" style="display:none;">
+        <span class="badge bg-secondary" id="summary-periodo"></span>
+        <span class="badge bg-info text-dark" id="summary-agente"></span>
+        <span class="badge bg-primary" id="summary-filter"></span>
+        <span class="badge bg-success" id="summary-total"></span>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="mb-0 fw-bold text-danger">Filtros de Ejecución</h6>
+                <small class="text-muted">Selecciona CEVE y rango para procesar el dashboard.</small>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="reset" class="btn btn-outline-secondary btn-sm" form="FormPreventa">Limpiar</button>
+                <button id="submitBtnPreventa" type="submit" form="FormPreventa" class="btn btn-danger btn-sm"><i class="fas fa-sync-alt me-2"></i>Actualizar Dashboard</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="FormPreventa" action="{% url form_url %}" method="post">
+                {% csrf_token %}
+                
+                <div class="row g-3">
+                    <!-- Selección de Agencia (CEVE) -->
+                    <div class="col-md-6">
+                        <label for="ceves_code" class="form-label fw-semibold">Agencia (CEVE):</label>
+                        <select class="form-select form-select-sm" id="ceves_code" name="ceves_code" required>
+                            <option value="" selected disabled>-- Seleccione una Agencia --</option>
+                            {% for item in ceves_catalog %}
+                            <option value="{{ item.id }}">{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Selección de Fechas -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Rango de Fechas:</label>
+                        <div id="reportrange" class="form-control form-control-sm d-flex align-items-center justify-content-between bg-white" style="cursor: pointer;">
+                            <span><i class="fa fa-calendar text-danger me-2"></i><span></span></span>
+                            <i class="fa fa-caret-down"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campos ocultos sincronizados con el datepicker -->
+                <input type="hidden" name="IdtReporteIni" id="IdtReporteIni">
+                <input type="hidden" name="IdtReporteFin" id="IdtReporteFin">
+                <input type="hidden" name="batch_size" value="20000">
+            </form>
+        </div>
+    </div>
+
+    <div id="pv-status" class="alert alert-info d-flex align-items-center mb-3">
+        <i class="fas fa-info-circle me-2"></i>
+        <div>Ejecuta el reporte para ver resultados.</div>
+    </div>
+
+    <!-- Resultados del Dashboard (KPIs + Matriz) -->
+    <div id="dashboardResults" style="display: none;">
+        <!-- Fila de KPIs -->
+        <div class="row mb-3 g-3">
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Pedidos totales</div>
+                        <div class="h4 mb-0 fw-bold text-danger" id="kpi-total-pedidos">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Clientes atendidos</div>
+                        <div class="h4 mb-0 fw-bold text-success" id="kpi-clientes-atendidos">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Clientes nuevos</div>
+                        <div class="h4 mb-0 fw-bold text-info" id="kpi-clientes-nuevos">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Valor total</div>
+                        <div class="h4 mb-0 fw-bold text-primary" id="kpi-valor-total">$0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-secondary">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Ticket promedio</div>
+                        <div class="h4 mb-0 fw-bold text-secondary" id="kpi-valor-promedio">$0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-secondary">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Tiempo promedio</div>
+                        <div class="h4 mb-0 fw-bold text-secondary" id="kpi-tiempo-promedio">00:00</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Programados</div>
+                        <div class="h4 mb-0 fw-bold text-warning" id="kpi-programados">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Eficiencia</div>
+                        <div class="h4 mb-0 fw-bold text-primary" id="kpi-eficiencia">0%</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Efectividad</div>
+                        <div class="h4 mb-0 fw-bold text-success" id="kpi-efectividad">0%</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-dark">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">Clientes con pedido</div>
+                        <div class="h4 mb-0 fw-bold text-dark" id="kpi-clientes-pedido">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 mb-2">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+                    <div class="card-body py-3">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1">No compra</div>
+                        <div class="h4 mb-0 fw-bold text-info" id="kpi-no-compra">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matriz Avanzada -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-th me-2"></i>Matriz de Desempeño por Zona</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                    <table class="table table-hover table-sm small align-middle mb-0" id="matrixTable">
+                        <thead class="table-light sticky-top" style="z-index:1;">
+                            <tr>
+                                <th class="ps-4">Zona</th>
+                                <th class="text-center">H. Inicio</th>
+                                <th class="text-center">H. Fin</th>
+                                <th class="text-center">T. Total</th>
+                                <th class="text-center">Programados</th>
+                                <th class="text-center">Atendidos</th>
+                                <th class="text-center">Cl. con Pedido</th>
+                                <th class="text-center">No Compra</th>
+                                <th class="text-center">% Cobertura</th>
+                                <th class="text-center">% Eficiencia</th>
+                                <th class="text-center">% Efectividad</th>
+                                <th class="text-center">Pedidos Totales</th>
+                                <th class="text-center">Ticket Prom.</th>
+                                <th class="text-center">Valor Total</th>
+                                <th class="text-center">Valor Cambio</th>
+                                <th class="text-center">P. Ruta</th>
+                                <th class="text-center">P. Extra</th>
+                                <th class="text-center pe-4">Pendientes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrixBody">
+                            <!-- Datos inyectados vía JS -->
+                        </tbody>
+                        <tfoot class="table-light fw-bold sticky-bottom" id="matrixFooter">
+                            <!-- Totales inyectados vía JS -->
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex justify-content-end">
+            {% include 'includes/download_file.html' %}
+        </div>
+    </div>
+
+    <div id="emptyState" class="text-center py-5">
+        <div class="text-muted">
+            <i class="fas fa-search fa-3x mb-3 text-gray-300"></i>
+            <p>Seleccione los parámetros y ejecute el reporte para ver resultados.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Procesamiento -->
+<div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+    aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.6);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content bg-dark text-white border-0 shadow">
+            <div class="modal-body text-center py-4">
+                <h5 class="mb-3" id="processingModalLabel">
+                    <i class="fas fa-cog fa-spin me-2 text-danger"></i> Procesando Preventa...
+                </h5>
+                <div id="progress-stage" class="mb-2 fw-bold">Iniciando...</div>
+                <div class="progress" style="height: 10px; background-color: rgba(255,255,255,0.2);">
+                    <div id="progressBar" class="progress-bar bg-danger"
+                        role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%
+                    </div>
+                </div>
+                <div id="detailedStatus" class="small text-white-50 mt-3 p-2"></div>
+                <p id="time-info" class="mt-2 small text-white-50 text-center">Tiempo: 0s</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock window %}
+
+{% block script %}
+<!-- Moment.js y DateRangePicker -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+<script>
+    // --- Inicialización de Date Range Picker ---
+    $(function() {
+        var start = moment().subtract(1, 'days');
+        var end = moment();
+
+        function cb(start, end) {
+            $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+            $('#IdtReporteIni').val(start.format('YYYY-MM-DD'));
+            $('#IdtReporteFin').val(end.format('YYYY-MM-DD'));
+        }
+
+        $('#reportrange').daterangepicker({
+            startDate: start,
+            endDate: end,
+            ranges: {
+               'Hoy': [moment(), moment()],
+               'Ayer': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+               'Últimos 7 Días': [moment().subtract(6, 'days'), moment()],
+               'Este Mes': [moment().startOf('month'), moment().endOf('month')],
+               'Mes Pasado': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+            },
+            locale: {
+                format: 'YYYY-MM-DD',
+                applyLabel: 'Aplicar',
+                cancelLabel: 'Cancelar',
+                customRangeLabel: 'Personalizado',
+                daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'],
+                monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+                firstDay: 1
+            }
+        }, cb);
+
+        cb(start, end);
+    });
+
+    // --- Lógica del Dashboard ---
+    var csrf_token = "{{ csrf_token }}";
+    var startTime = 0;
+    var progressInterval = null;
+    var progressBar = document.getElementById("progressBar");
+    
+    document.getElementById("submitBtnPreventa").addEventListener("click", function(event) {
+        event.preventDefault();
+        
+        var database = window.sessionStorage.getItem("database_name");
+        var ceves_code = document.getElementById("ceves_code").value;
+        var IdtReporteIni = document.getElementById("IdtReporteIni").value;
+        var IdtReporteFin = document.getElementById("IdtReporteFin").value;
+        
+        if (!database || !ceves_code || !IdtReporteIni || !IdtReporteFin) {
+            alert("Por favor complete todos los filtros.");
+            return;
+        }
+
+        startMonitoringUI();
+
+        fetch("{% url form_url %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": csrf_token,
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams({
+                "database_select": database,
+                "ceves_code": ceves_code,
+                "IdtReporteIni": IdtReporteIni,
+                "IdtReporteFin": IdtReporteFin,
+                "batch_size": document.querySelector('input[name="batch_size"]').value || 20000
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.sessionStorage.setItem("preventa_task_id", data.job_id);
+                updateProgressBar(5, "Encolado...");
+                setTimeout(checkTaskStatus, 1000);
+            } else {
+                stopMonitoring("Error: " + data.error_message);
+            }
+        })
+        .catch(err => stopMonitoring("Error de red: " + err));
+    });
+
+    function checkTaskStatus() {
+        var taskId = window.sessionStorage.getItem("preventa_task_id");
+        if (!taskId) return;
+
+        fetch("{% url 'home_app:check_task_status' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": csrf_token,
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams({"task_id": taskId})
+        })
+        .then(response => response.json())
+        .then(data => handleTaskStatus(data))
+        .catch(err => console.warn("Error polling:", err));
+    }
+
+    function handleTaskStatus(response) {
+        if (!response || !response.status) return;
+        var status = response.status.toLowerCase();
+        
+        var progress = response.progress || 0;
+        var stage = (response.meta && response.meta.stage) ? response.meta.stage : "Procesando...";
+        updateProgressBar(progress, stage);
+
+        if (status === "finished" || status === "completed" || (status === "success" && response.result)) {
+            renderDashboard(response.result);
+            stopMonitoring(null);
+        } else if (status === "failed") {
+            stopMonitoring("Error: " + (response.result ? response.result.error : "Falla interna"));
+        } else {
+            setTimeout(checkTaskStatus, 2000);
+        }
+    }
+
+    function renderDashboard(result) {
+        if (!result || !result.dashboard) return;
+        var data = result.dashboard;
+        var kpis = data.kpis;
+        var matrix = data.matrix;
+        var statusBox = document.getElementById("pv-status");
+        var emptyState = document.getElementById("emptyState");
+
+        // Mostrar contenedor
+        document.getElementById("dashboardResults").style.display = "block";
+        if (emptyState) emptyState.style.display = "none";
+        if (statusBox) {
+            statusBox.className = "alert alert-success d-flex align-items-center mb-3";
+            statusBox.innerHTML = '<i class="fas fa-check-circle me-2"></i><div>Reporte generado correctamente.</div>';
+        }
+
+        // Actualizar KPIs con animación simple o directa
+        document.getElementById("kpi-total-pedidos").innerText = kpis.total_pedidos.toLocaleString();
+        document.getElementById("kpi-clientes-atendidos").innerText = kpis.clientes_atendidos.toLocaleString();
+        document.getElementById("kpi-clientes-nuevos").innerText = kpis.clientes_nuevos.toLocaleString();
+        document.getElementById("kpi-valor-total").innerText = formatCurrency(kpis.valor_total);
+        document.getElementById("kpi-valor-promedio").innerText = formatCurrency(kpis.valor_promedio);
+        document.getElementById("kpi-tiempo-promedio").innerText = kpis.tiempo_promedio;
+        document.getElementById("kpi-programados").innerText = (kpis.programados || 0).toLocaleString();
+        document.getElementById("kpi-eficiencia").innerText = ((kpis.eficiencia_pct || 0).toFixed(1)) + "%";
+        document.getElementById("kpi-efectividad").innerText = ((kpis.efectividad_pct || 0).toFixed(1)) + "%";
+        document.getElementById("kpi-clientes-pedido").innerText = (kpis.clientes_con_pedido || 0).toLocaleString();
+        document.getElementById("kpi-no-compra").innerText = (kpis.clientes_no_compra || 0).toLocaleString();
+
+        // Renderizar Matriz
+        var tbody = document.getElementById("matrixBody");
+        tbody.innerHTML = "";
+        
+        var totals = { prog: 0, aten: 0, clped: 0, noc: 0, ped: 0, vto: 0, vca: 0, pru: 0, pex: 0, pen: 0 };
+        var totalRows = 0;
+        var lastDate = "";
+
+        matrix.forEach(row => {
+            totalRows++;
+            // Seguridad nulos
+            var hIni = row['Hora Inicio'] || '-';
+            var hFin = row['Hora Fin'] || '-';
+            var prog = parseFloat(row.Programados) || 0;
+            var aten = parseFloat(row.Atendidos) || 0;
+            var clPedido = parseFloat(row['Clientes Pedido']) || 0;
+            var noCompra = parseFloat(row['No Compra']) || 0;
+            var cobertura = parseFloat(row['Cobertura %']) || 0;
+            var eficiencia = parseFloat(row['Eficiencia %']) || 0;
+            var efectividad = parseFloat(row['Efectividad %']) || 0;
+            var ticket = parseFloat(row.TicketPromedio) || 0;
+            var currentFecha = row.FechaDisplay || "General";
+
+            // Insertar separador de día
+            if (currentFecha !== lastDate) {
+                var trHeader = document.createElement("tr");
+                // Estilo distintivo para el separador
+                trHeader.innerHTML = `
+                    <td colspan="16" class="fw-bold ps-4 text-start bg-secondary text-white border-top border-bottom py-2">
+                       📅 ${currentFecha}
+                    </td>
+                `;
+                tbody.appendChild(trHeader);
+                lastDate = currentFecha;
+            }
+            
+            var tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td class="ps-4 fw-bold text-nowrap">${row.Zona}</td>
+                <td class="text-center small">${hIni}</td>
+                <td class="text-center small">${hFin}</td>
+                <td class="text-center small fw-bold">${row['Tiempo Total'] || '-'}</td>
+                <td class="text-center">${prog}</td>
+                <td class="text-center">${aten}</td>
+                <td class="text-center">${clPedido}</td>
+                <td class="text-center">${noCompra}</td>
+                <td class="text-center">${cobertura.toFixed(1)}%</td>
+                <td class="text-center">${eficiencia.toFixed(1)}%</td>
+                <td class="text-center">${efectividad.toFixed(1)}%</td>
+                <td class="text-center fw-bold">${row['Pedidos Totales'] || 0}</td>
+                <td class="text-center text-muted">${formatCurrency(ticket)}</td>
+                <td class="text-center">${formatCurrency(row['Valor Total'] || 0)}</td>
+                <td class="text-center text-danger">${formatCurrency(row['Valor Cambio'] || 0)}</td>
+                <td class="text-center">${row['Pedidos Ruta'] || 0}</td>
+                <td class="text-center font-weight-bold text-primary">${row['P. Extra Ruta'] || 0}</td>
+                <td class="text-center pe-4">${row.Pendientes || 0}</td>
+            `;
+            tbody.appendChild(tr);
+
+            totals.prog += (parseFloat(prog) || 0);
+            totals.aten += (parseFloat(aten) || 0);
+            totals.clped += (parseFloat(clPedido) || 0);
+            totals.noc += (parseFloat(noCompra) || 0);
+            totals.ped += (parseFloat(row['Pedidos Totales']) || 0);
+            totals.vto += (parseFloat(row['Valor Total']) || 0);
+            totals.vca += (parseFloat(row['Valor Cambio']) || 0);
+            totals.pru += (parseFloat(row['Pedidos Ruta']) || 0);
+            totals.pex += (parseFloat(row['P. Extra Ruta']) || 0);
+            totals.pen += (parseFloat(row.Pendientes) || 0);
+        });
+
+        // Totales Footer
+        var totalCobertura = totals.prog > 0 ? (totals.aten / totals.prog * 100) : 0;
+        var totalEficiencia = totals.prog > 0 ? (((totals.noc) + totals.pru) / totals.prog * 100) : 0;
+        var totalEfectividad = totals.prog > 0 ? (((totals.prog - totals.pen) / totals.prog) * 100) : 0;
+        var totalTicket = totals.ped > 0 ? (totals.vto / totals.ped) : 0;
+
+        document.getElementById("matrixFooter").innerHTML = `
+            <tr>
+                <td class="ps-4">TOTALES (${totalRows})</td>
+                <td class="text-center">-</td>
+                <td class="text-center">-</td>
+                <td class="text-center">-</td>
+                <td class="text-center">${totals.prog.toLocaleString()}</td>
+                <td class="text-center">${totals.aten.toLocaleString()}</td>
+                <td class="text-center">${totals.clped.toLocaleString()}</td>
+                <td class="text-center">${totals.noc.toLocaleString()}</td>
+                <td class="text-center fw-bold">${totalCobertura.toFixed(1)}%</td>
+                <td class="text-center fw-bold">${totalEficiencia.toFixed(1)}%</td>
+                <td class="text-center fw-bold">${totalEfectividad.toFixed(1)}%</td>
+                <td class="text-center">${totals.ped.toLocaleString()}</td>
+                <td class="text-center">${formatCurrency(totalTicket)}</td>
+                <td class="text-center">${formatCurrency(totals.vto)}</td>
+                <td class="text-center">${formatCurrency(totals.vca)}</td>
+                <td class="text-center">${totals.pru.toLocaleString()}</td>
+                <td class="text-center">${totals.pex.toLocaleString()}</td>
+                <td class="text-center pe-4">${totals.pen.toLocaleString()}</td>
+            </tr>
+        `;
+
+        // Mostrar botón descarga si hay archivo
+        if (result.file_name) {
+            document.getElementById("download_file").className = 'd-flex mt-3';
+            var link = document.querySelector("#download_file a");
+            if(link) link.href = "/media/" + result.file_name;
+        }
+    }
+
+    function formatCurrency(val) {
+        return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
+    }
+
+    function startMonitoringUI() {
+        document.getElementById("submitBtnPreventa").disabled = true;
+        document.getElementById("processingModal").style.display = "flex";
+        startTime = new Date().getTime();
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = setInterval(updateTime, 1000);
+    }
+
+    function stopMonitoring(errorMsg) {
+        if (progressInterval) clearInterval(progressInterval);
+        document.getElementById("processingModal").style.display = "none";
+        document.getElementById("submitBtnPreventa").disabled = false;
+        if (errorMsg) alert(errorMsg);
+    }
+
+    function updateProgressBar(val, text) {
+        progressBar.style.width = val + "%";
+        progressBar.textContent = val + "%";
+        document.getElementById("progress-stage").textContent = text;
+    }
+
+    function updateTime() {
+        var diff = Math.floor((new Date().getTime() - startTime) / 1000);
+        document.getElementById("time-info").textContent = "Tiempo: " + diff + "s";
+    }
+</script>
+{% endblock script %}

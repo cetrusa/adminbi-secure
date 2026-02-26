@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SQL-Driven Report Archetype</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0e121b] dark:text-gray-100 flex flex-col min-h-screen overflow-x-hidden">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a202c] px-6 py-3 sticky top-0 z-30">
+<div class="flex items-center gap-4">
+<div class="size-8 text-primary flex items-center justify-center rounded-lg bg-primary/10">
+<span class="material-symbols-outlined text-2xl">dataset</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Data Studio</h2>
+</div>
+<div class="hidden md:flex flex-1 justify-end gap-8 items-center">
+<nav class="flex items-center gap-6">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Reports</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Dashboards</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">SQL Editor</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Settings</a>
+</nav>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined text-xl text-gray-600 dark:text-gray-300">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined text-xl text-gray-600 dark:text-gray-300">help</span>
+</button>
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-9 w-9 ml-2" data-alt="User profile avatar of a smiling person" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDdbeRw-pQOUbSNLnAIqwoaxssb1ayfURgPtg-fBv7TL4t8e5r_J60tbJWIungQ_fev4wRlo8AEsM4kD16U-CmiTWAPuekzhhEbJgBGV5jpD5AUdJ1DgRRsoH_HS3xqx84xgq7_ze-OJYzYnZTts7uZ85ZKxFJ0CLh-54BjpoSfbIZiXNdNoL7iS-SOmrN5HxetMrcSYu90_bnuaKDHrRN60tg3HDBhkCdm9kIXo9gRCe2tTp6O4ijFsNBWC1A0WJhYYvf9xxH5_8c");'></div>
+</div>
+</div>
+</header>
+<main class="flex-1 flex flex-col p-4 md:p-8 max-w-[1440px] mx-auto w-full gap-6">
+<!-- Breadcrumbs & Title -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+<a class="hover:text-primary" href="#">Reports</a>
+<span class="material-symbols-outlined text-base">chevron_right</span>
+<a class="hover:text-primary" href="#">Sales</a>
+<span class="material-symbols-outlined text-base">chevron_right</span>
+<span class="font-medium text-gray-900 dark:text-gray-100">Quarterly Performance</span>
+</div>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Quarterly Sales Performance Report</h1>
+<p class="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2 text-sm font-mono">
+<span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs px-2 py-0.5 rounded font-medium">SQL_ID: 8842</span>
+                        High-performance query interface
+                    </p>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#1a202c] border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-lg">bookmark</span>
+                        Save View
+                    </button>
+<button class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#1a202c] border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-lg">share</span>
+                        Share
+                    </button>
+</div>
+</div>
+</div>
+<!-- Parameters Pane -->
+<div class="bg-white dark:bg-[#1a202c] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50/50 dark:bg-gray-900/50">
+<div>
+<h3 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">tune</span>
+                        Query Parameters
+                    </h3>
+<p class="text-sm text-gray-500 dark:text-gray-400">Define the scope of your report to filter results.</p>
+</div>
+<button class="text-sm text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary font-medium flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-lg">restart_alt</span>
+                    Reset to Default
+                </button>
+</div>
+<div class="p-6">
+<form class="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+<!-- Param A -->
+<div class="md:col-span-3">
+<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Region (PARAM_A)</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+<span class="material-symbols-outlined text-xl">public</span>
+</span>
+<input class="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm h-11" placeholder="e.g. North America" type="text" value="North America"/>
+</div>
+</div>
+<!-- Param B -->
+<div class="md:col-span-3">
+<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department (PARAM_B)</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+<span class="material-symbols-outlined text-xl">domain</span>
+</span>
+<select class="pl-10 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm h-11 appearance-none">
+<option>Logistics</option>
+<option>Sales</option>
+<option>Marketing</option>
+<option>IT Support</option>
+</select>
+<span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+<span class="material-symbols-outlined text-xl">expand_more</span>
+</span>
+</div>
+</div>
+<!-- Date Range -->
+<div class="md:col-span-4">
+<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date Range</label>
+<div class="grid grid-cols-2 gap-2">
+<div class="relative">
+<input class="block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm h-11" type="date" value="2023-10-01"/>
+</div>
+<div class="relative">
+<input class="block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm h-11" type="date" value="2023-12-31"/>
+</div>
+</div>
+</div>
+<!-- Execute Button -->
+<div class="md:col-span-2 flex justify-end">
+<button class="w-full md:w-auto flex items-center justify-center gap-2 bg-primary hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors shadow-md h-11" type="button">
+<span class="material-symbols-outlined">play_arrow</span>
+                            Execute
+                        </button>
+</div>
+</form>
+</div>
+</div>
+<!-- Results Section -->
+<div class="bg-white dark:bg-[#1a202c] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col flex-1 min-h-[500px]">
+<!-- Result Toolbar -->
+<div class="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<span class="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        Success
+                    </span>
+<p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+<span class="font-bold text-gray-900 dark:text-white">450</span> records found in <span class="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">0.04s</span>
+</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-gray-500 uppercase tracking-wider mr-2 hidden sm:block">Export As:</span>
+<button class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined text-lg text-green-600">description</span>
+                        CSV
+                    </button>
+<button class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined text-lg text-red-600">picture_as_pdf</span>
+                        PDF
+                    </button>
+<button class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined text-lg text-blue-600">table_view</span>
+                        Excel
+                    </button>
+</div>
+</div>
+<!-- QUERY_SLOT: Data Table -->
+<div class="flex-1 overflow-x-auto relative">
+<table class="w-full text-left text-sm whitespace-nowrap">
+<thead class="bg-gray-50 dark:bg-gray-900/50 sticky top-0 z-10 text-xs uppercase text-gray-500 dark:text-gray-400 font-semibold">
+<tr>
+<th class="px-6 py-3 border-b border-gray-200 dark:border-gray-800 min-w-[80px]" scope="col">
+<div class="flex items-center gap-1 cursor-pointer hover:text-primary">
+                                    ID <span class="material-symbols-outlined text-base">unfold_more</span>
+</div>
+</th>
+<th class="px-6 py-3 border-b border-gray-200 dark:border-gray-800 min-w-[180px]" scope="col">
+<div class="flex items-center gap-1 cursor-pointer hover:text-primary">
+                                    Timestamp <span class="material-symbols-outlined text-base">unfold_more</span>
+</div>
+</th>
+<th class="px-6 py-3 border-b border-gray-200 dark:border-gray-800" scope="col">
+<div class="flex items-center gap-1 cursor-pointer hover:text-primary">
+                                    Region <span class="material-symbols-outlined text-base">unfold_more</span>
+</div>
+</th>
+<th class="px-6 py-3 border-b border-gray-200 dark:border-gray-800 text-right" scope="col">
+<div class="flex items-center justify-end gap-1 cursor-pointer hover:text-primary">
+                                    Revenue <span class="material-symbols-outlined text-base">unfold_more</span>
+</div>
+</th>
+<th class="px-6 py-3 border-b border-gray-200 dark:border-gray-800 text-right" scope="col">
+<div class="flex items-center justify-end gap-1 cursor-pointer hover:text-primary">
+                                    Conversion Rate <span class="material-symbols-outlined text-base">unfold_more</span>
+</div>
+</th>
+<th class="px-6 py-3 border-b border-gray-200 dark:border-gray-800 text-center" scope="col">
+                                Status
+                            </th>
+<th class="px-6 py-3 border-b border-gray-200 dark:border-gray-800 text-right" scope="col">
+                                Actions
+                            </th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#1a202c]">
+<!-- Row 1 -->
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<td class="px-6 py-3 font-mono text-gray-900 dark:text-gray-200">#8842-001</td>
+<td class="px-6 py-3 text-gray-600 dark:text-gray-400">2023-11-15 14:02:01</td>
+<td class="px-6 py-3 text-gray-900 dark:text-gray-200 font-medium">North America</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">$124,500.00</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">24.5%</td>
+<td class="px-6 py-3 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                    Completed
+                                </span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<td class="px-6 py-3 font-mono text-gray-900 dark:text-gray-200">#8842-002</td>
+<td class="px-6 py-3 text-gray-600 dark:text-gray-400">2023-11-15 14:05:22</td>
+<td class="px-6 py-3 text-gray-900 dark:text-gray-200 font-medium">Europe (West)</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">$84,210.50</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">18.2%</td>
+<td class="px-6 py-3 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+                                    Pending
+                                </span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<td class="px-6 py-3 font-mono text-gray-900 dark:text-gray-200">#8842-003</td>
+<td class="px-6 py-3 text-gray-600 dark:text-gray-400">2023-11-15 13:45:10</td>
+<td class="px-6 py-3 text-gray-900 dark:text-gray-200 font-medium">Asia Pacific</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">$201,300.00</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">31.0%</td>
+<td class="px-6 py-3 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                    Completed
+                                </span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<td class="px-6 py-3 font-mono text-gray-900 dark:text-gray-200">#8842-004</td>
+<td class="px-6 py-3 text-gray-600 dark:text-gray-400">2023-11-15 12:10:00</td>
+<td class="px-6 py-3 text-gray-900 dark:text-gray-200 font-medium">South America</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">$45,000.00</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">12.5%</td>
+<td class="px-6 py-3 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
+                                    Flagged
+                                </span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<td class="px-6 py-3 font-mono text-gray-900 dark:text-gray-200">#8842-005</td>
+<td class="px-6 py-3 text-gray-600 dark:text-gray-400">2023-11-15 11:30:15</td>
+<td class="px-6 py-3 text-gray-900 dark:text-gray-200 font-medium">North America</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">$98,120.00</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">22.1%</td>
+<td class="px-6 py-3 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                    Completed
+                                </span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Repeat rows for visual fill -->
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<td class="px-6 py-3 font-mono text-gray-900 dark:text-gray-200">#8842-006</td>
+<td class="px-6 py-3 text-gray-600 dark:text-gray-400">2023-11-14 16:20:44</td>
+<td class="px-6 py-3 text-gray-900 dark:text-gray-200 font-medium">Europe (East)</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">$67,890.00</td>
+<td class="px-6 py-3 text-right font-mono text-gray-900 dark:text-gray-200">15.8%</td>
+<td class="px-6 py-3 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                    Completed
+                                </span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Footer / Metadata Bar -->
+<div class="px-6 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
+<div class="flex items-center gap-4 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-base">schedule</span>
+                        Executed at 14:02:01 UTC
+                    </span>
+<span class="hidden sm:inline text-gray-300 dark:text-gray-700">|</span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-base">dns</span>
+                        Server: DB-04
+                    </span>
+<span class="hidden sm:inline text-gray-300 dark:text-gray-700">|</span>
+<span>
+                        Rows 1-50 of 450
+                    </span>
+</div>
+<!-- Pagination -->
+<div class="flex items-center gap-2">
+<button class="p-1 rounded-md text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-800 disabled:opacity-50">
+<span class="material-symbols-outlined">first_page</span>
+</button>
+<button class="p-1 rounded-md text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-800 disabled:opacity-50">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<div class="flex items-center gap-1">
+<input class="w-10 h-8 text-center text-xs font-medium border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-800 focus:ring-primary focus:border-primary" type="text" value="1"/>
+<span class="text-gray-500 text-xs">/ 9</span>
+</div>
+<button class="p-1 rounded-md text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+<button class="p-1 rounded-md text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined">last_page</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<footer class="p-6 text-center text-xs text-gray-400 dark:text-gray-600 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a202c]">
+        © 2023 Data Studio Inc. All rights reserved. • Privacy Policy • Terms of Service
+    </footer>
+</body></html>

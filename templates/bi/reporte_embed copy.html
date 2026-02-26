@@ -1,0 +1,59 @@
+<!-- reporte_embed.html -->
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}Power BI{% endblock title %}
+
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_bi.html' %}
+{% endblock barra_lateral %}
+
+{% block window %}
+<div id="reportContainer" style="height: 100vh;"></div>
+
+{% if error_message %}
+<p>{{ error_message }}</p>
+{% else %}
+<!-- Carga la librería de Power BI -->
+<script src="https://cdn.jsdelivr.net/npm/powerbi-client@2.19.1/dist/powerbi.js"></script>
+<script type="text/javascript">
+    (function () {
+        var models = window["powerbi-client"].models;
+        var embedContainer = document.getElementById("reportContainer");
+
+        // Bootstrap
+        powerbi.bootstrap(embedContainer, { type: "report" });
+
+        var config = {
+            type: "report",
+            tokenType: models.TokenType.Embed,
+            accessToken: "{{ EMBED_ACCESS_TOKEN }}",  // <--- token que enviaste desde la vista
+            embedUrl: "{{ EMBED_URL }}",              // <--- url de incrustación
+            id: "{{ REPORT_ID }}",                    // <--- id del reporte
+            settings: {
+                filterPaneEnabled: false,
+                navContentPaneEnabled: true
+            }
+        };
+
+        var report = powerbi.embed(embedContainer, config);
+
+        report.on("loaded", function () {
+            console.log("Reporte cargado");
+        });
+
+        report.on("rendered", function () {
+            console.log("Reporte renderizado");
+        });
+
+        report.on("error", function (event) {
+            console.error(event.detail);
+        });
+    })();
+</script>
+{% endif %}
+{% endblock window %}
+
+{% block script %}
+
+{% endblock script %}

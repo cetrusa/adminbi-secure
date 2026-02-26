@@ -1,0 +1,323 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}
+Actualización Bi
+{% endblock title %}
+
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_actualizacion.html' %}
+{% endblock barra_lateral %}
+
+{% block window %}
+{% include 'includes/datepicker_range.html' %}
+<br>
+<br>
+<div class="container">
+  {% if messages %}
+  <div class="alert alert-warning" role="alert">
+    {% for message in messages %}
+    <p>{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="card" style="width: 25rem;">
+    <div class="card-header text-center">
+      <h2>Actualización Bi</h2>
+    </div>
+    <div class="card-body">
+      <form action="{% url 'bi_app:actualizacion_bi' %}" method="post" id="FormActualizacion">
+        {% csrf_token %}
+        <label for="date_input">Fecha:</label>
+        <div id="reportrange"
+          style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+          <i class="fa fa-calendar"></i>&nbsp;
+          <span></span> <i class="fa fa-caret-down"></i>
+        </div>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th><label class="lh-1" for="IdtReporteIni">Fecha Inicial:</label></th>
+              <th><label class="lh-1" for="IdtReporteFin">Fecha Final:</label></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th><input type="date" name="IdtReporteIni" id="IdtReporteIni" readonly></th>
+              <th><input type="date" name="IdtReporteFin" id="IdtReporteFin" readonly></th>
+            </tr>
+          </tbody>
+        </table>
+    </div>
+    <span class="card text-center"><button id="submitBtnActualizacion" type="submit" class="btn btn-success"
+        data-submitted="false">Actualizar Bi</button></span>
+    </form>
+  </div>
+  <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+    aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content bg-dark text-white">
+        <div class="modal-header">
+          <h5 class="modal-title" id="processingModalLabel">Procesando Actualización del Bi...</h5>
+        </div>
+        <div class="modal-body">
+          <div id="progress-stage" class="mb-3 font-weight-bold">Por favor, espere mientras se actualiza el Bi...</div>
+          <div class="progress" style="height: 20px;">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+              role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+          </div>
+          <div id="detailedStatus" class="small text-muted mt-3 p-2 border-top"></div>
+          <div id="updateReport" class="mt-3"></div>
+          <div id="tabla-actual" class="mt-3 font-weight-bold text-info"></div>
+          <div id="errores-tablas" class="mt-2 text-danger small"></div>
+          <p id="time-info" class="mt-2 small text-muted">Tiempo transcurrido: 0 seg</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock window %}
+
+{% block script %}
+<script>
+  document.getElementById("processingModal").style.display = "none";
+  var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+  var startTime = 0;
+  var progressInterval = null;
+  var progressBar = document.getElementById("progressBar");
+  let lastProgressValue = 0;
+
+  document.getElementById("submitBtnActualizacion").addEventListener("click", function (event) {
+    event.preventDefault();
+    if (this.getAttribute("data-submitted") === "true") {
+      alert("Ya hay una tarea de actualización en curso.");
+      return;
+    }
+    var database = window.sessionStorage.getItem("database_name");
+    var IdtReporteIni = document.getElementById("IdtReporteIni").value;
+    var IdtReporteFin = document.getElementById("IdtReporteFin").value;
+    if (!database || !IdtReporteIni || !IdtReporteFin) {
+      stopMonitoring("Por favor, seleccione la empresa y ambas fechas.", true, 0);
+      return;
+    }
+    this.setAttribute("data-submitted", "true");
+    startTime = new Date().getTime();
+    updateProgressBar(0, "Iniciando actualización...");
+    document.getElementById("processingModal").style.display = "flex";
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(updateElapsedTime, 1000);
+    var xhr = new XMLHttpRequest();
+    xhr.responseType = "text";
+    xhr.open("POST", "{% url 'bi_app:actualizacion_bi' %}", true);
+    xhr.setRequestHeader("X-CSRFToken", csrf_token);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = function () {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        try {
+          var response = JSON.parse(this.responseText);
+          handleServerResponse(this.status, response);
+        } catch (e) {
+          stopMonitoring("Error al procesar la respuesta del servidor al iniciar la tarea.");
+        }
+      }
+    };
+    xhr.send("database_select=" + encodeURIComponent(database) +
+      "&IdtReporteIni=" + encodeURIComponent(IdtReporteIni) +
+      "&IdtReporteFin=" + encodeURIComponent(IdtReporteFin));
+  });
+
+  function handleServerResponse(status, response) {
+    if (status === 200 && response.success) {
+      window.sessionStorage.setItem("actualiza_bi_task", response.task_id);
+      updateProgressBar(5, "Tarea iniciada. Procesando...");
+      setTimeout(checkTaskStatus, 1000);
+    } else {
+      stopMonitoring("Hubo un error al iniciar la actualización: " + (response.error_message || "Error desconocido"));
+    }
+  }
+
+  function checkTaskStatus() {
+    var task_id = window.sessionStorage.getItem("actualiza_bi_task");
+    if (!task_id) {
+      stopMonitoring(null, false);
+      return;
+    }
+    var timestamp = new Date().getTime();
+    var xhr = new XMLHttpRequest();
+    xhr.responseType = "text";
+    xhr.open("POST", "{% url 'home_app:check_task_status' %}?t=" + timestamp, true);
+    xhr.setRequestHeader("X-CSRFToken", csrf_token);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = function () {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        try {
+          var response = JSON.parse(this.responseText);
+          handleTaskStatus(this.status, response);
+        } catch (e) {
+          stopMonitoring("Error al procesar la respuesta del servidor sobre el estado de la tarea.");
+        }
+      }
+    };
+    xhr.send("task_id=" + encodeURIComponent(task_id));
+  }
+
+  function handleTaskStatus(status, response) {
+    if (status === 200 && typeof response === "object" && "status" in response) {
+      var progressValue = response.progress !== undefined ? response.progress : parseInt(progressBar.getAttribute("aria-valuenow")) || 5;
+      // Construir el texto de etapa incluyendo tabla y reporte si existen
+      var stageText = response.stage || "Procesando...";
+      if (response.tabla || response.nmReporte) {
+        var tablaTxt = response.tabla ? ("Tabla: " + response.tabla) : "";
+        var reporteTxt = response.nmReporte ? ("Reporte: " + response.nmReporte) : "";
+        stageText += (" [" + [tablaTxt, reporteTxt].filter(Boolean).join(" | ") + "]");
+      }
+      updateProgressBar(progressValue, stageText);
+      updateEtaInfo(response.eta);
+      var taskStatus = response.status.toLowerCase();
+      // Mostrar reporte de tablas actualizadas si existe
+      if (response.result && response.result.tables_report) {
+        document.getElementById("updateReport").innerHTML = response.result.tables_report;
+      } else {
+        document.getElementById("updateReport").innerHTML = "";
+      }
+      // Mostrar información de la tabla actual
+      var tablaActualDiv = document.getElementById("tabla-actual");
+      if (response.tabla) {
+        tablaActualDiv.textContent = "Tabla actual: " + response.tabla;
+      } else {
+        tablaActualDiv.textContent = "";
+      }
+      // Mostrar errores de tablas si existen
+      var erroresDiv = document.getElementById("errores-tablas");
+      if (response.result && response.result.errores_tablas && Array.isArray(response.result.errores_tablas) && response.result.errores_tablas.length > 0) {
+        erroresDiv.innerHTML = '<b>Errores en tablas:</b><ul>' + response.result.errores_tablas.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul>';
+      } else {
+        erroresDiv.innerHTML = "";
+      }
+      // Cambia aquí: acepta 'completed' como estado final exitoso
+      if (taskStatus === "finished" || taskStatus === "success" || taskStatus === "completed") {
+        updateProgressBar(100, "Proceso completado exitosamente");
+        var resultMessage = "Actualización completada exitosamente.";
+        if (response.result && typeof response.result === "object") {
+          if (response.result.message) resultMessage = response.result.message;
+          if (response.result.execution_time) resultMessage += " Tiempo total: " + response.result.execution_time.toFixed(1) + " seg.";
+        }
+        stopMonitoring(resultMessage, true, 1000);
+      } else if (taskStatus === "failed") {
+        updateProgressBar(100, "Proceso fallido");
+        var errorMessage = "Hubo un error en la actualización.";
+        if (response.result) errorMessage += " Detalle: " + (typeof response.result === 'string' ? response.result : JSON.stringify(response.result));
+        stopMonitoring(errorMessage, true, 1000);
+      } else {
+        setTimeout(checkTaskStatus, 3000);
+      }
+    } else {
+      stopMonitoring("Hubo un error al comprobar el estado de la tarea (Código: " + status + ").");
+    }
+  }
+
+  function updateProgressBar(value, stageText) {
+    if (value < lastProgressValue) {
+      value = lastProgressValue;
+    } else {
+      lastProgressValue = value;
+    }
+    var progressStage = document.getElementById("progress-stage");
+    value = Math.max(0, Math.min(100, Number(value) || 0));
+    progressBar.style.width = value + "%";
+    progressBar.setAttribute("aria-valuenow", value);
+    progressBar.textContent = value.toFixed(0) + "%";
+    if (value < 100) {
+      progressBar.className = "progress-bar progress-bar-striped progress-bar-animated bg-success";
+    } else {
+      progressBar.className = "progress-bar bg-success";
+    }
+    if (stageText) progressStage.textContent = stageText;
+  }
+
+  function updateElapsedTime() {
+    var timeInfoElement = document.getElementById("time-info");
+    var elapsedText = "Tiempo transcurrido: ";
+    if (startTime > 0) {
+      var currentTime = new Date().getTime();
+      var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+      var minutes = Math.floor(elapsedSeconds / 60);
+      var seconds = elapsedSeconds % 60;
+      elapsedText += (minutes > 0 ? minutes + " min " : "") + seconds + " seg";
+    } else {
+      elapsedText += "0 seg";
+    }
+    var currentText = timeInfoElement.textContent;
+    var etaPart = currentText.includes("|") ? " |" + currentText.split("|")[1] : "";
+    timeInfoElement.textContent = elapsedText + etaPart;
+  }
+
+  function updateEtaInfo(etaSeconds) {
+    var timeInfoElement = document.getElementById("time-info");
+    var currentElapsedTimeText = timeInfoElement.textContent.split("|")[0].trim();
+    if (etaSeconds !== undefined && etaSeconds !== null && etaSeconds > 0) {
+      var etaMinutes = Math.floor(etaSeconds / 60);
+      var etaSecs = Math.floor(etaSeconds % 60);
+      var etaText = (etaMinutes > 0 ? etaMinutes + " min " : "") + etaSecs + " seg";
+      timeInfoElement.textContent = currentElapsedTimeText + " | Tiempo restante estimado: " + etaText;
+    } else {
+      timeInfoElement.textContent = currentElapsedTimeText;
+    }
+  }
+
+  function stopMonitoring(alertMessage, showAlert = true, delay = 0) {
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = null;
+    startTime = 0;
+    let finalBarClass = "progress-bar bg-success";
+    if (alertMessage) {
+      if (alertMessage.toLowerCase().includes("exitosamente") || alertMessage.toLowerCase().includes("completado")) {
+        finalBarClass = "progress-bar bg-success";
+      } else if (alertMessage.toLowerCase().includes("error") || alertMessage.toLowerCase().includes("fallido")) {
+        finalBarClass = "progress-bar bg-danger";
+      } else if (alertMessage.toLowerCase().includes("advertencia")) {
+        finalBarClass = "progress-bar bg-warning";
+      }
+    }
+    progressBar.className = finalBarClass;
+    const finalize = () => {
+      document.getElementById("processingModal").style.display = "none";
+      if (showAlert && alertMessage) {
+        alert(alertMessage);
+        // Si es éxito, recargar la página tras aceptar el alert
+        if (alertMessage.toLowerCase().includes("exitosamente") || alertMessage.toLowerCase().includes("completado")) {
+          location.reload();
+          return;
+        }
+      }
+      document.getElementById("submitBtnActualizacion").setAttribute("data-submitted", "false");
+      window.sessionStorage.removeItem("actualiza_bi_task");
+      updateProgressBar(0, "Listo para iniciar...");
+      document.getElementById("time-info").textContent = "Tiempo transcurrido: 0 seg";
+      document.getElementById("detailedStatus").innerText = "";
+    };
+    if (delay > 0) setTimeout(finalize, delay);
+    else finalize();
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var actualizacionTaskId = window.sessionStorage.getItem("actualiza_bi_task");
+    if (actualizacionTaskId) {
+      if (confirm("Detectamos una actualización pendiente. ¿Desea continuar monitoreando su progreso?")) {
+        document.getElementById("submitBtnActualizacion").setAttribute("data-submitted", "true");
+        document.getElementById("processingModal").style.display = "flex";
+        updateProgressBar(5, "Reanudando monitoreo...");
+        startTime = new Date().getTime();
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = setInterval(updateElapsedTime, 1000);
+        checkTaskStatus();
+      } else {
+        window.sessionStorage.removeItem("actualiza_bi_task");
+        document.getElementById("submitBtnActualizacion").setAttribute("data-submitted", "false");
+      }
+    } else {
+      document.getElementById("submitBtnActualizacion").setAttribute("data-submitted", "false");
+    }
+  });
+</script>
+{% endblock script %}

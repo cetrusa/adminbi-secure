@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CRUD List View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a202c",
+                        "border-light": "#e2e8f0",
+                        "border-dark": "#2d3748",
+                        "text-light": "#0e121b",
+                        "text-dark": "#f8f9fc",
+                        "text-secondary-light": "#64748b",
+                        "text-secondary-dark": "#94a3b8",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for horizontal scrolling areas */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-display antialiased flex flex-col min-h-screen transition-colors duration-200">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-6 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-4">
+<div class="size-8 text-primary flex items-center justify-center bg-primary/10 rounded-lg">
+<span class="material-symbols-outlined text-2xl">grid_view</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Entity Manager</h2>
+</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-sm font-medium text-primary" href="#">Entities</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Reports</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Settings</a>
+</nav>
+<div class="h-6 w-px bg-border-light dark:bg-border-dark hidden md:block"></div>
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="relative group cursor-pointer">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 ring-2 ring-transparent group-hover:ring-primary/20 transition-all" data-alt="User profile avatar showing a smiling person" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDvTgiNmJuyYg_aDSh7xWeTtkOigvl_GSskVymSljLzwH8kQ3D2PX28pnI8LZQECmyIySGtVjmrJwjqpRu5NlfanHLC9NfqkZOq87MosKypliLdMGTcsNDjt-Q1JQ-5XqZ8Yeff1meLSLXt7t1KCjj-h898p6SiyX7vd0ZViLGqiF9hEWJ07HzuP8raW6PhNZvEz21k4l-BMbEKsAToBsHpI4gNachADaRo_R7cfcFXG5rSq5acf79FYbknM8Ddc79L7WJFVDXqHkk");'></div>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-4 py-8 md:px-8 lg:px-12 max-w-[1600px] mx-auto w-full flex flex-col gap-6">
+<!-- Breadcrumbs & Header -->
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+<a class="hover:text-primary transition-colors" href="#">Home</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-text-light dark:text-text-dark font-medium">Entities</span>
+</div>
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div>
+<h1 class="text-3xl font-bold tracking-tight">User Management</h1>
+<p class="text-text-secondary-light dark:text-text-secondary-dark mt-1">Manage and view all registered system entities and their current status.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="hidden sm:flex items-center justify-center gap-2 px-4 h-10 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-[20px]">file_download</span>
+                        Export
+                    </button>
+<button class="flex items-center justify-center gap-2 px-4 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-bold shadow-sm shadow-primary/30 transition-all">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                        Add New Entity
+                    </button>
+</div>
+</div>
+</div>
+<!-- Action Bar: Search & Filters -->
+<div class="flex flex-col gap-4">
+<div class="flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
+<!-- Search -->
+<div class="relative w-full max-w-md">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</span>
+<input class="w-full h-11 pl-10 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark" placeholder="Search by name, ID, or status..." type="text"/>
+</div>
+<!-- Quick Filters -->
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 lg:pb-0 mask-image-r">
+<span class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap mr-2">Filters:</span>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-medium whitespace-nowrap transition-colors hover:bg-primary/20">
+                        Status: Active
+                        <span class="material-symbols-outlined text-[14px]">close</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary hover:text-primary text-text-secondary-light dark:text-text-secondary-dark text-xs font-medium whitespace-nowrap transition-colors">
+                        Role: Admin
+                    </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary hover:text-primary text-text-secondary-light dark:text-text-secondary-dark text-xs font-medium whitespace-nowrap transition-colors">
+                        Joined: Last 7 Days
+                    </button>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-full text-text-secondary-light dark:text-text-secondary-dark hover:text-primary text-xs font-medium whitespace-nowrap transition-colors ml-1 border border-dashed border-border-light dark:border-border-dark hover:border-primary">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+                        More Filters
+                    </button>
+</div>
+</div>
+</div>
+<!-- Data Table Container -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden flex flex-col relative">
+<!-- Bulk Actions Toolbar (Conditionally Visible - simulated here) -->
+<!-- In a real app, this would show only when items are checked. We'll show it as a demo of 'selection state' possibility but initially hidden or subtle -->
+<div class="hidden bg-primary text-white px-6 py-2 flex items-center justify-between text-sm animate-in slide-in-from-top-2 absolute top-0 left-0 right-0 z-10">
+<div class="flex items-center gap-4">
+<span class="font-semibold">2 items selected</span>
+<div class="h-4 w-px bg-white/30"></div>
+<button class="hover:underline opacity-90 hover:opacity-100">Select all 1,240</button>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-1 px-3 py-1 rounded bg-white/20 hover:bg-white/30 transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+                        Delete
+                    </button>
+<button class="flex items-center gap-1 px-3 py-1 rounded bg-white/20 hover:bg-white/30 transition-colors">
+<span class="material-symbols-outlined text-[18px]">archive</span>
+                        Archive
+                    </button>
+<button class="p-1 rounded hover:bg-white/20">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</div>
+<!-- Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-light dark:border-border-dark bg-background-light/50 dark:bg-surface-dark text-xs uppercase text-text-secondary-light dark:text-text-secondary-dark font-semibold">
+<th class="p-4 w-12 text-center">
+<input class="rounded border-border-light dark:border-border-dark text-primary focus:ring-primary/20 bg-surface-light dark:bg-surface-dark cursor-pointer" type="checkbox"/>
+</th>
+<th class="p-4 min-w-[200px] cursor-pointer group hover:text-primary transition-colors">
+<div class="flex items-center gap-1">
+                                    Entity Name
+                                    <span class="material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-100 text-primary">arrow_downward</span>
+</div>
+</th>
+<th class="p-4 min-w-[120px]">Status</th>
+<th class="p-4 min-w-[150px]">Role</th>
+<th class="p-4 min-w-[180px]">Last Active</th>
+<th class="p-4 min-w-[200px]">Email</th>
+<th class="p-4 w-20 text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-light dark:divide-border-dark text-sm">
+<!-- Row 1 -->
+<tr class="group hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
+<td class="p-4 text-center">
+<input class="rounded border-border-light dark:border-border-dark text-primary focus:ring-primary/20 bg-surface-light dark:bg-surface-dark cursor-pointer" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-cover bg-center border border-border-light dark:border-border-dark" data-alt="Profile picture of Sarah Johnson" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA8kCiMvjkZ_Nw0PELtUDuGXO9GabdBKoiz5gDVXTr3SxDXeC1sfT6ZpGH5CIm8DcrHa50K_ReGeZZEAflNzEAQPg_PzkcLXeWjsU3Ovnmu9cOD0pzpgm2SsPC5GKa9jwT24G7y-TIfyc16EmTiQM0jWj2L6j34KF8yAEuE02X7LvMZq3vd-jWFUqawpIvk3dtdXH_YTaf3dtxYkVSlvVwNBzzqotUctKAk28P-bWVf3w5ORd-Ee7jCkYXOcT2Hx0mzvADcYyxI7Ls");'></div>
+<div>
+<div class="font-medium text-text-light dark:text-text-dark">Sarah Johnson</div>
+<div class="text-xs text-text-secondary-light dark:text-text-secondary-dark">ID: #88329</div>
+</div>
+</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                    Active
+                                </span>
+</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">Product Manager</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">2 mins ago</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark font-mono text-xs">sarah.j@company.com</td>
+<td class="p-4 text-center">
+<div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors" title="Lock Account">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-text-secondary-light hover:text-red-600 transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
+<td class="p-4 text-center">
+<input checked="" class="rounded border-border-light dark:border-border-dark text-primary focus:ring-primary/20 bg-surface-light dark:bg-surface-dark cursor-pointer" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs border border-primary/20">MJ</div>
+<div>
+<div class="font-medium text-text-light dark:text-text-dark">Michael Jordan</div>
+<div class="text-xs text-text-secondary-light dark:text-text-secondary-dark">ID: #82103</div>
+</div>
+</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                    Pending
+                                </span>
+</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">Developer</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">Yesterday</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark font-mono text-xs">mike.j@company.com</td>
+<td class="p-4 text-center">
+<div class="flex items-center justify-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-text-secondary-light hover:text-red-600 transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
+<td class="p-4 text-center">
+<input class="rounded border-border-light dark:border-border-dark text-primary focus:ring-primary/20 bg-surface-light dark:bg-surface-dark cursor-pointer" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-cover bg-center border border-border-light dark:border-border-dark" data-alt="Profile picture of David Chen" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA7Xz_US6ZSdHrXrqqLWfTFc83d7dhJ3X99R1a7rX33-H2aLbqkOqUGtQJ94j4MbLnQg3jMYt9Q15h2-LLIaS3f-1fMsNm8_QyRfN9XsRFZQcPDxhcv9rhaRBzLsW2omfV2poH9g_eoONLpNKKNIjjq1lcujRwv4HBm5ZHRnB3L2Gezel98vPyg5mvQEWh6QcwvIqU5b_bJvAfP26Kr5L22JImQQ5STvDKnM5ed_AALDhEiOGyKubu2aOihnZLgP5sGJJsrcaElcJg");'></div>
+<div>
+<div class="font-medium text-text-light dark:text-text-dark">David Chen</div>
+<div class="text-xs text-text-secondary-light dark:text-text-secondary-dark">ID: #99210</div>
+</div>
+</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400">
+                                    Inactive
+                                </span>
+</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">Viewer</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">Oct 24, 2023</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark font-mono text-xs">d.chen@company.com</td>
+<td class="p-4 text-center">
+<div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">lock_open</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-text-secondary-light hover:text-red-600 transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
+<td class="p-4 text-center">
+<input class="rounded border-border-light dark:border-border-dark text-primary focus:ring-primary/20 bg-surface-light dark:bg-surface-dark cursor-pointer" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-200 dark:border-purple-800">AS</div>
+<div>
+<div class="font-medium text-text-light dark:text-text-dark">Alice Smith</div>
+<div class="text-xs text-text-secondary-light dark:text-text-secondary-dark">ID: #77219</div>
+</div>
+</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                    Active
+                                </span>
+</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">Designer</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">1 hour ago</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark font-mono text-xs">alice.s@design.co</td>
+<td class="p-4 text-center">
+<div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-text-secondary-light hover:text-red-600 transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="group hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors">
+<td class="p-4 text-center">
+<input checked="" class="rounded border-border-light dark:border-border-dark text-primary focus:ring-primary/20 bg-surface-light dark:bg-surface-dark cursor-pointer" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-cover bg-center border border-border-light dark:border-border-dark" data-alt="Profile picture of Jenny Wilson" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD9bhiobxNE1ttJQpwVivUB1yhNI4Ak-1iJL5v2MFA15nelQDm6tKLbddFpEjJBpNZnJ8mcQxCq1b6tSP8WEa34lKAT5OEqost-w0Rqp4mxMyitmcgLWxaRw7PiXiHRTLRXqthGy_pa51zhV2qXEuTiLSgNoKMOY9YRZ6eIByyUbZ0vybPtxZqDqje52hVFIY7uvw5bHJxVOKV3pNr-vNm6biimqOtFoztgUi1p2nj26R7Xcewbd3LERVNNzIE9UuyJkdbJOnrQXA4");'></div>
+<div>
+<div class="font-medium text-text-light dark:text-text-dark">Jenny Wilson</div>
+<div class="text-xs text-text-secondary-light dark:text-text-secondary-dark">ID: #44021</div>
+</div>
+</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                                    Locked
+                                </span>
+</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">Admin</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark">3 days ago</td>
+<td class="p-4 text-text-secondary-light dark:text-text-secondary-dark font-mono text-xs">j.wilson@admin.net</td>
+<td class="p-4 text-center">
+<div class="flex items-center justify-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-primary/10 text-text-secondary-light hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">lock_open</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-text-secondary-light hover:text-red-600 transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Footer Pagination -->
+<div class="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border-light dark:border-border-dark gap-4 bg-surface-light dark:bg-surface-dark">
+<div class="text-sm text-text-secondary-light dark:text-text-secondary-dark text-center sm:text-left">
+                    Showing <span class="font-medium text-text-light dark:text-text-dark">1-5</span> of <span class="font-medium text-text-light dark:text-text-dark">1,240</span> results
+                </div>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 rounded-lg border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors disabled:opacity-50 text-sm font-medium" disabled="">
+                        Previous
+                    </button>
+<div class="hidden sm:flex items-center gap-1">
+<button class="size-8 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-medium">1</button>
+<button class="size-8 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark text-sm font-medium transition-colors">2</button>
+<button class="size-8 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark text-sm font-medium transition-colors">3</button>
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-sm">...</span>
+<button class="size-8 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark text-sm font-medium transition-colors">12</button>
+</div>
+<button class="px-3 py-1.5 rounded-lg border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors text-sm font-medium">
+                        Next
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating 'Bulk Action' (Demonstration only, usually triggered by JS logic) -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+<div class="bg-surface-dark dark:bg-surface-light text-text-dark dark:text-text-light rounded-full shadow-2xl px-6 py-3 flex items-center gap-4 pointer-events-auto transform translate-y-20 opacity-0 animate-in slide-in-from-bottom-8 fade-in duration-500 delay-1000 fill-mode-forwards">
+<span class="text-sm font-medium">2 rows selected</span>
+<div class="h-4 w-px bg-white/20 dark:bg-black/20"></div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-black/10 px-3 py-1.5 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+<span class="text-sm font-medium">Delete</span>
+</button>
+<button class="flex items-center gap-1.5 hover:bg-white/10 dark:hover:bg-black/10 px-3 py-1.5 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="text-sm font-medium">Export</span>
+</button>
+</div>
+<button class="ml-2 hover:text-red-400 dark:hover:text-red-600 transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</div>
+</body></html>

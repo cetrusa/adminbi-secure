@@ -1,0 +1,29 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}
+Cubo de Ventas
+{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_cubo.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+{% include 'includes/datepicker_range.html' %}
+<div class="col py-3">
+    <h3>Left Sidebar with Submenus</h3>
+    <p class="lead">
+        An example 2-level sidebar with collasible menu items. The menu functions like an "accordion" where only a single 
+        menu is be open at a time. While the sidebar itself is not toggle-able, it does responsively shrink in width on smaller screens.</p>
+    <ul class="list-unstyled">
+        <li><h5>Responsive</h5> shrinks in width, hides text labels and collapses to icons only on mobile</li>
+    </ul>
+
+    <iframe title="Altimax v.1.3" width="1140" height="541.25" src="https://app.powerbi.com/reportEmbed?reportId=c1162676-2b99-4e26-ac8e-b7b3f832b1f7&autoAuth=true&ctid=24eaf79a-73f9-48bd-867a-63bba312d548" frameborder="0" allowFullScreen="true"></iframe>
+</div>
+{% endblock window %}
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css"></script>
+{% endblock script %}

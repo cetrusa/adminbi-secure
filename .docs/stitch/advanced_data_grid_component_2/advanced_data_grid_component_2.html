@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Operational Data Grid Component</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 5px;
+            border: 2px solid #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .sticky-col-first {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
+        .sticky-col-last {
+            position: sticky;
+            right: 0;
+            z-index: 10;
+        }tfoot {
+            position: sticky;
+            bottom: 0;
+            z-index: 20;
+            background-color: inherit;
+        }
+        tfoot td {
+            background-color: #f8fafc;border-top: 2px solid #e2e8f0;}
+        .dark tfoot td {
+            background-color: #1a202c;border-top: 2px solid #2d3748;}
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a202c] px-6 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-slate-900 dark:text-white">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight">ERP Nexus</h2>
+</div>
+<div class="hidden md:flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2 w-64 border border-transparent focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<span class="material-symbols-outlined text-slate-400">search</span>
+<input class="bg-transparent border-none text-sm w-full focus:ring-0 text-slate-700 dark:text-slate-200 placeholder-slate-400" placeholder="Search resources..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1a202c]"></span>
+</button>
+<div class="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="size-9 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden" data-alt="User profile avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjNTvm_JXbeWyWzUX0zeaDdCc-7g_FbxjI9SB5VqDk7qIfhA4ech5yQ1AyfYenX-EMUGKQunUYDncjAYNtKVjfRz0q7XfhBb_hTT3pZXPRjnvRj27SeGFzo_c-QzZEk5X93-D4UB5cENJx5NU7DXwi5xGu6A5fSnFY8N0w0tgz7sSo8xNCV8gQO7u3P6gz_s0Ky8SkiTWEEkOqzqFhSO8HzQ1MX-rq_WxMlxbhb8ywcnt-nmynB4IYGG9hG2GUGSHdD5Ecqy-SfVY'); background-size: cover; background-position: center;">
+</div>
+<div class="hidden sm:block text-sm">
+<p class="font-medium text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">Alex Morgan</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Admin</p>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-1 p-4 md:p-6 lg:p-8 flex flex-col gap-6 overflow-hidden max-w-[1920px] mx-auto w-full">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white">Operational Inventory</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Multi-tenant inventory allocation with grouped summaries.</p>
+</div>
+<div class="flex flex-wrap gap-2 items-center bg-white dark:bg-[#1a202c] border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 shadow-sm">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-[18px]">file_download</span>
+<span>Export Manager</span>
+</button>
+<div class="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+<span>Column Configurator</span>
+</button>
+<div class="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<div class="flex items-center">
+<button class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" title="Filter View">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+<button class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" title="Density">
+<span class="material-symbols-outlined text-[20px]">density_medium</span>
+</button>
+</div>
+<div class="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<button class="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white px-3 py-1.5 rounded-md font-medium shadow-sm transition-colors text-sm ml-1">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>New</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+<span class="font-medium">Grouped by:</span>
+<div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-[16px]">category</span>
+<span>Category</span>
+<button class="hover:text-red-500 ml-1"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</div>
+</div>
+<div class="flex flex-col flex-1 bg-white dark:bg-[#1a202c] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden h-full">
+<div class="flex-1 overflow-auto custom-scrollbar relative">
+<table class="w-full text-left border-collapse min-w-[1000px]">
+<thead class="bg-slate-50 dark:bg-[#232936] text-slate-500 dark:text-slate-400 sticky top-0 z-30 shadow-sm">
+<tr>
+<th class="sticky-col-first left-0 z-30 bg-slate-50 dark:bg-[#232936] border-b border-slate-200 dark:border-slate-700 w-12 px-4 py-3 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative w-[120px]">
+<div class="flex items-center gap-1 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span>ID</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative w-[250px]">
+<div class="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span>Item Name</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative w-[140px]">
+<div class="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span>Status</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative text-right w-[150px]">
+<div class="flex items-center justify-end gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span>Stock Qty</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative text-right w-[150px]">
+<div class="flex items-center justify-end gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span>Unit Cost</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative w-[180px]">
+<div class="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span>Last Updated</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="sticky-col-last right-0 z-30 bg-slate-50 dark:bg-[#232936] border-b border-slate-200 dark:border-slate-700 w-[80px] px-4 py-2 font-semibold text-xs uppercase tracking-wider text-center">
+                            Actions
+                        </th>
+</tr>
+</thead>
+<tbody class="text-sm divide-y divide-slate-100 dark:divide-slate-700">
+<tr class="bg-slate-50 dark:bg-[#1f2633] hover:bg-slate-100 dark:hover:bg-[#252d3d] cursor-pointer">
+<td class="sticky-col-first left-0 bg-slate-50 dark:bg-[#1f2633] border-y border-slate-200 dark:border-slate-600 px-4 py-2 font-semibold text-slate-800 dark:text-slate-200" colspan="8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-slate-400 transition-transform transform rotate-90">chevron_right</span>
+<span>Category: <strong>Construction Materials</strong></span>
+<span class="bg-slate-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">2 items</span>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-blue-50/30 dark:group-hover:bg-blue-900/10 px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90210</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white pl-8">Industrial Steel Beam - Grade A</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                In Stock
+                            </span>
+</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">2,450</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">$125.00</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">2 mins ago</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-blue-50/30 dark:group-hover:bg-blue-900/10 px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-blue-50/30 dark:group-hover:bg-blue-900/10 px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90216</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white pl-8">Reinforced Concrete Slab</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                                Pending
+                            </span>
+</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">45</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">$85.50</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">2 days ago</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-blue-50/30 dark:group-hover:bg-blue-900/10 px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="bg-slate-50/50 dark:bg-[#1a202c] border-b-2 border-slate-100 dark:border-slate-800 font-medium text-xs text-slate-500 dark:text-slate-400">
+<td class="sticky-col-first left-0 bg-slate-50/50 dark:bg-[#1a202c]" colspan="4"></td>
+<td class="px-4 py-1.5 text-right bg-yellow-50 dark:bg-yellow-900/10 text-slate-700 dark:text-yellow-200">
+                            Subtotal: 2,495
+                        </td>
+<td class="px-4 py-1.5 text-right bg-yellow-50 dark:bg-yellow-900/10 text-slate-700 dark:text-yellow-200">
+                            Avg: $105.25
+                        </td>
+<td colspan="2"></td>
+</tr>
+<tr class="bg-slate-50 dark:bg-[#1f2633] hover:bg-slate-100 dark:hover:bg-[#252d3d] cursor-pointer">
+<td class="sticky-col-first left-0 bg-slate-50 dark:bg-[#1f2633] border-y border-slate-200 dark:border-slate-600 px-4 py-2 font-semibold text-slate-800 dark:text-slate-200" colspan="8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-slate-400 transition-transform">chevron_right</span>
+<span>Category: <strong>Electrical</strong></span>
+<span class="bg-slate-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">1 item</span>
+</div>
+</td>
+</tr>
+<tr class="hidden group hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90211</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white pl-8">Copper Wiring Spool 500m</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                Low Stock
+                            </span>
+</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">12</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">$450.00</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">15 mins ago</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] px-4 py-2 text-center">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="bg-slate-50 dark:bg-[#1f2633] hover:bg-slate-100 dark:hover:bg-[#252d3d] cursor-pointer">
+<td class="sticky-col-first left-0 bg-slate-50 dark:bg-[#1f2633] border-y border-slate-200 dark:border-slate-600 px-4 py-2 font-semibold text-slate-800 dark:text-slate-200" colspan="8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-slate-400 transition-transform transform rotate-90">chevron_right</span>
+<span>Category: <strong>Tools</strong></span>
+<span class="bg-slate-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">3 items</span>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-blue-50/30 dark:group-hover:bg-blue-900/10 px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90215</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white pl-8">Pneumatic Drill Bit Set</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                In Stock
+                            </span>
+</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">120</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">$25.99</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">Yesterday</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-blue-50/30 dark:group-hover:bg-blue-900/10 px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-blue-50/30 dark:group-hover:bg-blue-900/10 px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90213</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white pl-8">Safety Goggles (Box of 20)</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                In Stock
+                            </span>
+</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">500</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">$15.00</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">3 hours ago</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-blue-50/30 dark:group-hover:bg-blue-900/10 px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="bg-slate-50/50 dark:bg-[#1a202c] border-b-2 border-slate-100 dark:border-slate-800 font-medium text-xs text-slate-500 dark:text-slate-400">
+<td class="sticky-col-first left-0 bg-slate-50/50 dark:bg-[#1a202c]" colspan="4"></td>
+<td class="px-4 py-1.5 text-right bg-yellow-50 dark:bg-yellow-900/10 text-slate-700 dark:text-yellow-200">
+                            Subtotal: 620
+                        </td>
+<td class="px-4 py-1.5 text-right bg-yellow-50 dark:bg-yellow-900/10 text-slate-700 dark:text-yellow-200">
+                            Avg: $20.49
+                        </td>
+<td colspan="2"></td>
+</tr>
+</tbody>
+<tfoot class="font-semibold text-sm shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+<tr>
+<td class="sticky-col-first left-0 px-4 py-3 text-slate-500 dark:text-slate-400">Total</td>
+<td class="px-4 py-3" colspan="3">
+<span class="text-slate-500 dark:text-slate-400 font-normal">Across all pages:</span>
+<span class="ml-2">5 Items Shown</span>
+</td>
+<td class="px-4 py-3 text-right text-primary dark:text-blue-400">
+                            3,127
+                        </td>
+<td class="px-4 py-3 text-right text-primary dark:text-blue-400">
+                            $203,450.00
+                        </td>
+<td class="px-4 py-3 text-xs text-slate-400" colspan="2">
+                            (Summed Value)
+                        </td>
+</tr>
+</tfoot>
+</table>
+</div>
+<div class="bg-white dark:bg-[#1a202c] border-t border-slate-200 dark:border-slate-700 p-3 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm z-20">
+<div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 w-full sm:w-auto justify-center sm:justify-start">
+<span>Showing</span>
+<span class="font-semibold text-slate-900 dark:text-slate-200">1-50</span>
+<span>of</span>
+<span class="font-semibold text-slate-900 dark:text-slate-200">2,250</span>
+<span>entries</span>
+</div>
+<div class="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-end">
+<div class="flex items-center gap-2">
+<span class="text-slate-500 dark:text-slate-400 hidden sm:inline">Rows per page:</span>
+<select class="form-select bg-slate-50 dark:bg-[#232936] border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm rounded py-1 pl-2 pr-8 focus:ring-primary focus:border-primary">
+<option>10</option>
+<option>25</option>
+<option selected="">50</option>
+<option>100</option>
+</select>
+</div>
+<div class="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50">
+<span class="material-symbols-outlined text-[20px]">first_page</span>
+</button>
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<div class="flex items-center gap-1 mx-2">
+<span class="text-slate-500 dark:text-slate-400">Page</span>
+<input class="form-input w-12 text-center text-sm py-1 px-1 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-[#232936] text-slate-700 dark:text-slate-200 focus:ring-primary focus:border-primary" max="45" min="1" type="number" value="1"/>
+<span class="text-slate-500 dark:text-slate-400">of 45</span>
+</div>
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+<span class="material-symbols-outlined text-[20px]">last_page</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+    // Simple script to demonstrate dark mode toggle if user were to implement it.
+    // document.documentElement.classList.add('dark'); // Uncomment to test dark mode
+</script>
+
+</body></html>

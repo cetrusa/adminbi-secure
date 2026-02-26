@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Advanced Data Grid Component</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for high-density tables */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 5px;
+            border: 2px solid #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Sticky Column styles */
+        .sticky-col-first {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
+        .sticky-col-last {
+            position: sticky;
+            right: 0;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a202c] px-6 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-slate-900 dark:text-white">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight">ERP Nexus</h2>
+</div>
+<div class="hidden md:flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2 w-64 border border-transparent focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<span class="material-symbols-outlined text-slate-400">search</span>
+<input class="bg-transparent border-none text-sm w-full focus:ring-0 text-slate-700 dark:text-slate-200 placeholder-slate-400" placeholder="Search resources..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1a202c]"></span>
+</button>
+<div class="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="size-9 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden" data-alt="User profile avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjNTvm_JXbeWyWzUX0zeaDdCc-7g_FbxjI9SB5VqDk7qIfhA4ech5yQ1AyfYenX-EMUGKQunUYDncjAYNtKVjfRz0q7XfhBb_hTT3pZXPRjnvRj27SeGFzo_c-QzZEk5X93-D4UB5cENJx5NU7DXwi5xGu6A5fSnFY8N0w0tgz7sSo8xNCV8gQO7u3P6gz_s0Ky8SkiTWEEkOqzqFhSO8HzQ1MX-rq_WxMlxbhb8ywcnt-nmynB4IYGG9hG2GUGSHdD5Ecqy-SfVY'); background-size: cover; background-position: center;">
+</div>
+<div class="hidden sm:block text-sm">
+<p class="font-medium text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">Alex Morgan</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Admin</p>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 p-4 md:p-6 lg:p-8 flex flex-col gap-6 overflow-hidden max-w-[1920px] mx-auto w-full">
+<!-- Header & Controls -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white">Inventory Master</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage global inventory allocation across all tenants.</p>
+</div>
+<div class="flex flex-wrap gap-2 items-center">
+<div class="flex items-center bg-white dark:bg-[#1a202c] border border-slate-200 dark:border-slate-700 rounded-lg p-1 shadow-sm">
+<button class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" title="Filter View">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+<div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<button class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" title="Columns">
+<span class="material-symbols-outlined text-[20px]">view_column</span>
+</button>
+<button class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" title="Density">
+<span class="material-symbols-outlined text-[20px]">density_medium</span>
+</button>
+</div>
+<button class="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>New Record</span>
+</button>
+</div>
+</div>
+<!-- Data Grid Container -->
+<div class="flex flex-col flex-1 bg-white dark:bg-[#1a202c] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden h-full">
+<!-- Bulk Actions Toolbar (Conditional Display) -->
+<div class="bg-blue-50 dark:bg-blue-900/20 px-4 py-2 border-b border-blue-100 dark:border-blue-800 flex items-center justify-between text-sm">
+<div class="flex items-center gap-3 text-blue-800 dark:text-blue-200">
+<span class="font-semibold">2 items selected</span>
+<span class="text-blue-300 dark:text-blue-700">|</span>
+<button class="hover:text-blue-600 dark:hover:text-blue-100 transition-colors font-medium">Select all 50</button>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-[#2d3748] border border-blue-200 dark:border-blue-700 rounded text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-xs font-medium">
+<span class="material-symbols-outlined text-[16px]">archive</span>
+                        Archive
+                    </button>
+<button class="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-[#2d3748] border border-blue-200 dark:border-blue-700 rounded text-red-600 dark:text-red-400 hover:border-red-300 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-xs font-medium">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+                        Delete
+                    </button>
+<button class="p-1.5 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 rounded">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Table Wrapper for Scroll -->
+<div class="flex-1 overflow-auto custom-scrollbar relative">
+<table class="w-full text-left border-collapse min-w-[1000px]">
+<thead class="bg-slate-50 dark:bg-[#232936] text-slate-500 dark:text-slate-400 sticky top-0 z-20">
+<tr>
+<th class="sticky-col-first left-0 z-30 bg-slate-50 dark:bg-[#232936] border-b border-slate-200 dark:border-slate-700 w-12 px-4 py-3 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative w-[120px]">
+<div class="flex items-center gap-1 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-slate-400 cursor-grab">drag_indicator</span>
+<span>ID</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 transition-opacity">arrow_upward</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative w-[250px]">
+<div class="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-slate-400 cursor-grab">drag_indicator</span>
+<span>Item Name</span>
+<span class="material-symbols-outlined text-[14px] text-primary">arrow_downward</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative w-[140px]">
+<div class="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-slate-400 cursor-grab">drag_indicator</span>
+<span>Status</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative w-[200px]">
+<div class="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-slate-400 cursor-grab">drag_indicator</span>
+<span>Category</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative text-right w-[150px]">
+<div class="flex items-center justify-end gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-slate-400 cursor-grab">drag_indicator</span>
+<span>Stock Qty</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="group border-b border-slate-200 dark:border-slate-700 px-4 py-2 font-semibold text-xs uppercase tracking-wider select-none relative w-[180px]">
+<div class="flex items-center gap-2 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-slate-400 cursor-grab">drag_indicator</span>
+<span>Last Updated</span>
+</div>
+<div class="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-blue-400 transition-colors"></div>
+</th>
+<th class="sticky-col-last right-0 z-30 bg-slate-50 dark:bg-[#232936] border-b border-slate-200 dark:border-slate-700 w-[100px] px-4 py-2 font-semibold text-xs uppercase tracking-wider text-center">
+                                Actions
+                            </th>
+</tr>
+<!-- Loading Indicator Placeholder -->
+<tr class="hidden">
+<td class="p-0" colspan="8">
+<div class="h-1 w-full bg-slate-100 overflow-hidden">
+<div class="animate-progress w-full h-full bg-primary origin-left-right"></div>
+</div>
+</td>
+</tr>
+</thead>
+<tbody class="text-sm divide-y divide-slate-100 dark:divide-slate-700">
+<!-- Row 1: Selected State -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 bg-blue-50/50 dark:bg-blue-900/10">
+<td class="sticky-col-first left-0 bg-blue-50/50 dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input checked="" class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90210</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Industrial Steel Beam - Grade A</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                    In Stock
+                                </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">Construction Materials</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">2,450</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">2 mins ago</td>
+<td class="sticky-col-last right-0 bg-blue-50/50 dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: Selected State -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 bg-blue-50/50 dark:bg-blue-900/10">
+<td class="sticky-col-first left-0 bg-blue-50/50 dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input checked="" class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90211</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Copper Wiring Spool 500m</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                    Low Stock
+                                </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">Electrical</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">12</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">15 mins ago</td>
+<td class="sticky-col-last right-0 bg-blue-50/50 dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90212</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Heavy Duty Concrete Mixer</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                                    State 1
+                                </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">Heavy Machinery</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">5</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">1 hour ago</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90213</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Safety Goggles (Box of 20)</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                                    State 2
+                                </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">Safety Gear</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">500</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">3 hours ago</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90214</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Hydraulic Pump Unit X500</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                    Out of Stock
+                                </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">Hydraulics</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">0</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">Yesterday</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90215</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Pneumatic Drill Bit Set</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                    In Stock
+                                </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">Tools</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">120</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">Yesterday</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 7 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90216</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Reinforced Concrete Slab</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                                    State 1
+                                </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">Construction</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">45</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">2 days ago</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 8 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90217</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Aluminium Sheet 2mm</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                    In Stock
+                                </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">Raw Materials</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">300</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">2 days ago</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 9 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="sticky-col-first left-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-r border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-colors">
+<input class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 bg-white dark:bg-[#2d3748] dark:border-slate-600" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300">#SKU-90218</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Carbon Fiber Panel</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                    Low Stock
+                                </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">Composites</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-slate-200">18</td>
+<td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">3 days ago</td>
+<td class="sticky-col-last right-0 bg-white dark:bg-[#1a202c] group-hover:bg-slate-50 dark:group-hover:bg-[#1a202c] px-4 py-2 text-center border-l border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Complex Pagination Footer -->
+<div class="bg-white dark:bg-[#1a202c] border-t border-slate-200 dark:border-slate-700 p-3 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm z-20">
+<div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 w-full sm:w-auto justify-center sm:justify-start">
+<span>Showing</span>
+<span class="font-semibold text-slate-900 dark:text-slate-200">1-50</span>
+<span>of</span>
+<span class="font-semibold text-slate-900 dark:text-slate-200">2,250</span>
+<span>entries</span>
+<!-- Loading State Placeholder -->
+<span class="ml-2 inline-flex items-center text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">
+<span class="w-1.5 h-1.5 bg-slate-400 rounded-full mr-1.5 animate-pulse"></span>
+                        Syncing...
+                    </span>
+</div>
+<div class="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-end">
+<div class="flex items-center gap-2">
+<span class="text-slate-500 dark:text-slate-400 hidden sm:inline">Rows per page:</span>
+<select class="form-select bg-slate-50 dark:bg-[#232936] border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm rounded py-1 pl-2 pr-8 focus:ring-primary focus:border-primary">
+<option>10</option>
+<option>25</option>
+<option selected="">50</option>
+<option>100</option>
+</select>
+</div>
+<div class="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50">
+<span class="material-symbols-outlined text-[20px]">first_page</span>
+</button>
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<div class="flex items-center gap-1 mx-2">
+<span class="text-slate-500 dark:text-slate-400">Page</span>
+<input class="form-input w-12 text-center text-sm py-1 px-1 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-[#232936] text-slate-700 dark:text-slate-200 focus:ring-primary focus:border-primary" max="45" min="1" type="number" value="1"/>
+<span class="text-slate-500 dark:text-slate-400">of 45</span>
+</div>
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+<span class="material-symbols-outlined text-[20px]">last_page</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Theme Toggle Helper (Invisible but functional logic placeholder) -->
+<script>
+        // Simple script to demonstrate dark mode toggle if user were to implement it.
+        // In a real app this would be more robust.
+        // document.documentElement.classList.add('dark'); // Uncomment to test dark mode
+    </script>
+</body></html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ERP Nexus - Search &amp; Filter Framework</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "primary-light": "#eef4ff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a202c",
+                        "border-light": "#e2e8f0",
+                        "border-dark": "#2d3748",
+                        "text-primary-light": "#0e121b",
+                        "text-primary-dark": "#f7fafc",
+                        "text-secondary-light": "#4e6797",
+                        "text-secondary-dark": "#a0aec0",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for sidebar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e0;
+            border-radius: 20px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #4a5568;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark flex flex-col h-screen overflow-hidden">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-light dark:border-border-dark px-6 py-3 bg-surface-light dark:bg-surface-dark z-20 shrink-0">
+<div class="flex items-center gap-4 text-text-primary-light dark:text-text-primary-dark">
+<div class="size-8 text-primary flex items-center justify-center bg-primary/10 rounded-lg">
+<span class="material-symbols-outlined text-[24px]">grid_view</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">ERP Nexus</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8 items-center">
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Inventory</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Orders</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Reports</a>
+</nav>
+<div class="flex gap-3 items-center">
+<button class="flex items-center justify-center rounded-lg size-10 hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg size-10 hover:bg-background-light dark:hover:bg-background-dark text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 ml-2 border border-border-light dark:border-border-dark" data-alt="User profile picture showing a man smiling" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAcFlc_xoagLxPwnd6ZPF77_I0LAd7S0S_sQEERXTwcK_c6Jhqg-b_5lALHwWj1JoxvWVSveZYA73v80UFWRS4OD8fPEj7bUp-a5KYAylWYtR5WJ7l5Y1c7y1Rs0l7AJsqHYhe2C9rW4mh4A814MKszDHw_G4s6gzB-u20xRRuxwUzqhwdFOWGU1jjtxjrCi-ZrP6tOlMoREU8n1tbvKlBBc_uZo9BT0JBYyBVDijjxrWSYGreNdn01aqNFi4U4ESyf3sXfC2KtJnA");'></div>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Sidebar: Saved Views -->
+<aside class="w-80 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark flex flex-col shrink-0 transition-all duration-300 transform">
+<div class="p-5 border-b border-border-light dark:border-border-dark">
+<div class="flex items-center justify-between mb-1">
+<h3 class="font-semibold text-text-primary-light dark:text-text-primary-dark">Saved Filters</h3>
+<button class="text-primary hover:bg-primary/10 p-1 rounded-md transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</button>
+</div>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Quick access to frequent queries</p>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6">
+<!-- System Views -->
+<div>
+<div class="px-3 mb-2 flex items-center gap-2 text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">globe</span>
+                        System Views
+                    </div>
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium group transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] fill-current">star</span>
+<span class="flex-1 text-sm">Open Orders Q4</span>
+<span class="bg-white dark:bg-background-dark text-primary px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm">12</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-text-primary-light dark:text-text-primary-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-text-secondary-light dark:text-text-secondary-dark group-hover:text-primary transition-colors">warning</span>
+<span class="flex-1 text-sm">Overdue Invoices</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-text-primary-light dark:text-text-primary-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-text-secondary-light dark:text-text-secondary-dark group-hover:text-primary transition-colors">inventory_2</span>
+<span class="flex-1 text-sm">Low Stock Items</span>
+</a>
+</div>
+</div>
+<!-- Personal Views -->
+<div>
+<div class="px-3 mb-2 flex items-center gap-2 text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">person</span>
+                        Personal Views
+                    </div>
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-text-primary-light dark:text-text-primary-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-text-secondary-light dark:text-text-secondary-dark group-hover:text-primary transition-colors">bookmark</span>
+<span class="flex-1 text-sm">My Territory Sales</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-text-primary-light dark:text-text-primary-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-text-secondary-light dark:text-text-secondary-dark group-hover:text-primary transition-colors">bookmark</span>
+<span class="flex-1 text-sm">Pending Approvals</span>
+<button class="opacity-0 group-hover:opacity-100 text-text-secondary-light hover:text-red-500">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+</button>
+</a>
+</div>
+</div>
+<!-- Shared Views -->
+<div>
+<div class="px-3 mb-2 flex items-center gap-2 text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">group</span>
+                        Shared Views
+                    </div>
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-text-primary-light dark:text-text-primary-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-text-secondary-light dark:text-text-secondary-dark group-hover:text-primary transition-colors">folder_shared</span>
+<span class="flex-1 text-sm">Logistics Team - Daily</span>
+</a>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+<button class="flex w-full items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+                    Manage Views
+                 </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark overflow-hidden relative">
+<!-- Header Section -->
+<div class="px-8 py-8 shrink-0">
+<div class="max-w-5xl mx-auto w-full">
+<h1 class="text-3xl font-black tracking-tight text-text-primary-light dark:text-text-primary-dark mb-2">Advanced Search</h1>
+<p class="text-text-secondary-light dark:text-text-secondary-dark">Define complex criteria to filter global ERP records across modules.</p>
+<!-- Global Search Bar -->
+<div class="mt-8 relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-secondary-light dark:text-text-secondary-dark group-focus-within:text-primary transition-colors">search</span>
+</div>
+<input class="block w-full pl-12 pr-4 py-4 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-lg shadow-sm placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-text-primary-light dark:text-text-primary-dark" placeholder="Search by Order ID, Customer Name, SKU, or Keyword..." type="text" value="ORD-2023-X99"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+<button class="text-text-secondary-light hover:text-text-primary-light dark:text-text-secondary-dark dark:hover:text-text-primary-dark p-1">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Filter Content Scrollable -->
+<div class="flex-1 overflow-y-auto px-8 pb-32">
+<div class="max-w-5xl mx-auto w-full flex flex-col gap-6">
+<!-- Logic Groups Container -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left Column: Primary Fields -->
+<div class="lg:col-span-8 space-y-6">
+<!-- Field Search Card -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
+<h3 class="font-semibold text-text-primary-light dark:text-text-primary-dark flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">tune</span>
+                                        Field Criteria
+                                    </h3>
+<button class="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">add</span> Add Condition
+                                    </button>
+</div>
+<div class="p-6 space-y-4">
+<!-- Row 1 -->
+<div class="flex flex-wrap md:flex-nowrap gap-3 items-center">
+<select class="form-select block w-full md:w-1/3 rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm focus:border-primary focus:ring-primary dark:text-white py-2.5">
+<option>Department</option>
+<option>Vendor</option>
+<option>Status</option>
+</select>
+<select class="form-select block w-full md:w-1/4 rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm focus:border-primary focus:ring-primary dark:text-white py-2.5">
+<option>Equals</option>
+<option>Contains</option>
+<option>Starts with</option>
+</select>
+<input class="form-input block w-full rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm focus:border-primary focus:ring-primary dark:text-white py-2.5" type="text" value="Sales &amp; Marketing"/>
+<button class="text-text-secondary-light hover:text-red-500 transition-colors p-2">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+<!-- Row 2 -->
+<div class="flex flex-wrap md:flex-nowrap gap-3 items-center">
+<select class="form-select block w-full md:w-1/3 rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm focus:border-primary focus:ring-primary dark:text-white py-2.5">
+<option>Region</option>
+<option selected="">Customer Type</option>
+</select>
+<select class="form-select block w-full md:w-1/4 rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm focus:border-primary focus:ring-primary dark:text-white py-2.5">
+<option selected="">Is not</option>
+<option>Equals</option>
+</select>
+<input class="form-input block w-full rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm focus:border-primary focus:ring-primary dark:text-white py-2.5" placeholder="Value..." type="text"/>
+<button class="text-text-secondary-light hover:text-red-500 transition-colors p-2">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Range Filters -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-white/5">
+<h3 class="font-semibold text-text-primary-light dark:text-text-primary-dark flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">date_range</span>
+                                        Range Filters
+                                    </h3>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Date Range -->
+<div class="flex flex-col gap-3">
+<label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">Created Date</label>
+<div class="flex items-center gap-2">
+<div class="relative flex-1">
+<input class="block w-full rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm py-2.5 px-3 focus:ring-primary focus:border-primary dark:text-white text-text-secondary-light" type="date"/>
+</div>
+<span class="text-text-secondary-light">-</span>
+<div class="relative flex-1">
+<input class="block w-full rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm py-2.5 px-3 focus:ring-primary focus:border-primary dark:text-white text-text-secondary-light" type="date"/>
+</div>
+</div>
+</div>
+<!-- Financial Range -->
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<label class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">Total Value (USD)</label>
+<span class="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">$1,200 - $50,000</span>
+</div>
+<!-- Dual Range Slider Simulation -->
+<div class="relative h-10 flex items-center">
+<div class="w-full h-1.5 bg-border-light dark:bg-border-dark rounded-full relative">
+<div class="absolute h-full bg-primary rounded-full" style="left: 10%; right: 30%;"></div>
+<div class="absolute size-4 bg-white border-2 border-primary rounded-full shadow cursor-pointer top-1/2 -translate-y-1/2 -ml-2" style="left: 10%"></div>
+<div class="absolute size-4 bg-white border-2 border-primary rounded-full shadow cursor-pointer top-1/2 -translate-y-1/2 -ml-2" style="left: 70%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Toggles & Meta -->
+<div class="lg:col-span-4 space-y-6">
+<!-- Status Toggles -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden h-fit">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-white/5">
+<h3 class="font-semibold text-text-primary-light dark:text-text-primary-dark flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">toggle_on</span>
+                                        Workflow Status
+                                    </h3>
+</div>
+<div class="p-5 flex flex-wrap gap-2">
+<label class="cursor-pointer select-none">
+<input checked="" class="peer sr-only" type="checkbox"/>
+<div class="px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark transition-all peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary hover:border-primary/50">
+                                            Active
+                                        </div>
+</label>
+<label class="cursor-pointer select-none">
+<input class="peer sr-only" type="checkbox"/>
+<div class="px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark transition-all peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary hover:border-primary/50">
+                                            Pending
+                                        </div>
+</label>
+<label class="cursor-pointer select-none">
+<input class="peer sr-only" type="checkbox"/>
+<div class="px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark transition-all peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary hover:border-primary/50">
+                                            Draft
+                                        </div>
+</label>
+<label class="cursor-pointer select-none">
+<input checked="" class="peer sr-only" type="checkbox"/>
+<div class="px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark transition-all peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary hover:border-primary/50">
+                                            Review
+                                        </div>
+</label>
+<label class="cursor-pointer select-none">
+<input class="peer sr-only" type="checkbox"/>
+<div class="px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark transition-all peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary hover:border-primary/50">
+                                            Archived
+                                        </div>
+</label>
+</div>
+</div>
+<!-- Additional Options -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden h-fit">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-white/5">
+<h3 class="font-semibold text-text-primary-light dark:text-text-primary-dark flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">settings_applications</span>
+                                        Options
+                                    </h3>
+</div>
+<div class="p-5 space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-sm text-text-primary-light dark:text-text-primary-dark">Include Deleted</span>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300" id="toggle1" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer" for="toggle1"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm text-text-primary-light dark:text-text-primary-dark">Case Sensitive</span>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-primary checked:right-0 right-0" id="toggle2" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-primary/50 cursor-pointer" for="toggle2"></label>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Action Bar -->
+<div class="absolute bottom-0 w-full bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark p-6 shadow-lg z-10">
+<div class="max-w-5xl mx-auto w-full flex items-center justify-between">
+<div class="flex items-center gap-4">
+<button class="text-sm font-medium text-text-secondary-light hover:text-text-primary-light dark:text-text-secondary-dark dark:hover:text-text-primary-dark transition-colors">
+                            Reset to Default
+                        </button>
+<span class="h-4 w-px bg-border-light dark:bg-border-dark"></span>
+<div class="flex items-center gap-2 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+<span class="material-symbols-outlined text-[18px]">filter_alt</span>
+<span>3 Active Filters</span>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-5 py-2.5 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark text-sm font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                            Save as View
+                        </button>
+<button class="px-6 py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors shadow-md shadow-primary/20 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">search</span>
+                            Apply Filters
+                        </button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Toggle Styles -->
+<style>
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #1754cf;
+        }
+        .toggle-checkbox {
+            right: 20px;
+            transition: all 0.3s;
+        }
+        .toggle-label {
+            width: 40px;
+        }
+    </style>
+</body></html>

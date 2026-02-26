@@ -1,0 +1,18 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Inicio{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_cubo.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<h1 class="text-align-center">Bienvenido!!!</h1>
+{% if messages %}
+<ul class="messages">
+  {% for message in messages %}
+  <li{% if message.tags %} class="{{ message.tags }}" {% endif %}}>{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<img src="{% static 'images/panel.png' %}" alt="panel" style="width: 100%;">
+{% endblock window %}

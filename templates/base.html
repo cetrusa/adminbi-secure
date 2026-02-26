@@ -1,0 +1,123 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="description" content="Sistema de Inteligencia de Negocios DataZenith">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/ico" href="{% static 'images/Iconologo.ico' %}">
+
+  <!-- Fuentes e iconos -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+
+  <!-- CSS para mejorar responsividad -->
+  <style>
+    html,
+    body {
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .content-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (min-width: 768px) {
+      .content-wrapper {
+        flex-direction: row;
+      }
+    }
+
+    .sidebar-wrapper {
+      width: 100%;
+    }
+
+    @media (min-width: 768px) {
+      .sidebar-wrapper {
+        width: 250px;
+        min-width: 250px;
+      }
+    }
+
+    .main-content {
+      flex: 1;
+      overflow-x: auto;
+      padding: 15px;
+    }
+
+    /* Ajustes para tablas responsivas */
+    .table-responsive {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Ajustes para imágenes responsivas */
+    .img-fluid {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+
+  <!-- Bloque para CSS personalizado -->
+  {% block style %}{% endblock style %}
+
+  <!-- Scripts principales -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+  <!-- Bloque para head personalizado -->
+  {% block head %}{% endblock head %}
+
+  <title>DataZenith | {% block title %}{% endblock title %}</title>
+</head>
+
+<body>
+  {% block selector_base %}
+  {% endblock selector_base %}
+
+  {% block barra_superior %}
+  {% endblock barra_superior %}
+
+  {% block content %}
+  <div class="content-wrapper">
+    <div class="sidebar-wrapper">
+      {% block barra_lateral %}
+      {% endblock barra_lateral %}
+    </div>
+
+    <div class="main-content">
+      {% block window %}
+      {% endblock window %}
+    </div>
+  </div>
+  {% endblock content %}
+
+  <!-- Bootstrap JS Bundle (Popper incluido) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+    crossorigin="anonymous"></script>
+
+  <!-- Bloque para scripts personalizados -->
+  {% block script %}{% endblock script %}
+</body>
+
+</html>

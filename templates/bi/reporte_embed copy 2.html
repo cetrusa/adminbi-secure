@@ -1,0 +1,142 @@
+<!-- reporte_embed.html -->
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}BI{% endblock title %}
+
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_bi.html' %}
+{% endblock barra_lateral %}
+
+{% block window %}
+<!-- 
+  IMPORTANTE: Para que el selector de base de datos funcione correctamente en esta página, 
+  la vista de Django que renderiza esta plantilla DEBE pasar la variable de contexto 'form_url'.
+  Esta variable debe contener el nombre de la URL (ej: 'home_app:database_select') 
+  de la vista que maneja la actualización de la base de datos en la sesión del servidor.
+-->
+<div class="container-fluid mt-4">
+    {% if error_message %}
+    <div class="alert alert-danger">
+        <p>{{ error_message }}</p>
+    </div>
+    {% else %}
+    <!-- Modal de carga (Bootstrap) -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-body text-center">
+            <div class="spinner-border text-primary mb-3" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <div>
+              <strong>Preparando los datos para su visualización...</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="reportContainer" style="height: 85vh; width: 100%;"></div>
+
+    <!-- Carga la librería de BI y Bootstrap JS si no está cargado -->
+    <script src="https://cdn.jsdelivr.net/npm/powerbi-client@2.19.1/dist/powerbi.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript">
+        // Función auto-ejecutable para cargar el reporte
+        (function () {
+            // Mostrar el modal de carga
+            var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            loadingModal.show();
+
+            // Obtener la base de datos seleccionada de sessionStorage para usarla en el reporte si es necesario
+            var database = window.sessionStorage.getItem("database_name");
+            console.log("Base de datos seleccionada (para reporte BI):", database);
+
+            if (!database) {
+                console.warn("No se ha seleccionado una base de datos para el reporte BI");
+                // Podrías mostrar un mensaje al usuario o cargar un reporte por defecto
+            }
+
+            var models = window["powerbi-client"].models;
+            var embedContainer = document.getElementById("reportContainer");
+
+            // Bootstrap
+            powerbi.bootstrap(embedContainer, { type: "report" });
+
+            var config = {
+                type: "report",
+                tokenType: models.TokenType.Embed,
+                accessToken: "{{ EMBED_ACCESS_TOKEN }}",
+                embedUrl: "{{ EMBED_URL }}",
+                id: "{{ REPORT_ID }}",
+                settings: {
+                    filterPaneEnabled: false,
+                    navContentPaneEnabled: true
+                }
+                // Aquí podrías añadir filtros basados en la variable 'database' si tu reporte lo soporta
+                /*
+                ,
+                filters: [
+                    {
+                        $schema: "http://powerbi.com/product/schema#basic",
+                        target: {
+                            table: "NombreTabla", // Reemplazar con tu tabla
+                            column: "NombreColumnaDB" // Reemplazar con tu columna de base de datos
+                        },
+                        operator: "In",
+                        values: [database] // Filtrar por la base de datos seleccionada
+                    }
+                ]
+                */
+            };
+
+            // Crear objeto para el reporte
+            var report = powerbi.embed(embedContainer, config);
+
+            // Eventos del reporte
+            report.on("loaded", function () {
+                console.log("Reporte BI cargado correctamente");
+                // Ocultar el modal de carga
+                loadingModal.hide();
+                // Opcional: Aplicar filtros después de cargar si es necesario
+                /*
+                if (database) {
+                    const basicFilter = {
+                        $schema: "http://powerbi.com/product/schema#basic",
+                        target: {
+                            table: "NombreTabla",
+                            column: "NombreColumnaDB"
+                        },
+                        operator: "In",
+                        values: [database]
+                    };
+                    report.setFilters([basicFilter])
+                        .then(function () {
+                            console.log("Filtro de base de datos aplicado:", database);
+                        })
+                        .catch(function (errors) {
+                            console.error("Error aplicando filtro:", errors);
+                        });
+                }
+                */
+            });
+
+            report.on("rendered", function () {
+                console.log("Reporte renderizado correctamente");
+            });
+
+            report.on("error", function (event) {
+                console.error("Error al cargar el reporte BI:", event.detail);
+                embedContainer.innerHTML = '<div class="alert alert-danger">Ocurrió un error al cargar el reporte. Por favor, verifique su conexión o contacte al administrador.</div>';
+                loadingModal.hide();
+            });
+        })();
+    </script>
+    {% endif %}
+</div>
+{% endblock window %}
+
+{# Eliminar cualquier bloque script personalizado que intente sincronizar la DB en esta página #}
+{% block script %}
+{# Dejar vacío o añadir scripts específicos de esta página que NO interfieran con database_selector.html #}
+{% endblock script %}

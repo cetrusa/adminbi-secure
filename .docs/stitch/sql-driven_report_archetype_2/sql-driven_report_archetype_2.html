@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SQL-Driven Report Archetype</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen flex flex-col overflow-hidden">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a202c] px-6 py-3 h-16 shrink-0 z-20">
+<div class="flex items-center gap-4 text-slate-900 dark:text-white">
+<div class="size-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">database</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight">ERP Reporting Console</h2>
+<span class="text-slate-400 dark:text-slate-500 mx-2">/</span>
+<span class="text-sm font-medium text-slate-500 dark:text-slate-400">Sales Analytics Module</span>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">help</span>
+</button>
+<div class="h-9 w-9 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-xs ml-2 border border-primary/20">
+                JD
+            </div>
+</div>
+</header>
+<main class="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden">
+<div class="shrink-0 bg-blue-50 dark:bg-blue-900/10 border-b border-blue-100 dark:border-blue-900/30 px-6 py-2">
+<div class="max-w-[1600px] mx-auto w-full flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[18px]">domain</span>
+<span class="font-semibold text-blue-900 dark:text-blue-100 uppercase tracking-wide">Data Context:</span>
+<span class="font-bold text-slate-800 dark:text-white">Organization A</span>
+<span class="text-slate-500 dark:text-slate-400 font-mono ml-1">(ID: SOURCE_01)</span>
+</div>
+<div class="flex items-center gap-4 text-slate-500 dark:text-slate-400">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">public</span>
+<span>Global Scope</span>
+</div>
+<div class="w-px h-3 bg-slate-300 dark:bg-slate-700"></div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">security</span>
+<span>Level 3 Access</span>
+</div>
+</div>
+</div>
+</div>
+<section class="shrink-0 bg-white dark:bg-[#1a202c] border-b border-slate-200 dark:border-slate-800 p-6 shadow-sm z-10">
+<div class="max-w-[1600px] mx-auto w-full">
+<div class="flex flex-col lg:flex-row items-start lg:items-end gap-6">
+<div class="flex-1 w-full lg:w-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Date Range</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2 border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-slate-50 dark:bg-slate-800 focus:ring-primary focus:border-primary dark:text-white" placeholder="Select dates" type="text" value="Oct 1, 2023 - Oct 31, 2023"/>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Region</label>
+<div class="relative">
+<select class="block w-full pl-3 pr-10 py-2 border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-slate-50 dark:bg-slate-800 focus:ring-primary focus:border-primary dark:text-white appearance-none">
+<option>All Regions</option>
+<option>North America</option>
+<option>EMEA</option>
+<option>APAC</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-500">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Department</label>
+<div class="relative">
+<select class="block w-full pl-3 pr-10 py-2 border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-slate-50 dark:bg-slate-800 focus:ring-primary focus:border-primary dark:text-white appearance-none">
+<option>Sales &amp; Marketing</option>
+<option>Engineering</option>
+<option>Finance</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-500">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</label>
+<div class="relative">
+<select class="block w-full pl-3 pr-10 py-2 border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-slate-50 dark:bg-slate-800 focus:ring-primary focus:border-primary dark:text-white appearance-none">
+<option>Active</option>
+<option>Pending</option>
+<option>Archived</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-500">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+<div class="shrink-0">
+<button class="flex items-center justify-center gap-2 bg-primary hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg shadow-sm shadow-blue-500/30 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]">play_arrow</span>
+<span>Run Report</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<div class="shrink-0 bg-slate-50 dark:bg-[#151b26] border-b border-slate-200 dark:border-slate-800 px-6 py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="text-xs font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded">
+                    Query ID: #SQL-8922
+                </div>
+<div class="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
+<span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Results Preview</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[16px] text-green-600">table_view</span>
+                    Excel
+                </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[16px] text-blue-500">description</span>
+                    CSV
+                </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[16px] text-red-500">picture_as_pdf</span>
+                    PDF
+                </button>
+<div class="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
+<button class="p-1.5 text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+<button class="p-1.5 text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">view_column</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-auto bg-white dark:bg-[#1a202c] relative">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 shadow-sm">
+<tr>
+<th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 w-16 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary bg-white dark:bg-slate-900" type="checkbox"/>
+</th>
+<th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group">
+<div class="flex items-center gap-1">
+                                TRX ID
+                                <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-slate-400">arrow_downward</span>
+</div>
+</th>
+<th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group">
+<div class="flex items-center gap-1">
+                                Date
+                                <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-slate-400">arrow_downward</span>
+</div>
+</th>
+<th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group">
+<div class="flex items-center gap-1">
+                                Customer
+                                <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-slate-400">arrow_downward</span>
+</div>
+</th>
+<th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group">
+<div class="flex items-center gap-1">
+                                Region
+                                <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-slate-400">arrow_downward</span>
+</div>
+</th>
+<th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group">
+<div class="flex items-center gap-1">
+                                Category
+                                <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-slate-400">arrow_downward</span>
+</div>
+</th>
+<th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors group">
+<div class="flex items-center justify-end gap-1">
+                                Amount
+                                <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-slate-400">arrow_downward</span>
+</div>
+</th>
+<th class="py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+<tr class="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
+<td class="py-2.5 px-4 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary bg-white dark:bg-slate-900" type="checkbox"/>
+</td>
+<td class="py-2.5 px-4 font-mono text-slate-600 dark:text-slate-400 text-xs">TRX-1001</td>
+<td class="py-2.5 px-4 text-slate-900 dark:text-slate-200 whitespace-nowrap">2023-10-25</td>
+<td class="py-2.5 px-4 font-medium text-slate-900 dark:text-white">Acme Corporation</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">North America</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">Software</td>
+<td class="py-2.5 px-4 text-right font-mono text-slate-900 dark:text-white">$12,450.00</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                Completed
+                            </span>
+</td>
+</tr>
+<tr class="bg-slate-50/50 dark:bg-slate-800/20 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
+<td class="py-2.5 px-4 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary bg-white dark:bg-slate-900" type="checkbox"/>
+</td>
+<td class="py-2.5 px-4 font-mono text-slate-600 dark:text-slate-400 text-xs">TRX-1002</td>
+<td class="py-2.5 px-4 text-slate-900 dark:text-slate-200 whitespace-nowrap">2023-10-25</td>
+<td class="py-2.5 px-4 font-medium text-slate-900 dark:text-white">Globex Inc.</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">Europe</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">Hardware</td>
+<td class="py-2.5 px-4 text-right font-mono text-slate-900 dark:text-white">$3,200.50</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                Pending
+                            </span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
+<td class="py-2.5 px-4 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary bg-white dark:bg-slate-900" type="checkbox"/>
+</td>
+<td class="py-2.5 px-4 font-mono text-slate-600 dark:text-slate-400 text-xs">TRX-1003</td>
+<td class="py-2.5 px-4 text-slate-900 dark:text-slate-200 whitespace-nowrap">2023-10-24</td>
+<td class="py-2.5 px-4 font-medium text-slate-900 dark:text-white">Soylent Corp</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">APAC</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">Services</td>
+<td class="py-2.5 px-4 text-right font-mono text-slate-900 dark:text-white">$8,900.00</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                Completed
+                            </span>
+</td>
+</tr>
+<tr class="bg-slate-50/50 dark:bg-slate-800/20 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
+<td class="py-2.5 px-4 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary bg-white dark:bg-slate-900" type="checkbox"/>
+</td>
+<td class="py-2.5 px-4 font-mono text-slate-600 dark:text-slate-400 text-xs">TRX-1004</td>
+<td class="py-2.5 px-4 text-slate-900 dark:text-slate-200 whitespace-nowrap">2023-10-23</td>
+<td class="py-2.5 px-4 font-medium text-slate-900 dark:text-white">Initech</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">North America</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">Software</td>
+<td class="py-2.5 px-4 text-right font-mono text-slate-900 dark:text-white">$540.00</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                Rejected
+                            </span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
+<td class="py-2.5 px-4 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary bg-white dark:bg-slate-900" type="checkbox"/>
+</td>
+<td class="py-2.5 px-4 font-mono text-slate-600 dark:text-slate-400 text-xs">TRX-1005</td>
+<td class="py-2.5 px-4 text-slate-900 dark:text-slate-200 whitespace-nowrap">2023-10-22</td>
+<td class="py-2.5 px-4 font-medium text-slate-900 dark:text-white">Umbrella Corp</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">Europe</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">Biotech</td>
+<td class="py-2.5 px-4 text-right font-mono text-slate-900 dark:text-white">$45,000.00</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                Completed
+                            </span>
+</td>
+</tr>
+<tr class="bg-slate-50/50 dark:bg-slate-800/20 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
+<td class="py-2.5 px-4 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary bg-white dark:bg-slate-900" type="checkbox"/>
+</td>
+<td class="py-2.5 px-4 font-mono text-slate-600 dark:text-slate-400 text-xs">TRX-1006</td>
+<td class="py-2.5 px-4 text-slate-900 dark:text-slate-200 whitespace-nowrap">2023-10-21</td>
+<td class="py-2.5 px-4 font-medium text-slate-900 dark:text-white">Stark Industries</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">North America</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">Hardware</td>
+<td class="py-2.5 px-4 text-right font-mono text-slate-900 dark:text-white">$22,100.00</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                Completed
+                            </span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
+<td class="py-2.5 px-4 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary bg-white dark:bg-slate-900" type="checkbox"/>
+</td>
+<td class="py-2.5 px-4 font-mono text-slate-600 dark:text-slate-400 text-xs">TRX-1007</td>
+<td class="py-2.5 px-4 text-slate-900 dark:text-slate-200 whitespace-nowrap">2023-10-21</td>
+<td class="py-2.5 px-4 font-medium text-slate-900 dark:text-white">Wayne Ent</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">North America</td>
+<td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">Services</td>
+<td class="py-2.5 px-4 text-right font-mono text-slate-900 dark:text-white">$3,450.00</td>
+<td class="py-2.5 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                Pending
+                            </span>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="sticky bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-[#1a202c] to-transparent pointer-events-none"></div>
+</div>
+<footer class="shrink-0 bg-slate-100 dark:bg-[#151b26] border-t border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between text-xs font-medium">
+<div class="flex items-center gap-6 text-slate-500 dark:text-slate-400">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+<span>Execution Time: <span class="text-slate-900 dark:text-white font-mono">142ms</span></span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">list_alt</span>
+<span>Total Rows: <span class="text-slate-900 dark:text-white font-mono">1,452</span></span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-slate-500 dark:text-slate-400 uppercase tracking-wide text-[10px] font-bold">Calculated Totals:</div>
+<div class="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 shadow-sm">
+<span class="text-slate-500 dark:text-slate-400">Sum Amount:</span>
+<span class="text-primary font-bold font-mono text-sm">$95,640.50</span>
+</div>
+</div>
+</footer>
+</main>
+
+</body></html>

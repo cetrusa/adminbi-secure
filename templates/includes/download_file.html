@@ -1,0 +1,6 @@
+<span id="download_file" class="card text-center">
+  <a id="download_link" class="btn btn-success"
+     href="{% url 'home_app:download_file' %}?file_name={{ file_name }}"{% if file_size %} data-filesize="{{ file_size }}"{% endif %}>
+    Descargar archivo
+  </a>
+</span>

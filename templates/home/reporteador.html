@@ -1,0 +1,552 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}
+Informe Cubo de Ventas
+{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_cubo.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+{% include 'includes/datepicker_range.html' %}
+<!-- contenido de la pagina -->
+<br>
+<br>
+<div class="container">
+    <!-- Mensajes de alerta -->
+    {% if messages %}
+    <div class="alert alert-warning" role="alert">
+        {% for message in messages %}
+        <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card" style="width: 25rem;">
+        <div class="card-header text-center">
+            <h2>Informe Cubo de Ventas</h2>
+        </div>
+        <div class="card-body">
+            <form action="{% url form_url %}" method="post" id="FormCubo">
+                {% csrf_token %}
+                <!-- Selector de reporte -->
+                {% include 'includes/reporte_selector.html' %}
+                <label for="date_input">Fecha:</label>
+                <div id="reportrange"
+                    style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+                    <i class="fa fa-calendar"></i>&nbsp;
+                    <span></span> <i class="fa fa-caret-down"></i>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th><label for="IdtReporteIni" class="lh-1">Fecha Inicial:</label></th>
+                            <th><label for="IdtReporteFin" class="lh-1">Fecha Final:</label></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th><input type="date" name="IdtReporteIni" id="IdtReporteIni" readonly></th>
+                            <th><input type="date" name="IdtReporteFin" id="IdtReporteFin" readonly></th>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="form-group mt-3">
+                    <label for="batch_size">Tamaño de lote (registros por procesamiento):</label>
+                    <select class="form-control" id="batch_size" name="batch_size">
+                        <option value="10000">10,000 (Recomendado para equipos con recursos limitados)</option>
+                        <option value="20000">20,000</option>
+                        <option value="50000" selected>50,000 (Configuración estándar)</option>
+                        <option value="100000">100,000 (Para conjuntos de datos grandes)</option>
+                        <option value="200000">200,000 (Para equipos con muchos recursos)</option>
+                    </select>
+                    <small class="form-text text-muted">Ajuste este valor según el rendimiento de su sistema y el tamaño
+                        de los
+                        datos</small>
+                </div>
+        </div>
+        {# ID del botón específico para Cubo #}
+        <span class="card text-center"><button id="submitBtnCubo" type="submit" class="btn btn-primary"
+                data-submitted="false">Generar Informe</button></span>
+        </form>
+
+        <br>
+        <br>
+        {% include 'includes/download_file.html' %}
+    </div>
+    {% include 'includes/reporteador_resultados.html' with resultado=resultado %}
+    <!-- Este es el Modal -->
+    <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+        aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content bg-dark text-white"> {# Fondo oscuro para mejor contraste con barra azul #}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="processingModalLabel">Procesando Informe de Cubo de Ventas...</h5>
+                </div>
+                <div class="modal-body">
+                    {# Mensaje principal de etapa #}
+                    <div id="progress-stage" class="mb-3 font-weight-bold">Por favor, espere mientras se genera el
+                        archivo...
+                    </div>
+                    {# Barra de progreso estándar #}
+                    <div class="progress" style="height: 20px;">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                            role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0"
+                            aria-valuemax="100">0%</div>
+                    </div>
+                    {# Detalles adicionales (registros, pasos) #}
+                    <div id="detailedStatus" class="small text-muted mt-3 p-2 border-top"></div>
+                    {# Información de tiempo (transcurrido y ETA) #}
+                    <p id="time-info" class="mt-2 small text-muted">Tiempo transcurrido: 0 seg</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- final del modal -->
+</div>
+{% endblock window %}
+
+{% block script %}
+
+<script>
+    document.getElementById("processingModal").style.display = "none";
+    document.getElementById("download_file").className = 'd-none';
+    var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+    var startTime = 0; // Para calcular tiempo transcurrido
+    var progressInterval = null; // Intervalo para actualizar tiempo
+    var progressBar = document.getElementById("progressBar"); // Referencia a la barra de progreso
+    let lastProgressValue = 0;
+
+    // Listener para el botón específico submitBtnCubo
+    document.getElementById("submitBtnCubo").addEventListener("click", function (event) {
+        event.preventDefault();
+        // Check if a task is already in progress
+        if (this.getAttribute("data-submitted") === "true") {
+            alert("Ya hay una tarea de generación de Cubo en curso.");
+            return;
+        }
+
+        var database = window.sessionStorage.getItem("database_name");
+        var reporte_id = window.sessionStorage.getItem("reporte_id");
+        var IdtReporteIni = document.getElementById("IdtReporteIni").value;
+        var IdtReporteFin = document.getElementById("IdtReporteFin").value;
+        var batchSize = document.getElementById("batch_size").value;
+
+        // Validar fechas y base de datos antes de enviar
+        if (!database || !IdtReporteIni || !IdtReporteFin || !reporte_id) {
+            // Usar stopMonitoring para resetear UI y mostrar alerta
+            stopMonitoring("Por favor, seleccione la empresa, reporte y ambas fechas.", true, 0);
+            return;
+        }
+
+        console.log("Iniciando generación Cubo...");
+        this.setAttribute("data-submitted", "true");
+        startTime = new Date().getTime(); // Iniciar contador de tiempo
+        updateProgressBar(0, "Iniciando generación..."); // Resetear barra
+        document.getElementById("processingModal").style.display = "flex";
+        if (progressInterval) clearInterval(progressInterval); // Limpiar intervalo anterior
+        progressInterval = setInterval(updateElapsedTime, 1000); // Iniciar intervalo de tiempo
+
+        // Realiza la solicitud AJAX al servidor para iniciar la tarea
+        var xhr = new XMLHttpRequest();
+        xhr.responseType = "text";
+        xhr.open("POST", "{% url form_url %}", true); // Usa la URL del formulario (CuboPage)
+        xhr.setRequestHeader("X-CSRFToken", csrf_token);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onreadystatechange = function () {
+            if (this.readyState === XMLHttpRequest.DONE) {
+                var contentType = xhr.getResponseHeader("Content-Type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    try {
+                        var response = JSON.parse(this.responseText);
+                        handleServerResponse(this.status, response);
+                    } catch (e) {
+                        console.error("Error parsing JSON response:", e);
+                        stopMonitoring("Error inesperado: no se pudieron procesar los datos del servidor.");
+                    }
+                } else {
+                    // No es JSON, probablemente es HTML de error/login
+                    console.error("La respuesta no es JSON:", this.responseText);
+                    if (this.status === 401 || this.status === 403) {
+                        stopMonitoring("Tu sesión ha expirado o no tienes permisos. Por favor, inicia sesión de nuevo.");
+                        // window.location.href = "/login"; // Descomenta si quieres redirigir automáticamente
+                    } else {
+                        stopMonitoring("Error inesperado del servidor. Puede que haya un problema interno o la sesión haya expirado.");
+                    }
+                }
+            }
+        };
+
+        // Enviar parámetros
+        xhr.send("database_select=" + encodeURIComponent(database) +
+            "&reporte_id=" + encodeURIComponent(reporte_id) +
+            "&IdtReporteIni=" + encodeURIComponent(IdtReporteIni) +
+            "&IdtReporteFin=" + encodeURIComponent(IdtReporteFin) +
+            "&batch_size=" + encodeURIComponent(batchSize));
+    });
+
+    // Manejar la respuesta del servidor (inicio de tarea)
+    function handleServerResponse(status, response) {
+        if (status === 200) {
+            if (typeof response === "object" && "success" in response) {
+                if (response.success) {
+                    console.log("Tarea Cubo iniciada. Task ID:", response.task_id);
+                    // Almacena cubo_task_id en sessionStorage
+                    window.sessionStorage.setItem("cubo_task_id", response.task_id); // <-- USA cubo_task_id
+
+                    updateProgressBar(5, "Tarea iniciada. Esperando procesamiento..."); // Actualizar barra inicial
+                    // Comprueba el estado de la tarea después de un breve retraso
+                    setTimeout(checkTaskStatus, 1000);
+                } else {
+                    // Usar stopMonitoring estándar
+                    stopMonitoring("Hubo un error al iniciar el proceso: " + (response.error_message || "Error desconocido"));
+                }
+            } else {
+                // Usar stopMonitoring estándar
+                stopMonitoring("La respuesta del servidor no es un objeto JSON válido al iniciar.");
+            }
+        } else {
+            // Usar stopMonitoring estándar
+            stopMonitoring("Hubo un error al enviar la solicitud, código de estado: " + status);
+        }
+    }
+
+    // función para revisar estatus de la tarea
+    function checkTaskStatus() {
+        var task_id = window.sessionStorage.getItem("cubo_task_id"); // <-- USA cubo_task_id
+        if (!task_id) {
+            // No mostrar alerta si simplemente no hay tarea
+            console.log("No se encontró ID de tarea del cubo para verificar.");
+            stopMonitoring(null, false); // Detener sin alerta
+            return;
+        }
+
+        console.log("Verificando estado tarea cubo:", task_id);
+        var timestamp = new Date().getTime();
+        var xhr = new XMLHttpRequest();
+        xhr.responseType = "text";
+        // Usa la URL estándar para verificar estado
+        xhr.open("POST", "{% url 'home_app:check_task_status' %}?t=" + timestamp, true);
+        xhr.setRequestHeader("X-CSRFToken", csrf_token);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onreadystatechange = function () {
+            if (this.readyState === XMLHttpRequest.DONE) {
+                var contentType = xhr.getResponseHeader("Content-Type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    try {
+                        var response = JSON.parse(this.responseText);
+                        handleTaskStatus(this.status, response);
+                    } catch (e) {
+                        console.error("Error parsing JSON response:", e);
+                        stopMonitoring("Error inesperado: no se pudieron procesar los datos del servidor.");
+                    }
+                } else {
+                    console.error("La respuesta no es JSON:", this.responseText);
+                    if (this.status === 401 || this.status === 403) {
+                        stopMonitoring("Tu sesión ha expirado o no tienes permisos. Por favor, inicia sesión de nuevo.");
+                        // window.location.href = "/login";
+                    } else {
+                        stopMonitoring("Error inesperado del servidor. Puede que haya un problema interno o la sesión haya expirado.");
+                    }
+                }
+            }
+        };
+        xhr.send("task_id=" + encodeURIComponent(task_id));
+    }
+
+    // Revisar el estado de la tarea (respuesta de check_task_status)
+    function handleTaskStatus(status, response) {
+        if (status === 200) {
+            if (typeof response === "object" && "status" in response) {
+
+                const detailedStatusEl = document.getElementById("detailedStatus");
+
+                // Actualizar barra de progreso, mensaje principal y ETA
+                var progressValue = response.progress !== undefined ? response.progress : parseInt(progressBar.getAttribute("aria-valuenow")) || 5;
+                var stageText = response.stage || (response.meta && response.meta.stage) || "Procesando...";
+                updateProgressBar(progressValue, stageText); // Usa la función estándar
+                updateEtaInfo(response.eta); // Usa la función estándar
+
+                // Mostrar detalles adicionales si están disponibles en meta
+                detailedStatusEl.innerText = ""; // Limpiar detalles anteriores
+                if (response.meta) {
+                    let detailText = "";
+                    // Mostrar pasos si existen
+                    if (response.meta.current_step && response.meta.total_steps) {
+                        detailText += `Paso ${response.meta.current_step} de ${response.meta.total_steps}. `;
+                    }
+                    // Mostrar registros procesados vs total estimado
+                    if (response.meta.records_processed !== undefined && response.meta.total_records_estimate !== undefined) {
+                        detailText += `${response.meta.records_processed.toLocaleString()} de ${response.meta.total_records_estimate.toLocaleString()} registros. `;
+                    } else if (response.meta.records_processed !== undefined) {
+                        // Mostrar solo registros procesados si no hay total
+                        detailText += `${response.meta.records_processed.toLocaleString()} registros procesados. `;
+                    }
+                    // Añadir otros detalles si existen en meta (ej: memoria)
+                    // if (response.meta.memory_usage) detailText += `Mem: ${response.meta.memory_usage}MB. `;
+
+                    detailedStatusEl.innerText = detailText;
+                }
+
+                // Verificar el estado de la tarea
+                var taskStatus = response.status.toLowerCase();
+                if (taskStatus === "completed" || taskStatus === "finished" || taskStatus === "success") {
+                    // La tarea se ha completado
+                    updateProgressBar(100, "Proceso completado exitosamente");
+                    document.getElementById("download_file").className = 'd-flex'; // Mostrar botón descarga
+
+                    let message = "¡Proceso completado exitosamente!";
+                    // Añadir detalles del resultado si existen
+                    if (response.result) {
+                        if (response.result.message) message = response.result.message; // Usar mensaje del backend si existe
+                        if (response.result.metadata && response.result.metadata.total_records !== undefined) {
+                            message += ` Se procesaron ${response.result.metadata.total_records.toLocaleString()} registros.`;
+                        }
+                        if (response.result.execution_time !== undefined) {
+                            message += ` Tiempo total: ${response.result.execution_time.toFixed(1)} seg.`;
+                        }
+                        // Opcional: Mostrar reporte de rendimiento si existe
+                        if (response.result.metadata && response.result.metadata.performance_report) {
+                            console.info("Reporte de Rendimiento:\n", response.result.metadata.performance_report);
+                        }
+                    }
+                    // Detener monitoreo después de mostrar mensaje
+                    stopMonitoring(message, true, 1000); // Mostrar alerta después de 1 seg
+
+                } else if (taskStatus === "failed") {
+                    // La tarea falló
+                    updateProgressBar(100, "Proceso fallido"); // Indicar fallo en barra
+                    let errorMsg = "Error en el proceso";
+                    // Intentar obtener mensaje de error más específico
+                    if (response.error) errorMsg = response.error; // Celery < 5
+                    else if (response.result && typeof response.result === 'string') errorMsg = response.result; // Resultado como string de error
+                    else if (response.result && response.result.error) errorMsg = response.result.error; // Error dentro del resultado
+                    else if (response.meta && response.meta.error) errorMsg = response.meta.error; // Error en meta
+                    else if (response.traceback) { // Celery >= 5
+                        errorMsg = response.traceback.split('\n').slice(-2)[0]; // Última línea relevante
+                    }
+
+                    // Detener monitoreo después de mostrar mensaje
+                    stopMonitoring("Hubo un error en el proceso: " + errorMsg, true, 1000);
+
+                } else if (taskStatus === "partial_success") { // Estado personalizado si lo implementas
+                    // La tarea tuvo éxito parcial
+                    updateProgressBar(100, "Completado con advertencias"); // Indicar estado parcial
+                    document.getElementById("download_file").className = 'd-flex';
+                    let partialMsg = "El archivo se generó, pero hubo algunas advertencias.";
+                    if (response.result && response.result.message) partialMsg = response.result.message;
+                    // Detener monitoreo después de mostrar mensaje
+                    stopMonitoring(partialMsg, true, 1000);
+
+                } else { // PENDING, STARTED, PROGRESS, RETRY
+                    // La tarea aún se está ejecutando, verificar el estado nuevamente después de un tiempo
+                    console.log("Tarea Cubo en progreso. Estado:", response.status, "Progreso:", progressValue + "%");
+                    // Si hay información de file_ready (personalizado), mostrar botón de descarga temprana
+                    if (response.meta && response.meta.file_ready && progressValue >= 80) {
+                        document.getElementById("download_file").className = 'd-flex';
+                        // Opcional: Cambiar texto de etapa si el archivo está listo pero sigue procesando
+                        // if (stageText.toLowerCase().includes("generando archivo")) {
+                        //     updateProgressBar(progressValue, "Archivo listo, finalizando...");
+                        // }
+                    }
+                    setTimeout(checkTaskStatus, 3000); // Verificar cada 3 segundos (más frecuente)
+                }
+            } else {
+                // Usar stopMonitoring estándar
+                stopMonitoring("La respuesta del servidor sobre el estado no es un objeto JSON válido.");
+            }
+        } else {
+            // Usar stopMonitoring estándar
+            stopMonitoring("Hubo un error al comprobar el estado de la tarea, código de estado: " + status);
+        }
+    }
+
+    // --- Funciones Estándar Añadidas ---
+    function updateProgressBar(value, stageText) {
+        if (value < lastProgressValue) {
+            value = lastProgressValue;
+        } else {
+            lastProgressValue = value;
+        }
+        var progressStage = document.getElementById("progress-stage"); // Usar el ID correcto
+        value = Math.max(0, Math.min(100, Number(value) || 0));
+        progressBar.style.width = value + "%";
+        progressBar.setAttribute("aria-valuenow", value);
+        progressBar.textContent = value.toFixed(0) + "%"; // Sin decimales en la barra
+        // Usar color primario (azul) para cubo
+        if (value < 100) {
+            progressBar.className = "progress-bar progress-bar-striped progress-bar-animated bg-primary";
+        } else {
+            // Cambiar a verde si es éxito, rojo si es fallo (detectado en handleTaskStatus)
+            // Por defecto, azul al 100% hasta que se confirme estado final
+            progressBar.className = "progress-bar bg-primary";
+        }
+        if (stageText) progressStage.textContent = stageText; // Actualizar mensaje principal
+    }
+
+    function updateElapsedTime() {
+        var timeInfoElement = document.getElementById("time-info");
+        var elapsedText = "Tiempo transcurrido: ";
+        if (startTime > 0) {
+            var currentTime = new Date().getTime();
+            var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+            var minutes = Math.floor(elapsedSeconds / 60);
+            var seconds = elapsedSeconds % 60;
+            elapsedText += (minutes > 0 ? minutes + " min " : "") + seconds + " seg";
+        } else {
+            elapsedText += "0 seg";
+        }
+        // Mantener la parte de ETA si existe
+        var currentText = timeInfoElement.textContent;
+        var etaPart = currentText.includes("|") ? " |" + currentText.split("|")[1] : "";
+        timeInfoElement.textContent = elapsedText + etaPart;
+    }
+
+    function updateEtaInfo(etaSeconds) {
+        var timeInfoElement = document.getElementById("time-info");
+        var currentElapsedTimeText = timeInfoElement.textContent.split("|")[0].trim(); // Obtener solo "Tiempo transcurrido..."
+        if (etaSeconds !== undefined && etaSeconds !== null && etaSeconds > 0) {
+            var etaMinutes = Math.floor(etaSeconds / 60);
+            var etaSecs = Math.floor(etaSeconds % 60);
+            var etaText = (etaMinutes > 0 ? etaMinutes + " min " : "") + etaSecs + " seg";
+            timeInfoElement.textContent = currentElapsedTimeText + " | Tiempo restante estimado: " + etaText;
+        } else {
+            // Si no hay ETA, mostrar solo el tiempo transcurrido
+            timeInfoElement.textContent = currentElapsedTimeText;
+        }
+    }
+
+    // Función estándar para detener monitoreo
+    function stopMonitoring(alertMessage, showAlert = true, delay = 0) {
+        console.log("Deteniendo monitoreo (cubo). Mensaje:", alertMessage);
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = null;
+        startTime = 0; // Resetear tiempo de inicio
+
+        // Determinar color final de la barra basado en el mensaje
+        let finalBarClass = "progress-bar bg-primary"; // Default
+        if (alertMessage) {
+            if (alertMessage.toLowerCase().includes("exitosamente") || alertMessage.toLowerCase().includes("completado")) {
+                finalBarClass = "progress-bar bg-success"; // Verde para éxito
+            } else if (alertMessage.toLowerCase().includes("error") || alertMessage.toLowerCase().includes("fallido")) {
+                finalBarClass = "progress-bar bg-danger"; // Rojo para error
+            } else if (alertMessage.toLowerCase().includes("advertencia")) {
+                finalBarClass = "progress-bar bg-warning"; // Amarillo para advertencia
+            }
+        }
+        progressBar.className = finalBarClass; // Aplicar color final
+
+        const finalize = () => {
+            document.getElementById("processingModal").style.display = "none";
+            if (showAlert && alertMessage) alert(alertMessage);
+            document.getElementById("submitBtnCubo").setAttribute("data-submitted", "false"); // Usa ID correcto
+            window.sessionStorage.removeItem("cubo_task_id"); // <-- Limpia cubo_task_id
+            // Resetear UI a estado inicial
+            updateProgressBar(0, "Listo para iniciar..."); // Resetear barra y texto
+            document.getElementById("time-info").textContent = "Tiempo transcurrido: 0 seg";
+            document.getElementById("detailedStatus").innerText = ""; // Limpiar detalles
+            // No ocultar botón de descarga si ya está visible y fue exitoso/parcial
+            // if (!finalBarClass.includes('success') && !finalBarClass.includes('warning')) {
+            //     document.getElementById("download_file").className = 'd-none';
+            // }
+        };
+
+        // Aplicar retraso si se especifica (para que el usuario vea el estado final)
+        if (delay > 0) setTimeout(finalize, delay);
+        else finalize();
+    }
+    // --- Fin Funciones Estándar ---
+
+
+    // Función para borrar el archivo después de descargarlo (Opcional)
+    function deleteFile() {
+        var downloadLink = document.getElementById("download_link");
+        if (!downloadLink || !downloadLink.href) return;
+        var url = new URL(downloadLink.href, window.location.origin);
+        var fileName = url.searchParams.get("file_name");
+        if (!fileName) return;
+
+        var xhr = new XMLHttpRequest();
+        xhr.responseType = "text";
+        xhr.open("POST", "{% url 'home_app:delete_file' %}", true);
+        xhr.setRequestHeader("X-CSRFToken", csrf_token);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onreadystatechange = function () {
+            if (this.readyState === XMLHttpRequest.DONE) {
+                console.log(this.status, this.responseText);
+            }
+        };
+        xhr.send("file_name=" + encodeURIComponent(fileName));
+    }
+
+    // Función para recargar el formulario (Opcional, puede ser confuso para el usuario)
+    function reloadForm() {
+        location.reload();
+    }
+
+    // Ejecuta la descarga y luego intenta borrar y recargar
+    document.getElementById("download_file").addEventListener("click", function (event) {
+        // No prevenir default, permitir que la descarga inicie
+        console.log("Descarga iniciada...");
+
+        // Aumenta el tiempo de espera antes de borrar para archivos grandes
+        var downloadLink = document.getElementById("download_link");
+        var delay = 3000; // 3 segundos por defecto
+        if (downloadLink && downloadLink.hasAttribute("data-filesize")) {
+            var fileSize = parseInt(downloadLink.getAttribute("data-filesize")); // en bytes
+            if (!isNaN(fileSize) && fileSize > 50 * 1024 * 1024) { // Si el archivo es mayor a 50MB
+                delay = 20000; // Espera 15 segundos
+            } else if (!isNaN(fileSize) && fileSize > 10 * 1024 * 1024) { // Si es mayor a 10MB
+                delay = 10000; // Espera 7 segundos
+            }
+        }
+
+        setTimeout(function () {
+            deleteFile();
+            setTimeout(function () {
+                location.reload();
+            }, 10000); // Espera 1 segundo tras borrar antes de recargar
+        }, delay); // Espera según el tamaño del archivo
+    });
+
+    // Al cargar la página, verificar si hay tareas de CUBO pendientes
+    document.addEventListener("DOMContentLoaded", function () {
+        console.log("DOM cargado (cubo). Verificando tareas de CUBO pendientes...");
+
+        var cuboTaskId = window.sessionStorage.getItem("cubo_task_id"); // <-- SOLO BUSCA cubo_task_id
+
+        if (cuboTaskId) {
+            console.log("Se encontró ID de tarea de CUBO pendiente:", cuboTaskId);
+            if (confirm("Detectamos una generación de Cubo pendiente. ¿Desea continuar monitoreando su progreso?")) {
+                console.log("Usuario confirmó continuar monitoreo (cubo).");
+                document.getElementById("submitBtnCubo").setAttribute("data-submitted", "true"); // Bloquear botón
+                document.getElementById("processingModal").style.display = "flex"; // Mostrar modal
+                // Intentar recuperar último estado conocido (si lo guardaste) o mostrar estado intermedio
+                // var lastProgress = parseInt(window.sessionStorage.getItem("cubo_last_progress") || "5");
+                // var lastStage = window.sessionStorage.getItem("cubo_last_stage") || "Reanudando monitoreo...";
+                // updateProgressBar(lastProgress, lastStage);
+                updateProgressBar(5, "Reanudando monitoreo..."); // Estado genérico al reanudar
+
+                startTime = new Date().getTime(); // Reiniciar tiempo transcurrido (o intentar recuperarlo)
+                if (progressInterval) clearInterval(progressInterval);
+                progressInterval = setInterval(updateElapsedTime, 1000);
+
+                checkTaskStatus(); // Iniciar verificación
+            } else {
+                console.log("Usuario canceló continuar monitoreo (cubo). Limpiando ID.");
+                window.sessionStorage.removeItem("cubo_task_id"); // Limpia solo cubo_task_id
+                // Opcional: Limpiar último estado guardado
+                // window.sessionStorage.removeItem("cubo_last_progress");
+                // window.sessionStorage.removeItem("cubo_last_stage");
+                document.getElementById("submitBtnCubo").setAttribute("data-submitted", "false"); // Desbloquear botón
+            }
+        } else {
+            console.log("No se encontraron tareas de CUBO pendientes.");
+            document.getElementById("submitBtnCubo").setAttribute("data-submitted", "false"); // Asegurar botón desbloqueado
+        }
+    });
+
+</script>
+
+{% endblock script %}

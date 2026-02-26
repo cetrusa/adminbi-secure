@@ -1,0 +1,593 @@
+{% extends "black.html" %}
+{% load static %}
+
+{% block title %}
+Cargue de Tablas Maestras
+{% endblock title %}
+
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_actualizacion.html' %}
+{% endblock barra_lateral %}
+
+{% block window %}
+<br>
+<br>
+<div class="container">
+    {% if messages %}
+    <div class="alert alert-warning" role="alert">
+        {% for message in messages %}
+        <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="row">
+        <!-- Panel de Archivos Excel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h4><i class="fas fa-file-excel"></i> Archivos Excel Requeridos</h4>
+                </div>
+                <div class="card-body">
+                    <form action="{% url form_url %}" method="post" enctype="multipart/form-data" id="cargue-maestras-form">
+                        {% csrf_token %}
+                        {% for archivo in archivos_excel %}
+                        <div class="mb-3 p-3 border rounded">
+                            <h6 class="text-primary"><i class="fas fa-file-excel"></i> {{ archivo.name }}</h6>
+                            <p class="small text-muted">{{ archivo.description }}</p>
+                            <input type="file" 
+                                   class="form-control excel-file-input" 
+                                   id="{{ archivo.key }}" 
+                                   name="{{ archivo.key }}" 
+                                   accept=".xlsx"
+                                   {% if archivo.required %}data-required="true"{% endif %}>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        {% endfor %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Nota:</strong> Debe subir al menos uno de los archivos Excel para proceder con la carga.
+                        </div>
+                        <!-- Panel de Tablas -->
+                        <div class="card mt-4">
+                            <div class="card-header text-center">
+                                <h4><i class="fas fa-database"></i> Tablas a Cargar</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="select-all-tablas"> 
+                                        <strong>Seleccionar Todas</strong>
+                                    </label>
+                                </div>
+                                <hr>
+                                {% for tabla in tablas_maestras %}
+                                <div class="mb-2">
+                                    <label class="form-check">
+                                        <input type="checkbox" 
+                                               class="form-check-input tabla-checkbox" 
+                                               name="tablas" 
+                                               value="{{ tabla.key }}"
+                                               {% if tabla.key in tablas_seleccionadas %}checked{% endif %}>
+                                        <span class="form-check-label">
+                                            <strong>{{ tabla.name }}</strong>
+                                            <br><small class="text-muted">{{ tabla.description }}</small>
+                                        </span>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                                <hr>
+                                <div class="d-grid">
+                                    <button id="submitBtnCargueTablas" 
+                                            type="submit" 
+                                            class="btn btn-primary btn-lg"
+                                            data-submitted="false"
+                                            disabled>
+                                        <i class="fas fa-upload"></i> Cargar Tablas Seleccionadas
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel de Tablas duplicado eliminado -->
+    </div>
+    
+    <!-- Modal de Progreso -->
+    <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+         aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="processingModalLabel">
+                        <i class="fas fa-sync fa-spin"></i> Procesando Cargue de Tablas Maestras...
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div id="progress-stage" class="mb-3 font-weight-bold">
+                        <i class="fas fa-hourglass-start"></i> Iniciando proceso de carga...
+                    </div>
+                    
+                    <div class="progress" style="height: 25px;">
+                        <div id="progressBar"
+                             class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                             role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0"
+                             aria-valuemax="100">0%</div>
+                    </div>
+                    
+                    <div id="detailedStatus" class="small text-muted mt-3 p-2 border-top"></div>
+                    
+                    <div id="tabla-actual" class="mt-3 font-weight-bold text-info">
+                        <i class="fas fa-table"></i> <span id="tabla-nombre"></span>
+                    </div>
+                    
+                    <div id="estadisticas-carga" class="mt-3 row">
+                        <div class="col-md-4 text-center">
+                            <div class="bg-primary p-2 rounded">
+                                <div class="h5 mb-0" id="tablas-completadas">0</div>
+                                <div class="small">Completadas</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="bg-warning p-2 rounded">
+                                <div class="h5 mb-0" id="tabla-registros">0</div>
+                                <div class="small">Registros</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="bg-info p-2 rounded">
+                                <div class="h5 mb-0" id="tiempo-transcurrido">00:00</div>
+                                <div class="small">Tiempo</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="errores-tablas" class="mt-3 alert alert-danger" style="display: none;">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Errores Encontrados:</h6>
+                        <div id="lista-errores"></div>
+                    </div>
+                    
+                    <div id="updateReport" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if resultado %}
+    <div class="alert alert-success mt-4">
+        <h5><i class="fas fa-check-circle"></i> Resultado del cargue:</h5>
+        <pre>{{ resultado }}</pre>
+    </div>
+    {% endif %}
+</div>
+{% endblock window %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('processingModal');
+    const csrfToken = document.getElementsByName('csrfmiddlewaretoken')[0].value;
+    const form = document.getElementById('cargue-maestras-form');
+    const submitBtn = document.getElementById('submitBtnCargueTablas');
+    const selectAllCheckbox = document.getElementById('select-all-tablas');
+    const tablaCheckboxes = document.querySelectorAll('.tabla-checkbox');
+    const excelInputs = document.querySelectorAll('.excel-file-input');
+    const progressStatusUrl = "{% url 'cargues_app:check_task_status' %}";
+
+    const progressBar = document.getElementById('progressBar');
+    const progressStage = document.getElementById('progress-stage');
+    const detailedStatus = document.getElementById('detailedStatus');
+    const updateReport = document.getElementById('updateReport');
+    const tablaActual = document.getElementById('tabla-actual');
+    const tablaNombre = document.getElementById('tabla-nombre');
+    const erroresTablas = document.getElementById('errores-tablas');
+    const listaErrores = document.getElementById('lista-errores');
+    const tablasCompletadas = document.getElementById('tablas-completadas');
+    const tablaRegistros = document.getElementById('tabla-registros');
+    const tiempoTranscurrido = document.getElementById('tiempo-transcurrido');
+
+    let currentTaskId = null;
+    let startTime = 0;
+    let progressInterval = null;
+    let progressTimer = null;
+    let lastProgressValue = 0;
+
+    function resetProgressState() {
+        lastProgressValue = 0;
+        progressBar.classList.remove('bg-danger', 'bg-warning');
+        if (!progressBar.classList.contains('bg-success')) {
+            progressBar.classList.add('bg-success');
+        }
+        progressBar.style.width = '0%';
+        progressBar.setAttribute('aria-valuenow', '0');
+        progressBar.textContent = '0%';
+        progressStage.innerHTML = '<i class="fas fa-hourglass-start"></i> Iniciando proceso de carga...';
+        detailedStatus.innerHTML = '';
+        updateReport.innerHTML = '';
+        if (tablaActual) {
+            tablaActual.style.display = 'none';
+        }
+        if (tablaNombre) {
+            tablaNombre.textContent = '';
+        }
+        renderErrores(null);
+        tablasCompletadas.textContent = '0';
+        tablaRegistros.textContent = '0';
+        tiempoTranscurrido.textContent = '00:00';
+    }
+
+    function renderErrores(errores) {
+        if (!errores || (Array.isArray(errores) && errores.length === 0)) {
+            listaErrores.innerHTML = '';
+            if (erroresTablas) {
+                erroresTablas.style.display = 'none';
+            }
+            return;
+        }
+
+        let html = '';
+        if (Array.isArray(errores)) {
+            html = errores.map(err => `<div>• ${err}</div>`).join('');
+        } else if (typeof errores === 'object') {
+            html = Object.entries(errores)
+                .map(([tabla, error]) => `<div>• ${tabla}: ${error}</div>`)
+                .join('');
+        } else {
+            html = `<div>• ${errores}</div>`;
+        }
+
+        listaErrores.innerHTML = html;
+        if (erroresTablas) {
+            erroresTablas.style.display = 'block';
+        }
+    }
+
+    function validateForm() {
+        const hayTablas = Array.from(tablaCheckboxes).some(cb => cb.checked);
+        const hayArchivos = Array.from(excelInputs).some(input => input.files && input.files.length > 0);
+
+        if (hayTablas && hayArchivos) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('btn-secondary');
+            submitBtn.classList.add('btn-primary');
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.classList.remove('btn-primary');
+            submitBtn.classList.add('btn-secondary');
+        }
+    }
+
+    function showModal() {
+        modal.style.display = 'block';
+    }
+
+    function hideModal() {
+        modal.style.display = 'none';
+    }
+
+    function formatElapsedTime(elapsedMs) {
+        const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+        const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+        return `${minutes}:${seconds}`;
+    }
+
+    function updateProgressBar(percentage, message) {
+        const value = Math.max(0, Math.min(100, Number(percentage) || 0));
+        progressBar.style.width = `${value}%`;
+        progressBar.setAttribute('aria-valuenow', value.toFixed(0));
+        progressBar.textContent = `${value.toFixed(0)}%`;
+        lastProgressValue = value;
+
+        if (message) {
+            progressStage.innerHTML = `<i class="fas fa-tasks"></i> ${message}`;
+        }
+    }
+
+    function startMonitoring(taskId) {
+        currentTaskId = taskId;
+        startTime = Date.now();
+
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+        if (progressTimer) {
+            clearInterval(progressTimer);
+        }
+
+        progressInterval = setInterval(() => checkTaskProgress(taskId), 2000);
+        progressTimer = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            tiempoTranscurrido.textContent = formatElapsedTime(elapsed);
+        }, 1000);
+
+        checkTaskProgress(taskId);
+    }
+
+    function stopMonitoring(message, isError = false, finalProgress = 100, isWarning = false) {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+        if (progressTimer) {
+            clearInterval(progressTimer);
+            progressTimer = null;
+        }
+
+        updateProgressBar(finalProgress, '');
+        progressBar.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+
+        if (isError) {
+            progressBar.classList.add('bg-danger');
+            progressStage.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+        } else if (isWarning) {
+            progressBar.classList.add('bg-warning');
+            progressStage.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+        } else {
+            progressBar.classList.add('bg-success');
+            progressStage.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+        }
+
+        submitBtn.dataset.submitted = 'false';
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('btn-secondary');
+        submitBtn.classList.add('btn-primary');
+        validateForm();
+
+        currentTaskId = null;
+    }
+
+    function applyMetaUpdates(meta) {
+        if (!meta) {
+            return;
+        }
+
+        if (meta.tabla_actual) {
+            tablaNombre.textContent = meta.tabla_actual;
+            tablaActual.style.display = 'block';
+        } else {
+            tablaActual.style.display = 'none';
+        }
+
+        if (meta.completadas !== undefined) {
+            tablasCompletadas.textContent = meta.completadas;
+        }
+
+        if (meta.registros !== undefined) {
+            tablaRegistros.textContent = meta.registros;
+        }
+
+        if (meta.update_report) {
+            updateReport.innerHTML = meta.update_report;
+        }
+
+        if (meta.errores) {
+            renderErrores(meta.errores);
+        }
+
+        if (meta.details) {
+            detailedStatus.innerHTML = meta.details;
+        }
+    }
+
+    function processResultPayload(result) {
+        if (!result || typeof result !== 'object') {
+            return;
+        }
+
+        if (result.detalles) {
+            detailedStatus.innerHTML = result.detalles;
+        }
+
+        if (result.update_report) {
+            updateReport.innerHTML = result.update_report;
+        }
+
+        if (result.errores) {
+            renderErrores(result.errores);
+        }
+
+        if (result.data && typeof result.data === 'object') {
+            let completadas = 0;
+            let registrosTotales = 0;
+            const errores = [];
+
+            Object.entries(result.data).forEach(([tabla, info]) => {
+                if (info && info.status === 'exitoso') {
+                    completadas += 1;
+                    if (typeof info.registros === 'number') {
+                        registrosTotales += info.registros;
+                    }
+                } else if (info && info.status === 'error') {
+                    const mensaje = info.error || 'Error no especificado';
+                    errores.push(`${tabla}: ${mensaje}`);
+                }
+            });
+
+            tablasCompletadas.textContent = completadas.toString();
+            tablaRegistros.textContent = registrosTotales.toString();
+
+            if (errores.length > 0) {
+                renderErrores(errores);
+            }
+        }
+    }
+
+    function checkTaskProgress(taskId) {
+        if (!taskId) {
+            return;
+        }
+
+        fetch(progressStatusUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
+            body: new URLSearchParams({ task_id: taskId })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Estado ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const statusRaw = (data.state || data.status || '').toString().toUpperCase();
+            const meta = data.meta || {};
+            const progressValue = typeof data.progress === 'number' ? data.progress : (typeof meta.progress === 'number' ? meta.progress : lastProgressValue);
+            const stageMessage = data.stage || meta.stage || meta.message || 'Procesando...';
+
+            if (statusRaw === 'NOTFOUND') {
+                stopMonitoring('Tarea no encontrada o expirada.', true, lastProgressValue || 0);
+                return;
+            }
+
+            if (statusRaw === 'FAILED' || statusRaw === 'ERROR') {
+                const errorPayload = data.result || data.error_info || data.error || {};
+                const errorMessage = errorPayload.message || errorPayload.error || data.error || 'Error desconocido en el cargue';
+                if (errorPayload.errores) {
+                    renderErrores(errorPayload.errores);
+                }
+                stopMonitoring(`Error: ${errorMessage}`, true, lastProgressValue || 0);
+                return;
+            }
+
+            if (['COMPLETED', 'FINISHED', 'SUCCESS', 'COMPLETED_WITH_ERRORS', 'PARTIAL_SUCCESS'].includes(statusRaw)) {
+                const resultPayload = data.result || {};
+                const finalMessage = resultPayload.message || resultPayload.error || data.message || 'Cargue completado';
+                const isWarningState = statusRaw === 'COMPLETED_WITH_ERRORS' || statusRaw === 'PARTIAL_SUCCESS';
+
+                updateProgressBar(100, '');
+                applyMetaUpdates(meta);
+                processResultPayload(resultPayload);
+
+                stopMonitoring(finalMessage, false, 100, isWarningState);
+
+                const reloadDelay = isWarningState ? 6000 : 3000;
+                setTimeout(() => {
+                    window.location.reload();
+                }, reloadDelay);
+                return;
+            }
+
+            updateProgressBar(progressValue, stageMessage);
+            applyMetaUpdates(meta);
+        })
+        .catch(error => {
+            console.error('Error checking task status:', error);
+            stopMonitoring(`Error al verificar el progreso: ${error.message}`, true, lastProgressValue || 0);
+        });
+    }
+
+    selectAllCheckbox.addEventListener('change', function() {
+        const checked = this.checked;
+        tablaCheckboxes.forEach(checkbox => {
+            checkbox.checked = checked;
+        });
+        validateForm();
+    });
+
+    tablaCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const total = tablaCheckboxes.length;
+            const marcadas = Array.from(tablaCheckboxes).filter(cb => cb.checked).length;
+            selectAllCheckbox.indeterminate = marcadas > 0 && marcadas < total;
+            selectAllCheckbox.checked = marcadas === total;
+            validateForm();
+        });
+    });
+
+    excelInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const file = this.files[0];
+            this.classList.remove('is-invalid', 'is-valid');
+            this.setCustomValidity('');
+
+            if (file) {
+                if (!file.name.toLowerCase().endsWith('.xlsx')) {
+                    this.setCustomValidity('Debe seleccionar un archivo Excel (.xlsx)');
+                    this.classList.add('is-invalid');
+                } else if (file.size > 200 * 1024 * 1024) {
+                    this.setCustomValidity('El archivo es demasiado grande (máximo 200MB)');
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.add('is-valid');
+                }
+            }
+
+            validateForm();
+        });
+    });
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        if (submitBtn.dataset.submitted === 'true') {
+            alert('Ya hay un cargue en curso.');
+            return;
+        }
+
+        const hayTablas = Array.from(tablaCheckboxes).some(cb => cb.checked);
+        if (!hayTablas) {
+            alert('Debe seleccionar al menos una tabla para cargar.');
+            return;
+        }
+
+        const hayArchivos = Array.from(excelInputs).some(input => input.files && input.files.length > 0);
+        if (!hayArchivos) {
+            alert('Debe subir al menos un archivo Excel.');
+            return;
+        }
+
+        submitBtn.dataset.submitted = 'true';
+        submitBtn.disabled = true;
+        submitBtn.classList.remove('btn-primary');
+        submitBtn.classList.add('btn-secondary');
+
+        resetProgressState();
+        showModal();
+        updateProgressBar(0, 'Iniciando cargue de tablas maestras...');
+
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Estado ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.task_id) {
+                const mensajeInicio = data.message ? `${data.message} iniciado correctamente` : 'Proceso iniciado';
+                updateProgressBar(5, mensajeInicio);
+                startMonitoring(data.task_id);
+            } else {
+                throw new Error(data.error || 'No se recibió un identificador de tarea');
+            }
+        })
+        .catch(error => {
+            console.error('Error iniciando el cargue:', error);
+            stopMonitoring(`Error al iniciar cargue: ${error.message}`, true, 0);
+        });
+    });
+
+    resetProgressState();
+    validateForm();
+    hideModal();
+});
+</script>
+{% endblock script %}

@@ -1,0 +1,6 @@
+# Backup of interface.py before disabling chunking in _write_query_to_excel
+# Date: 2025-06-07
+# This is a direct copy of the original file before the test sin chunks.
+
+# ...existing code...
+

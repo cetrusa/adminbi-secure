@@ -1,0 +1,56 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Inicio{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_actualizacion.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<h1 class="text-align-center">Bienvenido!!!</h1>
+{% if messages %}
+<ul class="messages">
+  {% for message in messages %}
+  <li{% if message.tags %} class="{{ message.tags }}" {% endif %}}>{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<img src="{% static 'images/panel.png' %}" alt="panel" style="width: 100%;">
+{% if request.user.is_staff %}
+<div id="clean-media-section" style="margin: 2em 0;">
+  <h3>Limpieza manual de archivos viejos en media/</h3>
+  <form id="clean-media-form" method="post" action="{% url 'home_app:clean_media' %}" style="display:inline;">
+    {% csrf_token %}
+    <label for="hours">Eliminar archivos con más de </label>
+    <input type="number" id="hours" name="hours" value="4" min="1" max="168" style="width:60px;"> horas
+    <button type="submit" class="btn btn-danger">Limpiar archivos viejos</button>
+  </form>
+  <div id="clean-media-result" style="margin-top:1em;"></div>
+</div>
+<script>
+  document.getElementById('clean-media-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var form = this;
+    var resultDiv = document.getElementById('clean-media-result');
+    var formData = new FormData(form);
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: formData
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          resultDiv.innerHTML = `<span style='color:green;'>${data.message}</span><br><small>${data.removed_files.join('<br>')}</small>`;
+        } else {
+          resultDiv.innerHTML = `<span style='color:red;'>Error: ${data.error_message || 'No se pudo limpiar.'}</span>`;
+        }
+      })
+      .catch(err => {
+        resultDiv.innerHTML = `<span style='color:red;'>Error inesperado: ${err}</span>`;
+      });
+  });
+</script>
+{% endif %}
+{% endblock window %}

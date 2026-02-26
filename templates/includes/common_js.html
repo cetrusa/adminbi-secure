@@ -1,0 +1,103 @@
+{% load cache %}
+{% comment %}
+Template compartido para cargar jQuery y scripts comunes
+Esto evita cargar jQuery múltiples veces en diferentes templates
+{% endcomment %}
+
+{% cache 3600 "jquery_common" %}
+<!-- jQuery (solo si no está ya cargado) -->
+<script>
+    if (typeof jQuery === 'undefined') {
+        document.write('<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"><\/script>');
+    }
+</script>
+{% endcache %}
+
+{% cache 1800 "common_utilities" %}
+<!-- Utilidades JavaScript comunes -->
+<script>
+    // Funciones globales optimizadas para la aplicación
+    window.DataZenithUtils = {
+        // Debounce function para optimizar eventos
+        debounce: function(func, wait, immediate) {
+            var timeout;
+            return function() {
+                var context = this, args = arguments;
+                var later = function() {
+                    timeout = null;
+                    if (!immediate) func.apply(context, args);
+                };
+                var callNow = immediate && !timeout;
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+                if (callNow) func.apply(context, args);
+            };
+        },
+        
+        // Mostrar indicadores de carga
+        showLoading: function(element) {
+            $(element).addClass('loading').prop('disabled', true);
+        },
+        
+        hideLoading: function(element) {
+            $(element).removeClass('loading').prop('disabled', false);
+        },
+        
+        // Manejo mejorado de errores AJAX
+        handleAjaxError: function(xhr, status, error) {
+            var message = "Error en la operación.";
+            
+            if (status === 'timeout') {
+                message = "La operación tardó demasiado tiempo.";
+            } else if (xhr.status === 403) {
+                message = "No tiene permisos para realizar esta acción.";
+            } else if (xhr.status === 500) {
+                message = "Error interno del servidor.";
+            } else if (xhr.status === 404) {
+                message = "Recurso no encontrado.";
+            }
+            
+            console.error("AJAX Error:", error, status, xhr.status);
+            return message;
+        },
+        
+        // Cache simple del lado del cliente
+        cache: {},
+        
+        setCache: function(key, value, ttl = 300000) { // 5 minutos por defecto
+            this.cache[key] = {
+                value: value,
+                expiry: Date.now() + ttl
+            };
+        },
+        
+        getCache: function(key) {
+            var item = this.cache[key];
+            if (!item) return null;
+            
+            if (Date.now() > item.expiry) {
+                delete this.cache[key];
+                return null;
+            }
+            
+            return item.value;
+        }
+    };
+    
+    // Configuración global de AJAX
+    $.ajaxSetup({
+        cache: false,
+        timeout: 30000, // 30 segundos
+        beforeSend: function(xhr, settings) {
+            // Agregar CSRF token automáticamente
+            if (!this.crossDomain) {
+                var csrftoken = $('input[name="csrfmiddlewaretoken"]').val() || 
+                               $('meta[name="csrf-token"]').attr('content');
+                if (csrftoken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        }
+    });
+</script>
+{% endcache %}

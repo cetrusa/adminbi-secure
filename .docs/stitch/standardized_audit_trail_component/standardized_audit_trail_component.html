@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Standardized Audit Trail Component</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for table overflow */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
+<!-- Main Layout Container -->
+<div class="layout-container flex h-full grow flex-col">
+<!-- Header / Breadcrumbs Area -->
+<header class="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+<div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+<!-- Breadcrumbs -->
+<nav class="flex items-center text-sm font-medium text-slate-500 dark:text-slate-400 mb-4">
+<a class="hover:text-primary transition-colors" href="#">Home</a>
+<span class="mx-2 text-slate-300 dark:text-slate-600">/</span>
+<a class="hover:text-primary transition-colors" href="#">Invoices</a>
+<span class="mx-2 text-slate-300 dark:text-slate-600">/</span>
+<span class="text-slate-900 dark:text-white">Invoice #4092 Audit Log</span>
+</nav>
+<!-- Title and Actions -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Invoice #4092 Audit Log</h1>
+<p class="mt-1 text-slate-500 dark:text-slate-400">Complete lifecycle history and change tracking for this record.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all">
+<span class="material-symbols-outlined mr-2 text-[20px]">print</span>
+                            Print
+                        </button>
+<button class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all">
+<span class="material-symbols-outlined mr-2 text-[20px]">download</span>
+                            Export CSV
+                        </button>
+</div>
+</div>
+<!-- Filters Toolbar -->
+<div class="mt-6 flex flex-wrap gap-3 pb-2">
+<!-- Date Filter -->
+<div class="relative group">
+<button class="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-slate-400 text-[18px]">calendar_today</span>
+<span>Date Range: All Time</span>
+<span class="material-symbols-outlined text-slate-400 text-[18px]">expand_more</span>
+</button>
+</div>
+<!-- User Filter -->
+<div class="relative group">
+<button class="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-slate-400 text-[18px]">person</span>
+<span>User: All Users</span>
+<span class="material-symbols-outlined text-slate-400 text-[18px]">expand_more</span>
+</button>
+</div>
+<!-- Action Filter -->
+<div class="relative group">
+<button class="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-slate-400 text-[18px]">label</span>
+<span>Action: All Actions</span>
+<span class="material-symbols-outlined text-slate-400 text-[18px]">expand_more</span>
+</button>
+</div>
+<!-- Search Input -->
+<div class="relative ml-auto w-full sm:w-auto">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+<span class="material-symbols-outlined text-[18px]">search</span>
+</span>
+<input class="block w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-1.5 pl-9 pr-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:w-64" placeholder="Search values..." type="text"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<main class="flex-1 w-full max-w-[960px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<!-- Timeline Container -->
+<div class="relative">
+<!-- Vertical Rail Line -->
+<div class="absolute left-[19px] top-4 bottom-4 w-0.5 bg-slate-200 dark:bg-slate-700 z-0"></div>
+<!-- Timeline Item 1: Most Recent -->
+<div class="relative pl-12 pb-10 group">
+<!-- Icon Node -->
+<div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-slate-900 border-2 border-green-500 z-10 shadow-sm">
+<span class="material-symbols-outlined text-green-600 dark:text-green-400 text-[20px]">check_circle</span>
+</div>
+<!-- Card Content -->
+<div class="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm transition-shadow hover:shadow-md">
+<!-- Header -->
+<div class="flex flex-wrap items-start justify-between gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-900 dark:text-white">Status Updated</span>
+<span class="inline-flex items-center rounded-md bg-green-50 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-inset ring-green-600/20">Approved</span>
+</div>
+<div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+<div class="h-5 w-5 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-xs font-medium text-indigo-700 dark:text-indigo-300">AM</div>
+<span class="font-medium text-slate-700 dark:text-slate-300">Alice M.</span>
+<span>•</span>
+<span title="Oct 24, 2023 at 14:32:00">2 mins ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">share</span>
+</button>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Delta Table -->
+<div class="mt-2 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+<table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+<thead class="bg-slate-50 dark:bg-slate-900/50">
+<tr>
+<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 w-1/4" scope="col">Field Name</th>
+<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 w-1/3" scope="col">Old Value</th>
+<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 w-1/3" scope="col">New Value</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+<td class="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">Status</td>
+<td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 line-through decoration-slate-400">Pending Review</td>
+<td class="px-4 py-3 text-sm font-semibold text-green-700 dark:text-green-400 bg-green-50/50 dark:bg-green-900/10">Approved</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+<td class="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">Approver ID</td>
+<td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 font-mono text-xs">null</td>
+<td class="px-4 py-3 text-sm font-semibold text-primary dark:text-blue-400 font-mono text-xs">U-99281</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="relative pl-12 pb-10 group">
+<!-- Icon Node -->
+<div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-slate-900 border-2 border-orange-500 z-10 shadow-sm">
+<span class="material-symbols-outlined text-orange-600 dark:text-orange-400 text-[20px]">inventory_2</span>
+</div>
+<!-- Card Content -->
+<div class="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm transition-shadow hover:shadow-md">
+<!-- Header -->
+<div class="flex flex-wrap items-start justify-between gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-900 dark:text-white">Inventory Adjustment</span>
+<span class="inline-flex items-center rounded-md bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 text-xs font-medium text-orange-700 dark:text-orange-400 ring-1 ring-inset ring-orange-600/20">Modification</span>
+</div>
+<div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+<div class="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-medium text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-[14px]">smart_toy</span>
+</div>
+<span class="font-medium text-slate-700 dark:text-slate-300">System Automation</span>
+<span>•</span>
+<span title="Oct 24, 2023 at 13:15:00">1 hour ago</span>
+</div>
+</div>
+</div>
+<!-- Detailed Description -->
+<div class="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                            System detected discrepancy during nightly warehouse sync.
+                        </div>
+<!-- Delta Table -->
+<div class="mt-1 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+<table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+<thead class="bg-slate-50 dark:bg-slate-900/50">
+<tr>
+<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 w-1/4" scope="col">Field Name</th>
+<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 w-1/3" scope="col">Old Value</th>
+<th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 w-1/3" scope="col">New Value</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+<td class="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">Inventory Count</td>
+<td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 line-through decoration-slate-400 font-mono">50</td>
+<td class="px-4 py-3 text-sm font-semibold text-primary dark:text-blue-400 font-mono">45</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Timeline Item 3 (Collapsed) -->
+<div class="relative pl-12 pb-10 group">
+<!-- Icon Node -->
+<div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-600 z-10 shadow-sm">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 text-[20px]">visibility</span>
+</div>
+<!-- Card Content -->
+<div class="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm transition-shadow hover:shadow-md">
+<!-- Header -->
+<div class="flex flex-wrap items-start justify-between gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-900 dark:text-white">Record Viewed</span>
+<span class="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-400 ring-1 ring-inset ring-slate-500/10">Access</span>
+</div>
+<div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+<div class="h-5 w-5 rounded-full bg-pink-100 dark:bg-pink-900 flex items-center justify-center text-xs font-medium text-pink-700 dark:text-pink-300">SJ</div>
+<span class="font-medium text-slate-700 dark:text-slate-300">Sarah Jenkins</span>
+<span>•</span>
+<span title="Oct 23, 2023 at 09:45:00">Yesterday</span>
+</div>
+</div>
+</div>
+<!-- No Changes Indicator -->
+<div class="flex items-center gap-2 text-sm text-slate-400 italic">
+<span class="material-symbols-outlined text-[16px]">info</span>
+                             No fields modified during this session.
+                        </div>
+</div>
+</div>
+<!-- Timeline Item 4: Creation -->
+<div class="relative pl-12 pb-2 group">
+<!-- Icon Node -->
+<div class="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white border-4 border-white dark:border-slate-900 z-10 shadow-md">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</div>
+<!-- Card Content -->
+<div class="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm transition-shadow hover:shadow-md">
+<!-- Header -->
+<div class="flex flex-wrap items-start justify-between gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-900 dark:text-white">Record Created</span>
+<span class="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-600/20">Initial</span>
+</div>
+<div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+<div class="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center text-xs font-medium text-emerald-700 dark:text-emerald-300">JD</div>
+<span class="font-medium text-slate-700 dark:text-slate-300">John D.</span>
+<span>•</span>
+<span title="Oct 22, 2023 at 10:00:00">2 days ago</span>
+</div>
+</div>
+</div>
+<!-- Content -->
+<div class="flex flex-col gap-2">
+<p class="text-sm text-slate-600 dark:text-slate-400">Initial creation of record via API Import.</p>
+<!-- Expandable Details -->
+<details class="group mt-2">
+<summary class="flex cursor-pointer items-center gap-2 text-sm font-medium text-primary hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+<span>View Initial Data Payload</span>
+<span class="material-symbols-outlined text-[18px] transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="mt-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+<pre class="overflow-x-auto p-4 text-xs font-mono text-slate-600 dark:text-slate-400 scrollbar-hide">{
+  "invoice_id": "4092",
+  "customer": "Acme Corp",
+  "amount": 12500.00,
+  "currency": "USD",
+  "items": [
+    {"sku": "SRV-001", "qty": 1}
+  ],
+  "status": "draft"
+}</pre>
+</div>
+</details>
+</div>
+</div>
+</div>
+<!-- End Cap of Line -->
+<div class="absolute left-[15px] bottom-0 h-4 w-2.5 rounded-b-full bg-gradient-to-t from-slate-200 to-transparent dark:from-slate-700"></div>
+</div>
+<!-- Pagination / Loading -->
+<div class="mt-8 flex justify-center">
+<button class="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-white transition-colors">
+<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                    Load older records
+                </button>
+</div>
+</main>
+</div>
+</body></html>

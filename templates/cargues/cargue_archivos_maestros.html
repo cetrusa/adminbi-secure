@@ -1,0 +1,546 @@
+{% extends "black.html" %}
+{% load static %}
+
+{% block title %}
+Cargue de Archivos Maestros
+{% endblock title %}
+
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_actualizacion.html' %}
+{% endblock barra_lateral %}
+
+{% block window %}
+<br>
+<div class="container">
+    {% if messages %}
+    <div class="alert alert-dismissible fade show" role="alert">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}">
+            <i class="fas fa-info-circle"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Header con selector de tipo -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><i class="fas fa-database"></i> Cargue de Archivos Maestros</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <label class="form-label"><strong>Tipo de Cargue:</strong></label>
+                    <div class="btn-group w-100 mb-3" role="group">
+                        <input type="radio" class="btn-check" name="tipo_cargue" id="tipo_maestras" value="maestras" checked>
+                        <label class="btn btn-outline-primary" for="tipo_maestras">
+                            <i class="fas fa-table"></i> Tablas Maestras
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="tipo_cargue" id="tipo_infoproducto" value="infoproducto">
+                        <label class="btn btn-outline-primary" for="tipo_infoproducto">
+                            <i class="fas fa-box-open"></i> InfoProducto
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario dinámico -->
+    <form id="cargue-form" action="{% url form_url %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="tipo_cargue" id="tipo_cargue_hidden" value="maestras">
+        
+        <!-- Panel Tablas Maestras -->
+        <div id="panel-maestras" class="cargue-panel">
+            <div class="row">
+                <!-- Archivos Excel -->
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header text-center bg-info text-white">
+                            <h5><i class="fas fa-file-excel"></i> Archivos Excel Requeridos</h5>
+                        </div>
+                        <div class="card-body">
+                            {% for archivo in archivos_excel %}
+                            <div class="mb-3 p-3 border rounded">
+                                <h6 class="text-primary"><i class="fas fa-file-excel"></i> {{ archivo.name }}</h6>
+                                <p class="small text-muted">{{ archivo.description }}</p>
+                                <input type="file" 
+                                       class="form-control excel-file-input" 
+                                       id="{{ archivo.key }}" 
+                                       name="{{ archivo.key }}" 
+                                       accept=".xlsx"
+                                       data-panel="maestras"
+                                       {% if archivo.required %}data-required="true"{% endif %}>
+                            </div>
+                            {% endfor %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> 
+                                <strong>Nota:</strong> Debe subir al menos uno de los archivos Excel.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tablas a Cargar -->
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header text-center bg-success text-white">
+                            <h5><i class="fas fa-tasks"></i> Seleccione Tablas a Actualizar</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="select_all_maestras">
+                                <label class="form-check-label fw-bold" for="select_all_maestras">
+                                    Seleccionar Todas
+                                </label>
+                            </div>
+                            <hr>
+                            {% for tabla in tablas_maestras %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input tabla-checkbox" 
+                                       type="checkbox" 
+                                       name="tablas" 
+                                       value="{{ tabla.key }}" 
+                                       id="tabla_{{ tabla.key }}">
+                                <label class="form-check-label" for="tabla_{{ tabla.key }}">
+                                    <strong>{{ tabla.name }}</strong>
+                                    <br><small class="text-muted">{{ tabla.description }}</small>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <button type="submit" class="btn btn-primary btn-lg px-5" id="btn-submit-maestras">
+                    <i class="fas fa-upload"></i> Iniciar Cargue de Maestras
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel InfoProducto -->
+        <div id="panel-infoproducto" class="cargue-panel" style="display: none;">
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Fecha del Reporte</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="fecha_reporte" class="form-label">
+                                <i class="fas fa-calendar"></i> Fecha <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" 
+                                   class="form-control form-control-lg" 
+                                   id="fecha_reporte" 
+                                   name="fecha_reporte"
+                                   data-panel="infoproducto"
+                                   required>
+                            <small class="text-muted mt-1 d-block">
+                                Fecha de generación de los reportes InfoProducto
+                            </small>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle"></i> 
+                                <strong>Instrucciones:</strong> Seleccione la fecha del reporte y luego adjunte los archivos correspondientes para cada empresa.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-building"></i> Archivos por Empresa</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        <i class="fas fa-lightbulb"></i> 
+                        Adjunte los archivos InfoProducto para cada empresa. Solo se cargarán las empresas que tengan archivos adjuntos.
+                    </p>
+                    
+                    <div class="row g-3">
+                        {% for empresa in empresas_infoproducto %}
+                        <div class="col-md-6">
+                            <div class="card border empresa-card" id="empresa-card-{{ empresa.slug }}" 
+                                 data-empresa-slug="{{ empresa.slug }}"
+                                 data-fuente-id="{{ empresa.fuente_id }}"
+                                 data-fuente-nombre="{{ empresa.fuente_nombre }}">
+                                <div class="card-header d-flex align-items-center" style="background-color: {{ empresa.color }}15; border-left: 4px solid {{ empresa.color }};">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0 text-dark">
+                                            <i class="fas fa-building" style="color: {{ empresa.color }};"></i> 
+                                            {{ empresa.fuente_nombre }}
+                                        </h6>
+                                        <small class="text-muted">ID: {{ empresa.fuente_id }}</small>
+                                    </div>
+                                    <div class="empresa-status" id="status-{{ empresa.slug }}">
+                                        <span class="badge bg-secondary">Sin archivo</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <input type="file" 
+                                           class="form-control empresa-file-input" 
+                                           id="archivo_{{ empresa.slug }}" 
+                                           name="archivo_{{ empresa.slug }}"
+                                           data-empresa-slug="{{ empresa.slug }}"
+                                           accept=".xls,.xlsx,.htm,.html"
+                                           data-panel="infoproducto">
+                                    <small class="text-muted mt-2 d-block file-info" id="fileinfo-{{ empresa.slug }}">
+                                        Ningún archivo seleccionado
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert alert-warning mt-4" id="no-files-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        <strong>Atención:</strong> Debe seleccionar al menos un archivo para proceder con el cargue.
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <button type="submit" class="btn btn-success btn-lg px-5" id="btn-submit-infoproducto" disabled>
+                    <i class="fas fa-upload"></i> Iniciar Cargue de InfoProducto
+                </button>
+                <div class="mt-2">
+                    <small class="text-muted" id="submit-hint">
+                        Seleccione al menos un archivo para continuar
+                    </small>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Área de Resultados/Progreso -->
+    <div id="result-area" class="mt-4" style="display: none;">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-tasks"></i> Estado del Cargue</h5>
+            </div>
+            <div class="card-body">
+                <div id="progress-stage" class="mb-3 text-center">
+                    <h6>Preparando proceso...</h6>
+                </div>
+                <div class="progress" style="height: 30px;">
+                    <div id="progress-bar" 
+                         class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                         role="progressbar" 
+                         style="width: 0%;">
+                        0%
+                    </div>
+                </div>
+                <div id="progress-meta" class="mt-3 text-muted small"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Procesamiento -->
+<div class="modal fade" id="processing-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-sync fa-spin"></i> Procesando Cargue...
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div id="modal-progress-stage" class="mb-3 text-center">
+                    <strong>Iniciando proceso...</strong>
+                </div>
+                <div class="progress" style="height: 25px;">
+                    <div id="modal-progress-bar" 
+                         class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         style="width: 0%;">
+                        0%
+                    </div>
+                </div>
+                <div id="modal-progress-meta" class="mt-3 small text-muted"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="btn-close-modal" disabled>
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock window %}
+
+{% block script %}
+<script>
+(function() {
+    'use strict';
+
+    // Referencias DOM
+    const form = document.getElementById('cargue-form');
+    const tipoMaestrasRadio = document.getElementById('tipo_maestras');
+    const tipoInfoProductoRadio = document.getElementById('tipo_infoproducto');
+    const tipoCargueHidden = document.getElementById('tipo_cargue_hidden');
+    const panelMaestras = document.getElementById('panel-maestras');
+    const panelInfoProducto = document.getElementById('panel-infoproducto');
+    const selectAllMaestras = document.getElementById('select_all_maestras');
+    const resultArea = document.getElementById('result-area');
+    const processingModal = new bootstrap.Modal(document.getElementById('processing-modal'));
+    
+    let currentTaskId = null;
+    let pollInterval = null;
+
+    // Cambio de tipo de cargue
+    function updatePanelDisplay() {
+        const tipoSeleccionado = document.querySelector('input[name="tipo_cargue"]:checked').value;
+        tipoCargueHidden.value = tipoSeleccionado;
+        
+        if (tipoSeleccionado === 'maestras') {
+            panelMaestras.style.display = 'block';
+            panelInfoProducto.style.display = 'none';
+            
+            // Deshabilitar campos de infoproducto
+            document.querySelectorAll('[data-panel="infoproducto"]').forEach(el => {
+                el.disabled = true;
+                el.removeAttribute('required');
+            });
+            
+            // Habilitar campos de maestras
+            document.querySelectorAll('[data-panel="maestras"]').forEach(el => {
+                el.disabled = false;
+            });
+        } else {
+            panelMaestras.style.display = 'none';
+            panelInfoProducto.style.display = 'block';
+            
+            // Deshabilitar campos de maestras
+            document.querySelectorAll('[data-panel="maestras"]').forEach(el => {
+                el.disabled = true;
+            });
+            
+            // Habilitar campos de infoproducto
+            document.querySelectorAll('[data-panel="infoproducto"]').forEach(el => {
+                el.disabled = false;
+            });
+            
+            // Hacer fecha obligatoria
+            document.getElementById('fecha_reporte').required = true;
+            document.getElementById('archivos_infoproducto').required = true;
+        }
+    }
+
+    tipoMaestrasRadio.addEventListener('change', updatePanelDisplay);
+    tipoInfoProductoRadio.addEventListener('change', updatePanelDisplay);
+
+    // Seleccionar todas las tablas maestras
+    if (selectAllMaestras) {
+        selectAllMaestras.addEventListener('change', function() {
+            document.querySelectorAll('.tabla-checkbox').forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+
+    // Envío del formulario
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const tipoSeleccionado = tipoCargueHidden.value;
+        
+        // Validaciones específicas
+        if (tipoSeleccionado === 'maestras') {
+            const tablasSeleccionadas = document.querySelectorAll('input[name="tablas"]:checked');
+            if (tablasSeleccionadas.length === 0) {
+                alert('Debe seleccionar al menos una tabla para cargar.');
+                return;
+            }
+        } else if (tipoSeleccionado === 'infoproducto') {
+            const fechaReporte = document.getElementById('fecha_reporte').value;
+            const empresasConArchivos = getEmpresasConArchivos();
+            
+            if (!fechaReporte) {
+                alert('Debe seleccionar la fecha del reporte.');
+                return;
+            }
+            
+            if (empresasConArchivos.length === 0) {
+                alert('Debe seleccionar al menos un archivo para una empresa.');
+                return;
+            }
+        }
+        
+        // Enviar formulario vía AJAX
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentTaskId = data.task_id;
+                processingModal.show();
+                startPolling();
+            } else {
+                alert('Error: ' + (data.error || data.error_message || 'Error desconocido'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al enviar el formulario: ' + error.message);
+        });
+    });
+
+    // Polling para verificar estado
+    function startPolling() {
+        if (pollInterval) clearInterval(pollInterval);
+        
+        pollInterval = setInterval(() => {
+            if (!currentTaskId) return;
+            
+            fetch(`{% url 'cargues_app:check_task_status' %}?task_id=${currentTaskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateProgress(data);
+                    
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        document.getElementById('btn-close-modal').disabled = false;
+                        
+                        if (data.status === 'completed') {
+                            showSuccessMessage(data);
+                        } else {
+                            showErrorMessage(data);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling:', error);
+                });
+        }, 2000);
+    }
+
+    function updateProgress(data) {
+        const progress = data.progress || 0;
+        const stage = data.stage || 'Procesando...';
+        
+        // Actualizar modal
+        document.getElementById('modal-progress-bar').style.width = progress + '%';
+        document.getElementById('modal-progress-bar').textContent = progress + '%';
+        document.getElementById('modal-progress-stage').innerHTML = '<strong>' + stage + '</strong>';
+        
+        if (data.meta) {
+            document.getElementById('modal-progress-meta').textContent = JSON.stringify(data.meta, null, 2);
+        }
+    }
+
+    function showSuccessMessage(data) {
+        const resultHtml = `
+            <div class="alert alert-success">
+                <h5><i class="fas fa-check-circle"></i> Cargue completado exitosamente</h5>
+                <p>Tarea: ${currentTaskId}</p>
+                ${data.result ? '<pre>' + JSON.stringify(data.result, null, 2) + '</pre>' : ''}
+            </div>
+        `;
+        
+        document.getElementById('modal-progress-stage').innerHTML = resultHtml;
+    }
+
+    function showErrorMessage(data) {
+        const errorHtml = `
+            <div class="alert alert-danger">
+                <h5><i class="fas fa-exclamation-triangle"></i> Error en el cargue</h5>
+                <p>${data.error || 'Error desconocido'}</p>
+            </div>
+        `;
+        
+        document.getElementById('modal-progress-stage').innerHTML = errorHtml;
+    }
+
+    // Manejo de archivos por empresa (InfoProducto)
+    const empresaFileInputs = document.querySelectorAll('.empresa-file-input');
+    const btnSubmitInfoProducto = document.getElementById('btn-submit-infoproducto');
+    const noFilesWarning = document.getElementById('no-files-warning');
+    const submitHint = document.getElementById('submit-hint');
+    
+    function getEmpresasConArchivos() {
+        const empresas = [];
+        empresaFileInputs.forEach(input => {
+            if (input.files.length > 0) {
+                const card = input.closest('.empresa-card');
+                empresas.push({
+                    slug: card.dataset.empresaSlug,
+                    fuente_id: card.dataset.fuenteId,
+                    fuente_nombre: card.dataset.fuenteNombre,
+                    file: input.files[0]
+                });
+            }
+        });
+        return empresas;
+    }
+    
+    function updateEmpresaStatus() {
+        const empresasConArchivos = getEmpresasConArchivos();
+        
+        empresaFileInputs.forEach(input => {
+            const empresaSlug = input.dataset.empresaSlug;
+            const statusBadge = document.getElementById('status-' + empresaSlug);
+            const fileInfo = document.getElementById('fileinfo-' + empresaSlug);
+            const card = input.closest('.empresa-card');
+            
+            if (input.files.length > 0) {
+                const file = input.files[0];
+                statusBadge.innerHTML = '<span class="badge bg-success"><i class="fas fa-check"></i> Archivo cargado</span>';
+                fileInfo.innerHTML = '<i class="fas fa-file-excel text-success"></i> ' + file.name + ' (' + formatFileSize(file.size) + ')';
+                card.classList.add('border-success');
+                card.classList.remove('border');
+            } else {
+                statusBadge.innerHTML = '<span class="badge bg-secondary">Sin archivo</span>';
+                fileInfo.textContent = 'Ningún archivo seleccionado';
+                card.classList.remove('border-success');
+                card.classList.add('border');
+            }
+        });
+        
+        // Actualizar botón de envío
+        if (empresasConArchivos.length > 0) {
+            btnSubmitInfoProducto.disabled = false;
+            noFilesWarning.style.display = 'none';
+            submitHint.innerHTML = '<i class="fas fa-check-circle text-success"></i> ' + 
+                                   empresasConArchivos.length + ' empresa(s) con archivos seleccionados';
+        } else {
+            btnSubmitInfoProducto.disabled = true;
+            noFilesWarning.style.display = 'block';
+            submitHint.innerHTML = 'Seleccione al menos un archivo para continuar';
+        }
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    empresaFileInputs.forEach(input => {
+        input.addEventListener('change', updateEmpresaStatus);
+    });
+
+    // Inicializar
+    updatePanelDisplay();
+})();
+</script>
+{% endblock script %}

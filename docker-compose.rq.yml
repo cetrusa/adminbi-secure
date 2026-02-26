@@ -1,0 +1,117 @@
+version: '3.3'
+
+services:
+  web:
+    build: .
+    command: gunicorn --bind 0.0.0.0:4085 --timeout 28800 adminbi.wsgi:application
+    volumes:
+      - ./staticfiles:/code/staticfiles
+      - ./media:/code/media
+    ports:
+      - "4085:4085"
+    environment:
+      - DJANGO_SETTINGS_MODULE=adminbi.settings.prod
+      - DB_HOST
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RQ_DEFAULT_TIMEOUT=28800
+      - RQ_TASK_TIMEOUT=28800
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    depends_on:
+      - redis
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  rqworker1:
+    build: .
+    command: python manage.py rqworker default
+    volumes:
+      - .:/code
+    environment:
+      - DJANGO_SETTINGS_MODULE=adminbi.settings.prod
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RQ_DEFAULT_TIMEOUT=28800
+      - RQ_TASK_TIMEOUT=28800
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    depends_on:
+      - web
+      - redis
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  rqworker2:
+    build: .
+    command: python manage.py rqworker default
+    volumes:
+      - .:/code
+    environment:
+      - DJANGO_SETTINGS_MODULE=adminbi.settings.prod
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RQ_DEFAULT_TIMEOUT=28800
+      - RQ_TASK_TIMEOUT=28800
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    depends_on:
+      - web
+      - redis
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  rqscheduler:
+    build: .
+    command: python manage.py rqscheduler
+    volumes:
+      - .:/code
+    environment:
+      - DJANGO_SETTINGS_MODULE=adminbi.settings.prod
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RQ_DEFAULT_TIMEOUT=28800
+      - RQ_TASK_TIMEOUT=28800
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    depends_on:
+      - web
+      - redis
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  redis:
+    image: redis:alpine3.16
+    ports:
+      - "6380:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--stop-writes-on-bgsave-error", "no"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  staticfiles:
+  media:

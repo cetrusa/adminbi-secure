@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Core Shell with Data Context</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0f62fe",
+                        "primary-hover": "#0353e9",
+                        "background-light": "#f4f4f4",
+                        "background-dark": "#161616",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#262626",
+                        "border-light": "#e0e0e0",
+                        "border-dark": "#393939",
+                        "text-main-light": "#161616",
+                        "text-main-dark": "#f4f4f4",
+                        "text-sub-light": "#525252",
+                        "text-sub-dark": "#c6c6c6",
+                        "brand": "#001d6c",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px", 
+                        "lg": "2px",
+                        "xl": "4px",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        "sm": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+                        "header": "0 1px 0 0 #e0e0e0"
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f4f4f4;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #161616;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a8a8a8;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #525252;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8d8d8d;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark overflow-hidden h-screen flex text-[13px]">
+<aside class="flex flex-col w-[260px] h-full border-r border-border-light dark:border-border-dark bg-surface-dark text-gray-300 transition-all duration-300 flex-shrink-0 z-20">
+<div class="h-12 flex items-center px-4 bg-brand border-b border-white/10 text-white shadow-sm">
+<div class="flex items-center gap-3 w-full">
+<div class="p-1">
+<span class="material-symbols-outlined text-[20px] leading-none">grid_view</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<h1 class="text-sm font-semibold leading-none tracking-tight whitespace-nowrap">Core ERP</h1>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto py-2 flex flex-col gap-0.5">
+<div class="px-4 py-3 mt-1 flex items-center justify-between text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+<span>Workspace</span>
+</div>
+<a class="flex items-center gap-3 px-4 py-2 text-[13px] font-medium hover:bg-white/10 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary" href="#">
+<span class="material-symbols-outlined text-[18px]">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[13px] font-medium hover:bg-white/10 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary" href="#">
+<span class="material-symbols-outlined text-[18px]">analytics</span>
+<span>Reports</span>
+</a>
+<div class="px-4 py-3 mt-2 flex items-center justify-between text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+<span>Finance Module</span>
+</div>
+<div class="relative bg-white/5">
+<button class="w-full flex items-center justify-between gap-3 px-4 py-2 text-[13px] font-medium text-white border-l-2 border-primary transition-colors text-left">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[18px]">account_balance</span>
+<span>General Ledger</span>
+</div>
+<span class="material-symbols-outlined text-[16px]">expand_less</span>
+</button>
+<div class="bg-black/20">
+<a class="flex items-center gap-3 pl-11 pr-4 py-2 text-[13px] text-white bg-primary/20 font-medium" href="#">
+<span>Journal Entries</span>
+</a>
+<a class="flex items-center gap-3 pl-11 pr-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span>Chart of Accounts</span>
+</a>
+<a class="flex items-center gap-3 pl-11 pr-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span>Trial Balance</span>
+</a>
+</div>
+</div>
+<a class="flex items-center gap-3 px-4 py-2 text-[13px] font-medium hover:bg-white/10 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary" href="#">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+<span>Accounts Payable</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[13px] font-medium hover:bg-white/10 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary" href="#">
+<span class="material-symbols-outlined text-[18px]">payments</span>
+<span>Accounts Receivable</span>
+</a>
+<div class="px-4 py-3 mt-2 flex items-center justify-between text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+<span>Data Tools</span>
+</div>
+<a class="flex items-center gap-3 px-4 py-2 text-[13px] font-medium hover:bg-white/10 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary" href="#">
+<span class="material-symbols-outlined text-[18px]">database</span>
+<span>SQL Query Editor</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[13px] font-medium hover:bg-white/10 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary" href="#">
+<span class="material-symbols-outlined text-[18px]">settings_input_component</span>
+<span>Integrations</span>
+</a>
+</div>
+<div class="p-0 border-t border-white/10 bg-black/20">
+<button class="w-full flex items-center justify-between px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-colors group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[18px]">dock_to_left</span>
+<span class="text-[12px] font-medium">Collapse Sidebar</span>
+</div>
+<span class="text-[10px] border border-gray-600 rounded px-1 group-hover:border-gray-400 text-gray-500 group-hover:text-gray-300">CTRL+[</span>
+</button>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full min-w-0 bg-surface-light dark:bg-surface-dark overflow-hidden relative">
+<header class="h-12 flex items-center justify-between px-4 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex-shrink-0 z-30 shadow-header">
+<div class="flex items-center gap-4">
+<button class="md:hidden p-1 -ml-1 text-text-sub-light hover:text-primary">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<nav class="hidden md:flex items-center text-[12px] text-text-sub-light">
+<span class="hover:underline cursor-pointer hover:text-primary">Finance</span>
+<span class="material-symbols-outlined text-[14px] mx-1 text-gray-400">chevron_right</span>
+<span class="hover:underline cursor-pointer hover:text-primary">GL</span>
+<span class="material-symbols-outlined text-[14px] mx-1 text-gray-400">chevron_right</span>
+<span class="font-semibold text-text-main-light dark:text-text-main-dark">Journal Entries</span>
+</nav>
+</div>
+<div class="flex items-center h-full divide-x divide-border-light dark:divide-border-dark">
+<div class="hidden lg:flex items-center px-3 h-full gap-2 group cursor-pointer hover:bg-background-light dark:hover:bg-surface-dark/50 transition-colors relative">
+<span class="material-symbols-outlined text-[18px] text-primary">database</span>
+<div class="flex flex-col justify-center">
+<span class="text-[10px] text-text-sub-light uppercase tracking-wide font-bold leading-none mb-0.5">Connection</span>
+<div class="flex items-center gap-1">
+<span class="text-[12px] font-semibold text-text-main-light dark:text-text-main-dark leading-none">PROD_DB_US_EAST</span>
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-text-sub-light ml-1">expand_more</span>
+</div>
+<div class="hidden md:flex items-center px-3 h-full gap-2 group cursor-pointer hover:bg-background-light dark:hover:bg-surface-dark/50 transition-colors">
+<span class="material-symbols-outlined text-[18px] text-text-sub-light">domain</span>
+<div class="flex flex-col justify-center">
+<span class="text-[10px] text-text-sub-light uppercase tracking-wide font-bold leading-none mb-0.5">Context</span>
+<span class="text-[12px] font-medium text-text-main-light dark:text-text-main-dark leading-none">FY24-Q3 • HQ Branch</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-text-sub-light ml-1">expand_more</span>
+</div>
+<button class="flex items-center justify-center px-3 h-full text-text-sub-light hover:text-primary hover:bg-background-light dark:hover:bg-surface-dark/50 transition-colors">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</button>
+<div class="flex items-center px-3 h-full gap-2 hover:bg-background-light dark:hover:bg-surface-dark/50 cursor-pointer transition-colors">
+<div class="w-7 h-7 rounded bg-brand text-white flex items-center justify-center text-[10px] font-bold">JD</div>
+</div>
+</div>
+</header>
+<div class="h-14 flex items-center justify-between px-6 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark/30 flex-shrink-0">
+<div class="flex items-center gap-4">
+<h2 class="text-lg font-bold text-text-main-light dark:text-white tracking-tight">Journal Entries</h2>
+<div class="h-5 w-px bg-border-light dark:border-border-dark"></div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px] text-text-sub-light">filter_alt</span>
+<span class="text-xs font-medium text-text-sub-light">Filtered by: <span class="text-text-main-light font-semibold">Active Period</span></span>
+<button class="ml-1 rounded-full p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 text-text-sub-light"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-8 px-3 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-main-light dark:text-text-main-dark text-xs font-medium rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                    Export
+                 </button>
+<button class="h-8 px-3 bg-primary text-white text-xs font-medium rounded hover:bg-primary-hover transition shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                    New Entry
+                 </button>
+</div>
+</div>
+<div class="flex-1 overflow-hidden flex flex-col relative">
+<div class="px-6 py-2 border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex items-center gap-4 overflow-x-auto">
+<div class="flex items-center gap-2">
+<label class="text-[11px] font-semibold text-text-sub-light uppercase">Status</label>
+<select class="form-select py-0.5 pl-2 pr-7 text-xs border-gray-300 dark:border-gray-700 rounded-sm focus:ring-0 focus:border-primary bg-background-light dark:bg-surface-dark">
+<option>All Statuses</option>
+<option>Posted</option>
+<option>Draft</option>
+</select>
+</div>
+<div class="h-4 w-px bg-border-light dark:border-border-dark"></div>
+<div class="flex items-center gap-2">
+<label class="text-[11px] font-semibold text-text-sub-light uppercase">Date Range</label>
+<div class="flex items-center bg-background-light dark:bg-surface-dark border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden">
+<input class="w-16 py-0.5 px-2 text-xs border-none bg-transparent focus:ring-0 text-center" readonly="" type="text" value="Oct 01"/>
+<span class="text-gray-400 text-xs">-</span>
+<input class="w-16 py-0.5 px-2 text-xs border-none bg-transparent focus:ring-0 text-center" readonly="" type="text" value="Oct 31"/>
+</div>
+</div>
+<div class="ml-auto flex items-center gap-2">
+<span class="text-[11px] text-text-sub-light">1,240 records</span>
+<button class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-text-sub-light" title="Refresh Data">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+<button class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-text-sub-light" title="Settings">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-auto bg-surface-light dark:bg-surface-dark">
+<table class="w-full text-left text-[12px] border-collapse">
+<thead class="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 font-semibold text-text-sub-light uppercase tracking-wide">
+<tr>
+<th class="px-4 py-2 border-b border-r border-border-light dark:border-border-dark w-10 text-center bg-gray-50 dark:bg-gray-800">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</th>
+<th class="px-4 py-2 border-b border-r border-border-light dark:border-border-dark w-32 bg-gray-50 dark:bg-gray-800 group cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
+<div class="flex items-center justify-between">
+<span>Entry ID</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100">arrow_downward</span>
+</div>
+</th>
+<th class="px-4 py-2 border-b border-r border-border-light dark:border-border-dark w-28 bg-gray-50 dark:bg-gray-800">Date</th>
+<th class="px-4 py-2 border-b border-r border-border-light dark:border-border-dark min-w-[200px] bg-gray-50 dark:bg-gray-800">Description</th>
+<th class="px-4 py-2 border-b border-r border-border-light dark:border-border-dark w-32 bg-gray-50 dark:bg-gray-800">Ref #</th>
+<th class="px-4 py-2 border-b border-r border-border-light dark:border-border-dark w-32 text-right bg-gray-50 dark:bg-gray-800">Debit</th>
+<th class="px-4 py-2 border-b border-r border-border-light dark:border-border-dark w-32 text-right bg-gray-50 dark:bg-gray-800">Credit</th>
+<th class="px-4 py-2 border-b border-border-light dark:border-border-dark w-24 text-center bg-gray-50 dark:bg-gray-800">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-light dark:divide-border-dark text-text-main-light dark:text-text-main-dark">
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-001</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-24</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Monthly Subscription Revenue</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">INV-9921</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">12,500.00</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono text-gray-300">-</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500" title="Posted"></span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-002</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-24</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Office Supplies Procurement</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">PO-3321</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono text-gray-300">-</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">450.25</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-yellow-500" title="Draft"></span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-003</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-23</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Payroll Allocation - Dept A</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">PAY-10-24</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">45,200.00</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">45,200.00</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500" title="Posted"></span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-004</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-22</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Cloud Infrastructure Costs</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">AWS-OCT</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono text-gray-300">-</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">2,100.00</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" title="Flagged"></span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-005</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-21</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Travel Expenses Reimbursement</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">EXP-004</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono text-gray-300">-</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">1,230.50</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500" title="Posted"></span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-006</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-20</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Legal Retainer Fee</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">LEG-202</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">5,000.00</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono text-gray-300">-</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500" title="Posted"></span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-007</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-19</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Q3 Audit Adjustments</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">AUD-Q3</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">150.00</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">150.00</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500" title="Posted"></span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-008</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-19</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Marketing Campaign Q4</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">MKT-Q4</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono text-gray-300">-</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">8,400.00</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-yellow-500" title="Draft"></span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-009</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-18</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Software Licenses Renewal</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">LIC-2025</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono text-gray-300">-</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">3,650.00</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500" title="Posted"></span>
+</td>
+</tr>
+<tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors odd:bg-white even:bg-gray-50/30 dark:odd:bg-surface-dark dark:even:bg-surface-dark/50">
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-center">
+<input class="rounded-sm border-gray-300 text-primary focus:ring-0 w-3 h-3 align-middle" type="checkbox"/>
+</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-mono text-primary font-medium">JE-2024-010</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light">2024-10-18</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark font-medium">Intercompany Transfer - Asia</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-text-sub-light font-mono text-[11px]">INT-ASIA</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">10,000.00</td>
+<td class="px-4 py-1.5 border-r border-border-light dark:border-border-dark text-right font-mono">10,000.00</td>
+<td class="px-4 py-1.5 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500" title="Posted"></span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="h-8 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-surface-dark px-4 flex items-center justify-between text-[11px] text-text-sub-light flex-shrink-0">
+<div class="flex items-center gap-4">
+<span>Total Debit: <span class="font-mono text-text-main-light font-medium ml-1">$1,245,300.50</span></span>
+<span class="text-gray-300">|</span>
+<span>Total Credit: <span class="font-mono text-text-main-light font-medium ml-1">$1,245,300.50</span></span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-green-600">check_circle</span>
+<span>System Balanced</span>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

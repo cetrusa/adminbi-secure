@@ -1,0 +1,622 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}Informe Venta Cero{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_bimbo.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+{% include 'includes/datepicker_range.html' %}
+<div class="container-fluid py-4 bg-light">
+  {% if messages %}
+  <div class="alert alert-warning" role="alert">
+    {% for message in messages %}
+    <p class="mb-0">{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1 text-danger fw-bold">Informe Venta Cero</h1>
+      <p class="text-muted small mb-0">Clientes en ruta sin compra neta del alcance seleccionado.</p>
+    </div>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2 mb-3" id="vc-summary" style="display:none;">
+    <span class="badge bg-secondary" id="summary-periodo"></span>
+    <span class="badge bg-info text-dark" id="summary-agente"></span>
+    <span class="badge bg-primary" id="summary-filter"></span>
+    <span class="badge bg-primary" id="summary-procedure"></span>
+    <span class="badge bg-success" id="summary-total"></span>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="mb-0 fw-bold text-danger">Filtros de Ejecución</h6>
+        <small class="text-muted">Selecciona CEVE, rango y filtro dinámico antes de generar.</small>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" type="button" id="btnClearFilters">Limpiar</button>
+        <button class="btn btn-danger btn-sm" type="button" id="submitBtnVentaCero" data-submitted="false"><i class="fas fa-play me-2"></i>Generar reporte</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <form action="{% url form_url %}" method="post" id="FormVentaCero" onsubmit="event.preventDefault(); return false;">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold" for="ceves_code_select">CEVE (obligatorio)</label>
+            <select class="form-select form-select-sm" name="ceves_code" id="ceves_code_select" {% if not ceves_catalog %}disabled{% endif %} required>
+              {% if ceves_catalog %}
+              <option value="">Seleccione CEVES</option>
+              {% for ceve in ceves_catalog %}
+              <option value="{{ ceve.id }}">{{ ceve.label }}</option>
+              {% endfor %}
+              {% else %}
+              <option value="" selected>Sin CEVES disponibles</option>
+              {% endif %}
+            </select>
+            <small class="text-muted">Formato: CEVE - Nombre - Oficina</small>
+          </div>
+
+          <!-- Configuración de Tiempo y Proceso -->
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Seleccionar Rango</label>
+            <div id="reportrange" class="form-control form-control-sm d-flex align-items-center justify-content-between bg-white" style="cursor: pointer;">
+              <span><i class="fa fa-calendar me-2"></i> <span></span></span>
+              <i class="fa fa-caret-down"></i>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Fecha Inicial</label>
+            <input type="date" class="form-control form-control-sm" name="IdtReporteIni" id="IdtReporteIni" readonly>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Fecha Final</label>
+            <input type="date" class="form-control form-control-sm" name="IdtReporteFin" id="IdtReporteFin" readonly>
+          </div>
+          <input type="hidden" name="procedure_name" id="procedure_name" value="venta_cero">
+
+          <!-- Filtros - Fila Dedicada para evitar superposición -->
+          <div class="col-12">
+            <label class="form-label fw-semibold d-block small text-uppercase mb-2">Tipo de filtro</label>
+            <div class="d-flex flex-wrap gap-2">
+              {% for ft in filter_types %}
+              <input type="radio" class="btn-check" name="filter_type" id="ft_{{ ft.id }}" value="{{ ft.id }}" {% if ft.id == 'proveedor' %}checked{% endif %}>
+              <label class="btn btn-outline-secondary btn-sm" for="ft_{{ ft.id }}">{{ ft.nombre }}</label>
+              {% endfor %}
+            </div>
+            <small class="text-muted" id="filter_value_hint">Por defecto se ejecuta con proveedor BIMBO.</small>
+          </div>
+
+          <!-- Valor del Filtro y Opciones Técnicas -->
+          <div class="col-md-9">
+            <label class="form-label fw-semibold" for="filter_value_select">Valor del Filtro</label>
+            <select class="form-select form-select-sm" name="filter_value" id="filter_value_select" disabled required>
+              <option value="">Seleccione tipo de filtro primero</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Tamaño de lote</label>
+            <select class="form-select form-select-sm" id="batch_size" name="batch_size">
+              <option value="10000">10,000</option>
+              <option value="20000">20,000</option>
+              <option value="50000" selected>50,000</option>
+              <option value="100000">100,000</option>
+              <option value="200000">200,000</option>
+            </select>
+            <small class="text-muted">Ajuste si el dataset es grande</small>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="alert alert-info d-flex align-items-center mb-3" role="alert" id="vc-status">
+    <i class="fas fa-info-circle me-2"></i>
+    <div>Ejecuta el reporte para ver resultados.</div>
+  </div>
+
+  <div id="vc-dashboard" style="display:none;">
+    <div class="row mb-3 g-3">
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-4 border-danger h-100">
+          <div class="card-body">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Clientes sin compra</div>
+            <div class="h4 mb-0 fw-bold text-danger" id="vc-kpi-1">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-4 border-success h-100">
+          <div class="card-body">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Zonas afectadas</div>
+            <div class="h4 mb-0 fw-bold text-success" id="vc-kpi-2">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-4 border-info h-100">
+          <div class="card-body">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Última fecha</div>
+            <div class="h4 mb-0 fw-bold text-info" id="vc-kpi-3">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-4 border-primary h-100">
+          <div class="card-body">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Filtro activo</div>
+            <div class="h4 mb-0 fw-bold text-primary" id="vc-kpi-4">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-list me-2"></i>Detalle de Venta Cero</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive" id="vc-table-wrapper" style="max-height: 550px; overflow-y: auto; display:none;">
+          <table class="table table-hover table-sm small align-middle" id="vc-preview-table">
+            <thead class="table-light sticky-top" style="z-index:1;">
+              <tr id="vc-preview-head"></tr>
+            </thead>
+            <tbody id="vc-preview-body"></tbody>
+            <tfoot class="table-light fw-bold sticky-bottom" id="vc-preview-footer"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 d-flex justify-content-end">
+      {% include 'includes/download_file.html' %}
+    </div>
+  </div>
+
+  <div id="emptyState" class="text-center py-5">
+    <div class="text-muted">
+      <i class="fas fa-search fa-3x mb-3 text-gray-300"></i>
+      <p>Seleccione los parámetros y ejecute el reporte para ver resultados.</p>
+    </div>
+  </div>
+
+  <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.6);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content bg-dark text-white border-0 shadow">
+        <div class="modal-body text-center py-4">
+          <h5 class="mb-3"><i class="fas fa-spinner fa-spin text-danger me-2"></i>Generando Informe Venta Cero...</h5>
+          <div class="progress mb-2" style="height: 10px; background-color: rgba(255,255,255,0.2);">
+            <div id="progressBar" class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+          </div>
+          <div id="progress-stage" class="mb-2 fw-bold">Preparando ejecución...</div>
+          <p id="time-info" class="mt-2 small text-white-50">Tiempo transcurrido: 0 seg</p>
+          <div id="detailedStatus" class="small text-white-50 mt-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock window %}
+
+{% block script %}
+<script>
+  const csrfToken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+  const progressBar = document.getElementById("progressBar");
+  const progressStage = document.getElementById("progress-stage");
+  const filterValueSelect = document.getElementById("filter_value_select");
+  const filterHint = document.getElementById("filter_value_hint");
+  // OJO: el selector de base real vive en el sidebar (includes/database_selector.html)
+  const databaseSelectEl = document.getElementById("database_select");
+  const ceveSelect = document.getElementById("ceves_code_select");
+  let progressInterval = null;
+  let startTime = 0;
+  document.getElementById("processingModal").style.display = "none";
+  document.getElementById("download_file").className = "d-none";
+
+  function setSelectOptions(selectEl, options, placeholder = "Seleccione una opción") {
+    selectEl.innerHTML = "";
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = placeholder;
+    selectEl.appendChild(defaultOpt);
+    options.forEach(opt => {
+      const option = document.createElement("option");
+      option.value = opt.id;
+      option.textContent = opt.label || opt.id;
+      selectEl.appendChild(option);
+    });
+  }
+
+  function setSelectLoading(selectEl, message) {
+    selectEl.innerHTML = "";
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = message;
+    selectEl.appendChild(opt);
+  }
+
+  // No sobreescribir sessionStorage aquí: lo administra el selector global del sidebar.
+
+  function fetchLookup(url, onSuccess, onError) {
+    const xhr = new XMLHttpRequest();
+    xhr.responseType = "json";
+    xhr.open("GET", url, true);
+    xhr.onreadystatechange = function () {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        if (this.status === 200 && this.response) {
+          onSuccess(this.response);
+        } else {
+          onError(this.response || { error: `Error ${this.status}` });
+        }
+      }
+    };
+    xhr.send();
+  }
+
+  function handleFilterTypeChange(type) {
+    const database = window.sessionStorage.getItem("database_name") || (databaseSelectEl ? databaseSelectEl.value : "");
+    filterValueSelect.disabled = true;
+    filterValueSelect.innerHTML = "";
+    if (!database) {
+      setSelectOptions(filterValueSelect, [], "Seleccione un agente/CEVES primero");
+      filterHint.textContent = "Seleccione un agente para cargar opciones.";
+      return;
+    }
+
+    let url = "";
+    if (type === "proveedor") {
+      url = "{% url 'home_app:venta_cero_lookup_proveedores' %}?database_select=" + encodeURIComponent(database);
+      setSelectLoading(filterValueSelect, "Cargando proveedores...");
+      fetchLookup(url, (resp) => {
+        const options = resp.results || [];
+        setSelectOptions(filterValueSelect, options, options.length ? "Seleccione proveedor" : "Sin proveedores");
+        filterValueSelect.disabled = options.length === 0;
+        filterHint.textContent = options.length ? "Proveedor fijo: BIMBO" : "No hay proveedores disponibles.";
+        if (options.length) {
+          filterValueSelect.value = options[0].id;
+        }
+      }, () => {
+        setSelectOptions(filterValueSelect, [], "Error cargando proveedores");
+      });
+    } else if (type === "categoria") {
+      url = "{% url 'home_app:venta_cero_lookup_categorias' %}?database_select=" + encodeURIComponent(database);
+      setSelectLoading(filterValueSelect, "Cargando categorías...");
+      fetchLookup(url, (resp) => {
+        const options = resp.results || [];
+        setSelectOptions(filterValueSelect, options, options.length ? "Seleccione categoría" : "Sin categorías");
+        filterValueSelect.disabled = options.length === 0;
+        filterHint.textContent = options.length ? "Categoría obligatoria" : "No hay categorías disponibles.";
+      }, () => {
+        setSelectOptions(filterValueSelect, [], "Error cargando categorías");
+      });
+    } else if (type === "subcategoria") {
+      url = "{% url 'home_app:venta_cero_lookup_subcategorias' %}?database_select=" + encodeURIComponent(database);
+      setSelectLoading(filterValueSelect, "Cargando subcategorías...");
+      fetchLookup(url, (resp) => {
+        const options = resp.results || [];
+        setSelectOptions(filterValueSelect, options, options.length ? "Seleccione subcategoría" : "Sin subcategorías");
+        filterValueSelect.disabled = options.length === 0;
+        filterHint.textContent = options.length ? "Seleccione subcategoría" : "No hay subcategorías disponibles.";
+      }, () => {
+        setSelectOptions(filterValueSelect, [], "Error cargando subcategorías");
+      });
+    } else if (type === "producto") {
+      url = "{% url 'home_app:venta_cero_lookup_productos' %}?database_select=" + encodeURIComponent(database);
+      setSelectLoading(filterValueSelect, "Cargando productos...");
+      fetchLookup(url, (resp) => {
+        const options = resp.results || [];
+        setSelectOptions(filterValueSelect, options, options.length ? "Seleccione producto" : "Sin productos");
+        filterValueSelect.disabled = options.length === 0;
+        filterHint.textContent = options.length ? "Seleccione el producto exacto" : "No hay productos disponibles.";
+      }, () => {
+        setSelectOptions(filterValueSelect, [], "Error cargando productos");
+      });
+    } else {
+      setSelectOptions(filterValueSelect, [], "Seleccione un tipo de filtro");
+    }
+  }
+
+  function resetUI() {
+    updateProgressBar(0, "Listo para iniciar...");
+    document.getElementById("processingModal").style.display = "none";
+    document.getElementById("detailedStatus").innerText = "";
+    document.getElementById("time-info").textContent = "Tiempo transcurrido: 0 seg";
+    document.getElementById("submitBtnVentaCero").setAttribute("data-submitted", "false");
+  }
+
+  function updateProgressBar(value, stageText) {
+    const safeValue = Math.max(0, Math.min(100, Number(value) || 0));
+    progressBar.style.width = safeValue + "%";
+    progressBar.setAttribute("aria-valuenow", safeValue);
+    progressBar.textContent = safeValue.toFixed(0) + "%";
+    progressBar.className = safeValue < 100 ? "progress-bar progress-bar-striped progress-bar-animated bg-primary" : "progress-bar bg-primary";
+    if (stageText) progressStage.textContent = stageText;
+  }
+
+  function updateElapsedTime() {
+    const timeInfoElement = document.getElementById("time-info");
+    let elapsedText = "Tiempo transcurrido: ";
+    if (startTime > 0) {
+      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = Math.floor(elapsedSeconds / 60);
+      const seconds = elapsedSeconds % 60;
+      elapsedText += (minutes > 0 ? minutes + " min " : "") + seconds + " seg";
+    } else {
+      elapsedText += "0 seg";
+    }
+    timeInfoElement.textContent = elapsedText;
+  }
+
+  function renderPreview(headers, rows) {
+    const tableWrapper = document.getElementById("vc-table-wrapper");
+    const statusBox = document.getElementById("vc-status");
+    const dashboard = document.getElementById("vc-dashboard");
+    const emptyState = document.getElementById("emptyState");
+    const headRow = document.getElementById("vc-preview-head");
+    const body = document.getElementById("vc-preview-body");
+    headRow.innerHTML = "";
+    body.innerHTML = "";
+
+    if (!headers || headers.length === 0 || !rows || rows.length === 0) {
+      tableWrapper.style.display = "none";
+      statusBox.className = "alert alert-info";
+      statusBox.textContent = "No hay datos para mostrar con estos filtros.";
+      if (dashboard) dashboard.style.display = "none";
+      if (emptyState) emptyState.style.display = "block";
+      return;
+    }
+
+    if (dashboard) dashboard.style.display = "block";
+    if (emptyState) emptyState.style.display = "none";
+    headers.forEach(h => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      headRow.appendChild(th);
+    });
+
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      headers.forEach(h => {
+        const td = document.createElement("td");
+        td.textContent = r[h] !== undefined && r[h] !== null ? r[h] : "";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+
+    statusBox.className = "alert alert-success";
+    statusBox.textContent = "Previsualización de las primeras filas generadas.";
+    tableWrapper.style.display = "block";
+  }
+
+  function updateKpis(meta, fechaIni, fechaFin) {
+    const kpis = (meta && meta.kpis) ? meta.kpis : {};
+
+    const clientes = (kpis.clientes_sin_compra !== undefined && kpis.clientes_sin_compra !== null)
+      ? kpis.clientes_sin_compra
+      : (meta && meta.total_records !== undefined ? meta.total_records : "-");
+
+    const zonas = (kpis.zonas_afectadas !== undefined && kpis.zonas_afectadas !== null)
+      ? kpis.zonas_afectadas
+      : "-";
+
+    const ultimaFecha = kpis.ultima_fecha || fechaFin || "-";
+    const filtroActivo = kpis.filtro_activo || `${(meta && meta.filter_type) ? meta.filter_type : ""} = ${(meta && meta.filter_value) ? meta.filter_value : ""}`.trim();
+
+    const el1 = document.getElementById("vc-kpi-1");
+    const el2 = document.getElementById("vc-kpi-2");
+    const el3 = document.getElementById("vc-kpi-3");
+    const el4 = document.getElementById("vc-kpi-4");
+
+    if (el1) el1.textContent = clientes;
+    if (el2) el2.textContent = zonas;
+    if (el3) el3.textContent = ultimaFecha;
+    if (el4) el4.textContent = filtroActivo;
+  }
+
+  function updateSummary(meta, fechaIni, fechaFin, procedure) {
+    document.getElementById("summary-periodo").textContent = `Período: ${fechaIni} - ${fechaFin}`;
+    document.getElementById("summary-agente").textContent = `Agente: ${meta.ceves || ''}`;
+    document.getElementById("summary-procedure").textContent = `SP: ${procedure}`;
+    document.getElementById("summary-filter").textContent = `Filtro: ${meta.filter_type || ""} = ${meta.filter_value || ""}`;
+    const total = meta.total_records !== undefined ? meta.total_records : "-";
+    document.getElementById("summary-total").textContent = `Filas: ${total}`;
+    document.getElementById("vc-summary").style.display = "flex";
+  }
+
+  function validateInputs() {
+    const database = (document.getElementById("database_select") ? document.getElementById("database_select").value : "") || window.sessionStorage.getItem("database_name");
+    const ceve = ceveSelect ? ceveSelect.value : "";
+    const fechaIni = document.getElementById("IdtReporteIni").value;
+    const fechaFin = document.getElementById("IdtReporteFin").value;
+    const filterType = document.querySelector('input[name="filter_type"]:checked');
+    const filterValue = filterValueSelect.value;
+    let error = "";
+    if (!database) error = "Debe seleccionar una base de datos.";
+    else if (!ceve) error = "Seleccione un CEVES válido.";
+    else if (!filterType) error = "Seleccione un tipo de filtro.";
+    else if (filterType && filterType.value !== "proveedor" && !filterValue) error = "Seleccione un valor del catálogo.";
+    else if (!fechaIni || !fechaFin) error = "Seleccione fechas de inicio y fin.";
+    else if (fechaIni > fechaFin) error = "La fecha inicial no puede ser mayor que la final.";
+    return error;
+  }
+
+  function handleServerResponse(status, response) {
+    if (status === 200 && response && typeof response === "object" && response.success) {
+      window.sessionStorage.setItem("venta_cero_task_id", response.task_id);
+      updateProgressBar(5, "Tarea iniciada. Esperando procesamiento...");
+      setTimeout(checkTaskStatus, 1000);
+    } else {
+      const msg = (response && response.error_message) ? response.error_message : `Error al iniciar la tarea (status ${status})`;
+      stopMonitoring(msg, true);
+    }
+  }
+
+  function handleTaskStatus(status, response) {
+    if (status !== 200 || !response || typeof response !== "object") {
+      stopMonitoring("Error al comprobar el estado de la tarea.", true);
+      return;
+    }
+
+    const progressValue = response.progress !== undefined ? response.progress : parseInt(progressBar.getAttribute("aria-valuenow")) || 5;
+    const stageText = response.stage || (response.meta && response.meta.stage) || "Procesando...";
+    updateProgressBar(progressValue, stageText);
+    document.getElementById("detailedStatus").innerText = response.meta && response.meta.records_processed ? `${response.meta.records_processed} registros procesados.` : "";
+
+    const taskStatus = response.status ? response.status.toLowerCase() : "unknown";
+    if (["completed", "finished", "success"].includes(taskStatus)) {
+      updateProgressBar(100, "Proceso completado");
+      document.getElementById("download_file").className = "d-flex";
+      const result = response.result || {};
+      const meta = result.metadata || {};
+      renderPreview(meta.preview_headers, meta.preview_sample);
+      updateSummary(meta, document.getElementById("IdtReporteIni").value, document.getElementById("IdtReporteFin").value, meta.procedure || "");
+      updateKpis(meta, document.getElementById("IdtReporteIni").value, document.getElementById("IdtReporteFin").value);
+      let msg = result.message || "Reporte generado";
+      stopMonitoring(msg, true, 800);
+    } else if (taskStatus === "failed") {
+      const err = response.error_message || (response.result && response.result.error_message) || "Proceso fallido";
+      updateProgressBar(100, "Proceso fallido");
+      stopMonitoring(err, true, 800);
+    } else {
+      setTimeout(checkTaskStatus, 3000);
+    }
+  }
+
+  function stopMonitoring(message, showAlert = false, delay = 0) {
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = null;
+    const finalize = () => {
+      document.getElementById("processingModal").style.display = "none";
+      if (showAlert && message) alert(message);
+      resetUI();
+      window.sessionStorage.removeItem("venta_cero_task_id");
+    };
+    if (delay > 0) setTimeout(finalize, delay); else finalize();
+  }
+
+  function checkTaskStatus() {
+    const taskId = window.sessionStorage.getItem("venta_cero_task_id");
+    if (!taskId) return;
+    const xhr = new XMLHttpRequest();
+    xhr.responseType = "text";
+    xhr.open("POST", "{% url 'home_app:check_task_status' %}?t=" + Date.now(), true);
+    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = function () {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        try {
+          const response = JSON.parse(this.responseText);
+          handleTaskStatus(this.status, response);
+        } catch (e) {
+          stopMonitoring("Error procesando respuesta de estado.", true);
+        }
+      }
+    };
+    xhr.send("task_id=" + encodeURIComponent(taskId));
+  }
+
+  document.getElementById("submitBtnVentaCero").addEventListener("click", function (event) {
+    event.preventDefault();
+    if (this.getAttribute("data-submitted") === "true") {
+      alert("Ya hay una tarea en curso.");
+      return;
+    }
+    const validationError = validateInputs();
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+    const database = (document.getElementById("database_select") ? document.getElementById("database_select").value : "") || window.sessionStorage.getItem("database_name");
+    const fechaIni = document.getElementById("IdtReporteIni").value;
+    const fechaFin = document.getElementById("IdtReporteFin").value;
+    const procedure = "venta_cero";
+    const filterType = document.querySelector('input[name="filter_type"]:checked');
+    const filterValue = (filterType && filterType.value === "proveedor") ? "BIMBO DE COLOMBIA S.A" : filterValueSelect.value;
+    const batchSize = document.getElementById("batch_size").value;
+
+    this.setAttribute("data-submitted", "true");
+    startTime = Date.now();
+    updateProgressBar(0, "Iniciando generación...");
+    document.getElementById("processingModal").style.display = "flex";
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(updateElapsedTime, 1000);
+
+    const xhr = new XMLHttpRequest();
+    xhr.responseType = "text";
+    xhr.open("POST", "{% url form_url %}", true);
+    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = function () {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        try {
+          const response = JSON.parse(this.responseText);
+          handleServerResponse(this.status, response);
+        } catch (e) {
+          stopMonitoring("Error al iniciar la tarea.", true);
+        }
+      }
+    };
+    const body = "database_select=" + encodeURIComponent(database) +
+      "&ceves_code=" + encodeURIComponent(ceveSelect ? ceveSelect.value : "") +
+      "&IdtReporteIni=" + encodeURIComponent(fechaIni) +
+      "&IdtReporteFin=" + encodeURIComponent(fechaFin) +
+      "&procedure_name=" + encodeURIComponent(procedure) +
+      "&filter_type=" + encodeURIComponent(filterType.value) +
+      "&filter_value=" + encodeURIComponent(filterValue) +
+      "&category_value=" + encodeURIComponent("") +
+      "&batch_size=" + encodeURIComponent(batchSize);
+    xhr.send(body);
+  });
+
+  document.getElementById("btnClearFilters").addEventListener("click", function () {
+    filterValueSelect.innerHTML = "<option value=''>Seleccione tipo de filtro primero</option>";
+    filterValueSelect.disabled = true;
+    document.querySelectorAll('input[name="filter_type"]').forEach(r => r.checked = (r.value === "proveedor"));
+    handleFilterTypeChange("proveedor");
+  });
+
+  document.querySelectorAll('input[name="filter_type"]').forEach(radio => {
+    radio.addEventListener("change", function () {
+      handleFilterTypeChange(this.value);
+    });
+  });
+
+  if (databaseSelectEl) {
+    databaseSelectEl.addEventListener("change", function () {
+      document.querySelectorAll('input[name="filter_type"]').forEach(r => (r.checked = false));
+      filterValueSelect.disabled = true;
+      setSelectOptions(filterValueSelect, [], "Seleccione tipo de filtro primero");
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    setSelectOptions(filterValueSelect, [], "Seleccione tipo de filtro primero");
+    filterValueSelect.disabled = true;
+    // Default: Proveedor (BIMBO)
+    const defaultFilter = document.querySelector('input[name="filter_type"][value="proveedor"]');
+    if (defaultFilter) {
+      defaultFilter.checked = true;
+      handleFilterTypeChange("proveedor");
+    }
+    const existingTask = window.sessionStorage.getItem("venta_cero_task_id");
+    if (existingTask) {
+      if (confirm("Hay una tarea de Venta Cero en curso. ¿Desea seguir monitoreándola?")) {
+        document.getElementById("submitBtnVentaCero").setAttribute("data-submitted", "true");
+        document.getElementById("processingModal").style.display = "flex";
+        startTime = Date.now();
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = setInterval(updateElapsedTime, 1000);
+        updateProgressBar(5, "Reanudando monitoreo...");
+        checkTaskStatus();
+      } else {
+        window.sessionStorage.removeItem("venta_cero_task_id");
+      }
+    }
+  });
+</script>
+{% endblock script %}

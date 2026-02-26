@@ -1,0 +1,70 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Panel de Monitoreo{% endblock title %}
+{% block barra_lateral %}
+{% comment %} {% include 'includes/left_sidebar_cubo.html' %} {# Puedes crear left_sidebar_monitor.html si quieres menú propio #} {% endcomment %}
+{% endblock barra_lateral %}
+{% block window %}
+<h2 class="mb-4">Panel de Monitoreo</h2>
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">Trabajos en cola (RQ)</div>
+            <div class="card-body">
+                <strong>Trabajos pendientes:</strong> {{ rq_jobs|length }}<br>
+                <strong>Trabajos fallidos:</strong> {{ rq_failed }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white">Workers activos</div>
+            <div class="card-body">
+                <ul>
+                    {% for worker in rq_workers %}
+                    <li>{{ worker }}</li>
+                    {% empty %}
+                    <li>No hay workers activos</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">Usuarios</div>
+            <div class="card-body">
+                <strong>Totales:</strong> {{ usuarios_totales }}<br>
+                <strong>Activos:</strong> {{ usuarios_activos }}<br>
+                <strong>Staff:</strong> {{ usuarios_staff }}<br>
+                <strong>Superusuarios:</strong> {{ usuarios_superuser }}
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-warning text-dark">Últimos accesos</div>
+            <div class="card-body">
+                <ul>
+                    {% for acceso in ultimos_accesos %}
+                    <li>{{ acceso.fecha_hora|date:"Y-m-d H:i:s" }} - {{ acceso.usuario.get_full_name }} - {{ acceso.ip }} - {{ acceso.city }}</li>
+                    {% empty %}
+                    <li>No hay registros recientes</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white">Métricas adicionales</div>
+            <div class="card-body">
+                <!-- Aquí puedes agregar más métricas -->
+                <em>Personaliza este panel según tus necesidades.</em>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock window %}

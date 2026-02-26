@@ -1,0 +1,75 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+.venv
+*.env
+.env.*
+
+# Logs
+*.log
+log.txt
+logExtractor.txt
+logCargueInfoVentas.txt
+cargueinfoventas.txt
+difusion.txt
+difusionerror.txt
+logs/
+
+# Databases
+db.sqlite3
+mydata.db
+*.db
+*.sqlite3
+*.sql
+
+# Credentials and sensitive JSON data
+secret.json
+config_email.json
+Exe_Extrae_Bi.json
+InstalarExeFinal-actualizar-Insert.json
+InstalarExeFinal-con-Excel-compi.json
+*.pem
+*.key
+rsa_key
+rsa_key.pub
+
+# Local configurations
+local_settings.py
+docker-compose.local.yml
+Dockerfile-local
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Application media / static
+media/
+staticfiles/
+output/
+*.exe
+
+# Testing
+htmlcov/
+.tox/
+.nox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Django migrations (Optional but generally keep them, except for initial db stuff, but better not to ignore migrations entirely unless specified)
+# */migrations/*.py
+# !*/migrations/__init__.py

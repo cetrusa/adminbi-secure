@@ -1,0 +1,65 @@
+<!-- {% if perms.permisos.nav_bar %} -->
+{% load static %}
+
+
+<!-- Barra lateral -->
+<div class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 bg-dark">
+  <div class="d-flex flex-column align-items-center align-items-sm-start px-3 pt-2 text-white min-vh-100">
+    <!-- Logo y Nombre de Usuario -->
+    <a href="{% url 'home_app:panel_cubo' %}"
+      class="d-flex align-items-center pb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+      <img src="{% static 'images/Logo-Blanco.png' %}" alt="Logo" width="30" height="30" class="rounded-circle">
+      <span class="fs-5 ms-2 d-none d-sm-inline">{{ user.get_full_name }}</span>
+    </a>
+    <!-- Enlaces de Navegación -->
+    <ul class="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start">
+      {% if perms.permisos.interface or perms.permisos.interface_siigo %}
+      <li class="nav-item">
+        <a href="{% url 'home_app:interface'%}" class="nav-link text-white align-middle px-0">
+          <i class="fas fa-calculator me-2"></i> <span class="ms-1 d-none d-sm-inline">Int. Contables</span>
+        </a>
+      </li>
+      {% if perms.permisos.interface_siigo %}
+      <li class="nav-item">
+        <a href="{% url 'home_app:interface_siigo'%}" class="nav-link text-white align-middle px-0">
+          <i class="fas fa-file-excel me-2"></i> <span class="ms-1 d-none d-sm-inline">Int. Siigo</span>
+        </a>
+      </li>
+      {% endif %}
+      {% endif %}
+      {% if perms.permisos.plano %}
+      <li class="nav-item">
+        <a href="{% url 'home_app:plano'%}" class="nav-link text-white align-middle px-0">
+          <i class="fas fa-calculator me-2"></i> <span class="ms-1 d-none d-sm-inline">Archivos Planos</span>
+        </a>
+      </li>
+      {% endif %}
+      
+      <!-- Cargues movidos al menú de actualización -->
+      
+      <!-- Agrega más elementos de menú aquí según sea necesario -->
+    </ul>
+
+    <hr>
+
+    <!-- Área de Usuario y Dropdown -->
+    <div class="dropdown pb-4">
+      <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1"
+        data-bs-toggle="dropdown" aria-expanded="false">
+        <img src="{% static 'images/user-profile.png' %}" alt="profile" width="30" height="30" class="rounded-circle">
+        <span class="d-none d-sm-inline mx-1">{{ user.username }}</span>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+        <!-- Agrega elementos al dropdown según sea necesario -->
+        {% if user.is_authenticated %}
+        <li><a class="dropdown-item" href="{% url 'users_app:user-logout' %}">Sign out</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- {% endif %} -->

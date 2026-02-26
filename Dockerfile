@@ -1,0 +1,40 @@
+# Usamos la imagen oficial de Python 3.12 como imagen base
+FROM python:3.12
+
+WORKDIR /code
+
+# Configuramos variables de entorno
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Instalamos coreutils para tener el comando `timeout`
+RUN apt-get update && apt-get install -y coreutils && rm -rf /var/lib/apt/lists/*
+
+# Copiamos requirements-docker.txt a /code en el contenedor
+COPY ./requirements-docker.txt .
+
+# Actualizamos pip, setuptools y wheel
+RUN pip install --upgrade pip setuptools wheel
+
+# Instalamos dependencias con un límite de 10 minutos
+RUN timeout 600 pip install --no-cache-dir -r requirements-docker.txt
+
+# Copiamos todos los archivos y directorios al directorio de trabajo en el contenedor
+COPY . .
+
+# Ajustamos la zona horaria del contenedor
+RUN ln -sf /usr/share/zoneinfo/America/Bogota /etc/localtime
+
+# Ejecutamos el comando collectstatic de Django
+RUN python manage.py collectstatic --no-input
+
+# Cambiamos permisos de los archivos estáticos
+RUN chmod -R 755 /code/static
+
+# Crea la carpeta media y establece permisos adecuados
+RUN mkdir -p /code/media
+RUN chmod -R 755 /code/media
+
+# Comando para iniciar la aplicación
+CMD ["gunicorn", "--bind", "0.0.0.0:4085", "--timeout", "28800", "adminbi.wsgi:application"]

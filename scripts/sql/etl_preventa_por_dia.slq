@@ -1,0 +1,283 @@
+WITH
+ordenes_base AS (
+    SELECT
+        zona_id,
+        fecha,
+        establecimiento_id,
+        pedido_id,
+        pedidotipo_id,
+        MIN(hora) AS horai,
+        MAX(hora) AS horaf,
+        SEC_TO_TIME(SUM(DISTINCT TIME_TO_SEC(tiempop))) AS tiempo_pedido
+    FROM tordenesmovil
+    WHERE fecha BETWEEN :fi AND :ff
+    GROUP BY zona_id, fecha, establecimiento_id, pedido_id, pedidotipo_id
+),
+
+visitados AS (
+    SELECT DISTINCT zona_id, fecha, establecimiento_id
+    FROM ordenes_base
+),
+
+visitados_ruta AS (
+    SELECT DISTINCT o.zona_id, o.fecha, o.establecimiento_id
+    FROM ordenes_base o
+    WHERE EXISTS (
+        SELECT 1 FROM mcliente_visitas_entregas_dia v
+        WHERE v.cliente_id = o.establecimiento_id
+          AND v.zona_id = o.zona_id
+          AND v.fecha = o.fecha
+    )
+),
+
+clientes_compra AS (
+    SELECT DISTINCT zona_id, fecha, establecimiento_id
+    FROM ordenes_base
+    WHERE pedidotipo_id = 1
+),
+
+clientes_no_compra AS (
+        SELECT DISTINCT o.zona_id, o.fecha, o.establecimiento_id
+        FROM ordenes_base o
+        WHERE o.pedidotipo_id >= 2
+            AND EXISTS (
+                    SELECT 1 FROM mcliente_visitas_entregas_dia v
+                    WHERE v.cliente_id = o.establecimiento_id
+                        AND v.zona_id = o.zona_id
+                        AND v.fecha = o.fecha
+            )
+            AND NOT EXISTS (
+                    SELECT 1 FROM ordenes_base c
+                    WHERE c.zona_id = o.zona_id
+                        AND c.fecha = o.fecha
+                        AND c.establecimiento_id = o.establecimiento_id
+                        AND c.pedidotipo_id = 1
+            )
+),
+
+base AS (
+    SELECT DISTINCT
+        z.zona_id,
+        z.zona_nm,
+        o.fecha,
+        (SELECT idProveedorFVP FROM mempresa LIMIT 1) AS codigo_agente,
+        CASE DAYOFWEEK(o.fecha)
+            WHEN 1 THEN 'DOMINGO'
+            WHEN 2 THEN 'LUNES'
+            WHEN 3 THEN 'MARTES'
+            WHEN 4 THEN 'MIÉRCOLES'
+            WHEN 5 THEN 'JUEVES'
+            WHEN 6 THEN 'VIERNES'
+            WHEN 7 THEN 'SÁBADO'
+        END AS dia_semana,
+        CASE DAYOFWEEK(o.fecha)
+            WHEN 1 THEN 'DO'
+            WHEN 2 THEN 'LU'
+            WHEN 3 THEN 'MA'
+            WHEN 4 THEN 'MI'
+            WHEN 5 THEN 'JU'
+            WHEN 6 THEN 'VI'
+            WHEN 7 THEN 'SA'
+        END AS dia_semana_corto
+    FROM zona z
+    JOIN ordenes_base o ON o.zona_id = z.zona_id
+    WHERE z.idestado = 1
+),
+
+clientes_compra_resumen AS (
+    SELECT zona_id, fecha, COUNT(DISTINCT establecimiento_id) clientescom
+    FROM clientes_compra
+    GROUP BY zona_id, fecha
+),
+
+pedidos AS (
+    SELECT
+        zona_id,
+        fecha,
+        COUNT(DISTINCT pedido_id) totalpedidos, -- todos los pedidos
+        COUNT(DISTINCT CASE WHEN pedidotipo_id = 1 THEN establecimiento_id END) totalpedD, -- clientes con pedido
+        SUM(CASE WHEN pedidotipo_id = 1 THEN 1 ELSE 0 END) totalclsub, -- pedidos de compra (líneas)
+        COUNT(DISTINCT establecimiento_id) total_atendidos_raw
+    FROM ordenes_base
+    GROUP BY zona_id, fecha
+),
+
+no_compra AS (
+    SELECT zona_id, fecha, COUNT(*) totalpa
+    FROM clientes_no_compra
+    GROUP BY zona_id, fecha
+),
+
+atendidos AS (
+    SELECT
+        zona_id,
+        fecha,
+        COUNT(*) atendidos
+    FROM visitados_ruta
+    GROUP BY zona_id, fecha
+),
+
+ruta_extraruta AS (
+    SELECT
+        o.zona_id,
+        o.fecha,
+        COUNT(DISTINCT CASE WHEN EXISTS (
+            SELECT 1 FROM mcliente_visitas_entregas_dia v
+            WHERE v.cliente_id = o.establecimiento_id
+              AND v.zona_id = o.zona_id
+              AND v.fecha = o.fecha
+        ) THEN o.establecimiento_id END) pedidos_ruta,
+        COUNT(DISTINCT CASE WHEN NOT EXISTS (
+            SELECT 1 FROM mcliente_visitas_entregas_dia v
+            WHERE v.cliente_id = o.establecimiento_id
+              AND v.zona_id = o.zona_id
+              AND v.fecha = o.fecha
+        ) THEN o.establecimiento_id END) pedidos_extraruta
+    FROM ordenes_base o
+    WHERE o.pedidotipo_id = 1
+    GROUP BY o.zona_id, o.fecha
+),
+
+tiempos AS (
+    SELECT
+        zona_id,
+        fecha,
+        MIN(horai) horai,
+        MAX(horaf) horaf,
+        SEC_TO_TIME(SUM(TIME_TO_SEC(tiempo_pedido))) tiempo_total,
+        SEC_TO_TIME(AVG(TIME_TO_SEC(tiempo_pedido))) tiempo_prom
+    FROM ordenes_base
+    GROUP BY zona_id, fecha
+),
+
+programados AS (
+    SELECT
+        v.zona_id,
+        v.fecha,
+        COUNT(DISTINCT v.cliente_id) programados
+    FROM mcliente_visitas_entregas_dia v
+    WHERE v.fecha BETWEEN :fi AND :ff
+      AND v.dia_visita = CASE WEEKDAY(v.fecha)
+            WHEN 0 THEN 'LU'
+            WHEN 1 THEN 'MA'
+            WHEN 2 THEN 'MI'
+            WHEN 3 THEN 'JU'
+            WHEN 4 THEN 'VI'
+            WHEN 5 THEN 'SA'
+      END
+    GROUP BY v.zona_id, v.fecha
+),
+
+pendientes AS (
+    SELECT
+        v.zona_id,
+        v.fecha,
+        COUNT(DISTINCT v.cliente_id) totalpendientes
+    FROM mcliente_visitas_entregas_dia v
+    LEFT JOIN visitados_ruta o
+        ON o.establecimiento_id = v.cliente_id
+       AND o.zona_id = v.zona_id
+       AND o.fecha = v.fecha
+    WHERE v.fecha BETWEEN :fi AND :ff
+      AND v.dia_visita = CASE WEEKDAY(v.fecha)
+            WHEN 0 THEN 'LU'
+            WHEN 1 THEN 'MA'
+            WHEN 2 THEN 'MI'
+            WHEN 3 THEN 'JU'
+            WHEN 4 THEN 'VI'
+            WHEN 5 THEN 'SA'
+      END
+    AND o.establecimiento_id IS NULL
+    GROUP BY v.zona_id, v.fecha
+),
+
+clientes_nuevos AS (
+    SELECT
+        zona zona_id,
+        fingreso_dt fecha,
+        COUNT(DISTINCT cliente_id) pednuevo
+    FROM clientes
+    WHERE fingreso_dt BETWEEN :fi AND :ff
+    GROUP BY zona, fingreso_dt
+),
+
+valores AS (
+    SELECT
+        zona_id,
+        fecha,
+        COUNT(DISTINCT establecimiento_id) TotalCLi,
+        AVG(vlrpromedio) ValorPrm,
+        SUM(vlrproducto) ValorT,
+        SUM(vlrcambio) ValorC
+    FROM (
+        SELECT
+            t.zona_id,
+            t.fecha,
+            t.establecimiento_id,
+            AVG(t.Cantidad * t.valor_fl) vlrpromedio,
+            SUM(t.Cantidad * t.valor_fl) vlrproducto,
+            IFNULL(
+                SUM(
+                    ROUND(
+                        ((t.valor_fl * dc.porcentaje) / 100) /
+                        IF(p.nbUnidadesDisplay IS NULL OR p.nbUnidadesDisplay = 0, 1, p.nbUnidadesDisplay),
+                        2
+                    ) * t.Cambios
+                ),
+                SUM(t.Cambios * t.valor_fl)
+            ) vlrcambio
+        FROM tordenesmovil t
+        JOIN mproductos p ON p.nbProducto = t.producto_id
+        LEFT JOIN detalle_cambio dc
+            ON dc.codigo_pedido = t.pedido_id
+           AND dc.codigo_producto = t.producto_id
+           AND dc.fechae = t.fechae
+        WHERE t.fecha BETWEEN :fi AND :ff
+          AND t.pedidotipo_id = 1
+        GROUP BY t.zona_id, t.fecha, t.establecimiento_id, t.pedido_id
+    ) x
+    GROUP BY zona_id, fecha
+)
+
+SELECT
+    b.fecha,                       -- Fecha del día
+    b.zona_id,                     -- Código de zona
+    b.zona_nm,                     -- Nombre de zona
+    b.codigo_agente,               -- Código del agente/proveedor
+    b.dia_semana,                  -- Día de la semana
+    b.dia_semana_corto,            -- Día de la semana abreviado
+    cc.clientescom,                -- Clientes con pedido (compra)
+    p.totalpedidos,                -- Pedidos totales (todas las órdenes)
+    p.totalpedD,                   -- Clientes con pedido (distintos)
+    COALESCE(nc.totalpa,0) AS totalpa,      -- Clientes visitados sin compra (no-compra)
+    p.totalclsub,                  -- Pedidos de compra (líneas pedidotipo=1)
+    COALESCE(at.atendidos,0) AS atendidos,  -- Clientes atendidos (compra + no-compra)
+    r.pedidos_ruta,                -- Clientes con compra en ruta
+    r.pedidos_extraruta,           -- Clientes con compra fuera de ruta
+    pen.totalpendientes,           -- Programados sin visita/pedido
+    prog.programados,              -- Clientes programados
+    CASE
+        WHEN prog.programados IS NULL OR prog.programados = 0 THEN 0
+        ELSE ROUND(((prog.programados - IFNULL(pen.totalpendientes, 0)) / prog.programados) * 100, 2)
+    END AS efectividad_visita,     -- % programados atendidos
+    t.horai,                       -- Hora inicio
+    t.horaf,                       -- Hora fin
+    t.tiempo_total,                -- Tiempo total invertido
+    t.tiempo_prom,                 -- Tiempo promedio por pedido
+    v.TotalCLi,                    -- Clientes con pedido (para métricas de valor)
+    v.ValorPrm,                    -- Valor promedio
+    v.ValorT,                      -- Valor total
+    v.ValorC,                      -- Valor por cambio
+    cn.pednuevo                    -- Clientes nuevos
+FROM base b
+LEFT JOIN clientes_compra_resumen cc ON cc.zona_id=b.zona_id AND cc.fecha=b.fecha
+LEFT JOIN pedidos p ON p.zona_id=b.zona_id AND p.fecha=b.fecha
+LEFT JOIN no_compra nc ON nc.zona_id=b.zona_id AND nc.fecha=b.fecha
+LEFT JOIN atendidos at ON at.zona_id=b.zona_id AND at.fecha=b.fecha
+LEFT JOIN ruta_extraruta r ON r.zona_id=b.zona_id AND r.fecha=b.fecha
+LEFT JOIN tiempos t ON t.zona_id=b.zona_id AND t.fecha=b.fecha
+LEFT JOIN valores v ON v.zona_id=b.zona_id AND v.fecha=b.fecha
+LEFT JOIN pendientes pen ON pen.zona_id=b.zona_id AND pen.fecha=b.fecha
+LEFT JOIN programados prog ON prog.zona_id=b.zona_id AND prog.fecha=b.fecha
+LEFT JOIN clientes_nuevos cn ON cn.zona_id=b.zona_id AND cn.fecha=b.fecha
+ORDER BY b.fecha, b.zona_id;

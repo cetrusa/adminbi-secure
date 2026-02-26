@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Entity Detail View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2236",
+                        "border-light": "#e5e7eb",
+                        "border-dark": "#2d3748",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col overflow-hidden">
+<!-- Top Navigation -->
+<header class="h-16 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center justify-between px-6 shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div class="size-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">dataset</span>
+</div>
+<h1 class="font-bold text-lg tracking-tight">Entity Manager</h1>
+<nav class="hidden md:flex ml-8 gap-6">
+<a class="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-sm font-medium text-primary border-b-2 border-primary pb-[1.35rem] mb-[-1.35rem]" href="#">Records</a>
+<a class="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">Reports</a>
+<a class="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">Settings</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">search</span>
+<input class="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-64 placeholder-slate-400 text-slate-900 dark:text-white" placeholder="Search..." type="text"/>
+</div>
+<button class="size-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors relative">
+<span class="material-symbols-outlined text-[20px] text-slate-600 dark:text-slate-300">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark"></span>
+</button>
+<div class="size-9 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center" data-alt="User profile avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBhFRKEBzKLxKPtOHaPdT2wCiiEFRKIzI-yyuypWhFAwe3_1Ul5EphK6q8Hcx3CmRuYRXXSJT56y_l7bVpQI1TDWazLv9OlVALZkOZ_S0hk-3fjhxRaOthHLM-DdM4T3x4aD7E0KHdTma3GEPnFfH8w9pqQCniukqDachgCojciOmzLDuAryDdl-PFpbEA0HEuSaQY5dMOZkRc5HEKZwgZGfSp0jm17Wx7vnXfwvO5ABR5jmZMCeEuS4xWQPQXSiQCuarLuu7DoPYQ');"></div>
+</div>
+</header>
+<!-- Main Layout -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Center Content Area (Scrollable) -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+<!-- Breadcrumbs & Header -->
+<div class="px-8 pt-6 pb-2">
+<div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-4">
+<a class="hover:text-primary transition-colors" href="#">Records</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Orders</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-slate-900 dark:text-slate-100 font-medium">Order #492-22</span>
+</div>
+<div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<h2 class="text-3xl font-bold text-slate-900 dark:text-white">Order #492-22</h2>
+<span class="px-2.5 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-semibold uppercase tracking-wide border border-yellow-200 dark:border-yellow-800">
+                                Processing
+                            </span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-mono bg-slate-100 dark:bg-slate-800 inline-block px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                            UUID: 8a92-41b2-99c1-7d3f8a
+                        </p>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-slate-700 dark:text-slate-200 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">ios_share</span>
+                            Export
+                        </button>
+<button class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-slate-700 dark:text-slate-200 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+                            Delete
+                        </button>
+<button class="px-4 py-2 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+                            Edit Record
+                        </button>
+</div>
+</div>
+</div>
+<!-- Dashboard Grid -->
+<div class="px-8 pb-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left Column: Main Info & Relationships -->
+<div class="lg:col-span-2 space-y-6">
+<!-- General Information Card -->
+<section class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+<h3 class="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">info</span>
+                                General Information
+                            </h3>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+<div>
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Created Date</label>
+<p class="text-sm font-medium text-slate-900 dark:text-slate-200">Oct 24, 2023 at 09:42 AM</p>
+</div>
+<div>
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Owner</label>
+<div class="flex items-center gap-2">
+<div class="size-6 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center" data-alt="Owner portrait" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBN9difYQ8TXzYjfncP9pBTJYj-oaSDXoxdKST5O7wgdWPgGfbG-R-oj6M7EwmuBuBlXLBYEBeumgHDFwE2LLMEvWhhtlJVNg1af7HnlYR3D0b1A6Hoqf-1jar1UHFJ5eYXA0SRJSrtVg9A2cz_dQWI1NlNhkPQO1QnAXh-3DtU9Y0srYRONpR3BwgfKIs-pSfgQl-eVnGXpcqKlt1kAbXFIOrDGzN6WY7CiL_FYB20n1Jb9JdvnUd4GPlqh9YPp01eMHL6OwAS2Ns');"></div>
+<p class="text-sm font-medium text-slate-900 dark:text-slate-200">Sarah Jenkins</p>
+</div>
+</div>
+<div>
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Department</label>
+<p class="text-sm font-medium text-slate-900 dark:text-slate-200">Logistics &amp; Supply Chain</p>
+</div>
+<div>
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Priority</label>
+<div class="flex items-center gap-1.5">
+<span class="size-2 rounded-full bg-red-500"></span>
+<p class="text-sm font-medium text-slate-900 dark:text-slate-200">High</p>
+</div>
+</div>
+<div class="md:col-span-2">
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Description</label>
+<p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                                    Standard shipment for Q4 inventory restock targeting the North-East distribution center. Requires expedited handling due to holiday season demand spike. Please verify pallet count before dispatch.
+                                </p>
+</div>
+</div>
+</section>
+<!-- Relationships Card -->
+<section class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+<h3 class="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">hub</span>
+                                Relationships
+                            </h3>
+<button class="text-primary hover:text-primary/80 text-sm font-medium">Add New</button>
+</div>
+<div class="divide-y divide-border-light dark:divide-border-dark">
+<div class="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<div class="flex items-center gap-4">
+<div class="size-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+<span class="material-symbols-outlined">confirmation_number</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-slate-900 dark:text-white">Linked Ticket #44</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Support Request • Open</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary cursor-pointer">open_in_new</span>
+</div>
+<div class="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<div class="flex items-center gap-4">
+<div class="size-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+<span class="material-symbols-outlined">apartment</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-slate-900 dark:text-white">Acme Corp HQ</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Parent Organization • Active</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary cursor-pointer">open_in_new</span>
+</div>
+</div>
+</section>
+<!-- Files Section -->
+<section class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+<h3 class="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">folder_open</span>
+                                Files &amp; Attachments
+                            </h3>
+<button class="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors">
+<span class="material-symbols-outlined">upload</span>
+</button>
+</div>
+<div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+<!-- File Card 1 -->
+<div class="flex items-start gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:border-primary/50 dark:hover:border-primary/50 bg-slate-50 dark:bg-slate-800/50 transition-colors cursor-pointer group">
+<div class="size-10 shrink-0 bg-red-100 dark:bg-red-900/30 rounded flex items-center justify-center text-red-600 dark:text-red-400">
+<span class="material-symbols-outlined text-[24px]">picture_as_pdf</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors">Contract_v2.pdf</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">1.2 MB • Added 2d ago</p>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+</div>
+<!-- File Card 2 -->
+<div class="flex items-start gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:border-primary/50 dark:hover:border-primary/50 bg-slate-50 dark:bg-slate-800/50 transition-colors cursor-pointer group">
+<div class="size-10 shrink-0 bg-emerald-100 dark:bg-emerald-900/30 rounded flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+<span class="material-symbols-outlined text-[24px]">table_chart</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors">Inventory_List_Q4.xlsx</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">845 KB • Added 5h ago</p>
+</div>
+<button class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+</div>
+<!-- Add File Placeholder -->
+<div class="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer text-slate-500 hover:text-primary">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span class="text-sm font-medium">Upload File</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Audit Timeline -->
+<div class="lg:col-span-1">
+<section class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm h-full flex flex-col">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+<h3 class="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+                                Audit Timeline
+                            </h3>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+</div>
+<div class="p-6 overflow-y-auto max-h-[600px]">
+<div class="relative pl-4 border-l border-slate-200 dark:border-slate-700 space-y-8">
+<!-- Timeline Item 1 -->
+<div class="relative group">
+<div class="absolute -left-[21px] top-1 size-3 rounded-full border-2 border-white dark:border-surface-dark bg-primary shadow-sm ring-2 ring-primary/20"></div>
+<div class="flex flex-col gap-1">
+<p class="text-sm font-semibold text-slate-900 dark:text-white">Status changed to Processing</p>
+<div class="flex items-center gap-2 mt-1">
+<div class="size-5 rounded-full bg-cover bg-center" data-alt="Admin user avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDqdSLVT2Sy1a6N-C2hCRTPoovdTdtQbkB7cM3cxqp7qJI59LLmJRufc3A8t42dhbXArgBjFotrCYB_qkDEGsqxU4rIOJwYwZBqhSZhXJU1ptt2b79ukSYxNXA74tVgwzxbp-_lK5LJuwJre6bwDyULerOOzjzP9Ee33LMk1Vjy48Oq8r2AAyr5NYlE9f6mhTJZe1-SaBpgrs133oyZeTNf2Hy5hRcP7o7frsUA7qBM9pvwq2ZvRoJfEaQIfopi4ldOrWLEQiKunYc');"></div>
+<span class="text-xs font-medium text-slate-700 dark:text-slate-300">Admin</span>
+<span class="text-xs text-slate-400">•</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">2 mins ago</span>
+</div>
+</div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="relative group">
+<div class="absolute -left-[21px] top-1 size-3 rounded-full border-2 border-white dark:border-surface-dark bg-slate-300 dark:bg-slate-600"></div>
+<div class="flex flex-col gap-1">
+<p class="text-sm font-semibold text-slate-900 dark:text-white">New File Uploaded</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 italic">Inventory_List_Q4.xlsx</p>
+<div class="flex items-center gap-2 mt-1">
+<div class="size-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-[10px] font-bold">SY</div>
+<span class="text-xs font-medium text-slate-700 dark:text-slate-300">System</span>
+<span class="text-xs text-slate-400">•</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">5 hours ago</span>
+</div>
+</div>
+</div>
+<!-- Timeline Item 3 -->
+<div class="relative group">
+<div class="absolute -left-[21px] top-1 size-3 rounded-full border-2 border-white dark:border-surface-dark bg-slate-300 dark:bg-slate-600"></div>
+<div class="flex flex-col gap-1">
+<p class="text-sm font-semibold text-slate-900 dark:text-white">Description Updated</p>
+<div class="flex items-center gap-2 mt-1">
+<div class="size-5 rounded-full bg-cover bg-center" data-alt="Sarah Jenkins avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAkpV0dD2biKpD1MJ-T_ZjwcAJRBstLibpAOd2QwXvYlC8oRqkAKbugWGAtQdEAENJhzkAFINzDXjidPPlNSvFdzcSyfekmZG3psW3d6TVtp0yb74eqe_od8C1VL14QseATBdvuglEVDZJcrX1YihTItxBf78RMBkdpsIw0PtU2qnSluWelfxqWRTuVJkYrfcQB_EbOWE5NIIinGv6px7q2H0jH0Pr6DLNU0CPUqN1295Mz0nvYrK6nVLlu7ZX2nkloRmC8NMKJeao');"></div>
+<span class="text-xs font-medium text-slate-700 dark:text-slate-300">Sarah Jenkins</span>
+<span class="text-xs text-slate-400">•</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">1 day ago</span>
+</div>
+</div>
+</div>
+<!-- Timeline Item 4 -->
+<div class="relative group">
+<div class="absolute -left-[21px] top-1 size-3 rounded-full border-2 border-white dark:border-surface-dark bg-slate-300 dark:bg-slate-600"></div>
+<div class="flex flex-col gap-1">
+<p class="text-sm font-semibold text-slate-900 dark:text-white">Record Created</p>
+<div class="flex items-center gap-2 mt-1">
+<div class="size-5 rounded-full bg-cover bg-center" data-alt="John Doe avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDmIYB191jBVCRGh9Vn5_xeoW4shcfUoxmeGzwsBPKKkrc62_u6JmS7wSHvRjMqNPyoL3yhoz547bmVEk176znqe6tTdRG-Y2f-OQwQTA8aaTYKHg7GowgiQiRB-6758RIYtgCFvbgz7Bd4hjyDOI8Df9i6qNZ02Gx-ocyScNMjwxNPSoT3AYSQOf6we8zASLrAt_7hO6qbsQGKwjAmazirewibIwkKNND6_04o-7dPZ_4G_uOtOe2pmlTGYyMsTGDrmF6mMDtq4Rk');"></div>
+<span class="text-xs font-medium text-slate-700 dark:text-slate-300">John Doe</span>
+<span class="text-xs text-slate-400">•</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">2 days ago</span>
+</div>
+</div>
+</div>
+<div class="relative">
+<div class="absolute -left-[21px] top-0 size-3 rounded-full border-2 border-white dark:border-surface-dark bg-slate-200 dark:bg-slate-700"></div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-border-light dark:border-border-dark mt-auto bg-slate-50/50 dark:bg-slate-800/20">
+<button class="w-full py-2 text-xs font-medium text-slate-500 hover:text-primary text-center transition-colors">
+                                View Full History
+                            </button>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</body></html>

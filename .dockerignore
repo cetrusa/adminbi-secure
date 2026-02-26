@@ -1,0 +1,36 @@
+# Archivos y carpetas que no deben entrar al contexto de build
+# VCS y editor
+.git
+.gitignore
+.vscode/
+.idea/
+
+# Python cache y artefactos
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.venv/
+venv/
+
+# Tests y herramientas
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Sistema/OS
+.DS_Store
+Thumbs.db
+
+# Proyecto: evitar grandes volúmenes o artefactos generados
+media/
+output/
+logs/
+staticfiles/
+
+# Otros
+*.log

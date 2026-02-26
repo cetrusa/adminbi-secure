@@ -1,0 +1,417 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}
+Matrix de Ventas
+{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_cubo.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+{% include 'includes/datepicker_range.html' %}
+<!-- contenido de la pagina -->
+<br>
+<br>
+<div class="container">
+  <!-- Mensajes de alerta -->
+  {% if messages %}
+  <div class="alert alert-warning" role="alert">
+    {% for message in messages %}
+    <p>{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="card" style="width: 25rem;">
+    <div class="card-header text-center">
+      <h2>Matrix de Ventas</h2>
+    </div>
+    <div class="card-body">
+      <form action="{% url form_url %}" method="post" id="FormMatrix">
+        {% csrf_token %}
+        <label for="date_input">Fecha:</label>
+        <div id="reportrange"
+          style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+          <i class="fa fa-calendar"></i>&nbsp;
+          <span></span> <i class="fa fa-caret-down"></i>
+        </div>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th><label class="lh-1" for="IdtReporteIni">Fecha Inicial:</label></th>
+              <th><label class="lh-1" for="IdtReporteFin">Fecha Final:</label></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th><input type="date" name="IdtReporteIni" id="IdtReporteIni" readonly></th>
+              <th><input type="date" name="IdtReporteFin" id="IdtReporteFin" readonly></th>
+            </tr>
+          </tbody>
+        </table>
+        <div class="form-group mt-3">
+          <label for="batch_size">Tamaño de lote (registros por procesamiento):</label>
+          <select class="form-control" id="batch_size" name="batch_size">
+            <option value="10000">10,000 (Recomendado para equipos con recursos limitados)</option>
+            <option value="20000">20,000</option>
+            <option value="50000" selected>50,000 (Configuración estándar)</option>
+            <option value="100000">100,000 (Para conjuntos de datos grandes)</option>
+            <option value="200000">200,000 (Para equipos con muchos recursos)</option>
+          </select>
+          <small class="form-text text-muted">Ajuste este valor según el rendimiento de su sistema y el tamaño de los
+            datos</small>
+        </div>
+    </div>
+    <span class="card text-center"><button id="submitBtnMatrix" type="submit" class="btn btn-primary"
+        data-submitted="false">Generar Matrix de Ventas</button></span>
+    </form>
+
+    <br>
+    <br>
+    {% include 'includes/download_file.html' %}
+  </div>
+  <!-- Este es el Modal -->
+  <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+    aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content bg-dark text-white">
+        <div class="modal-header">
+          <h5 class="modal-title" id="processingModalLabel">Procesando Matrix de Ventas...</h5>
+        </div>
+        <div class="modal-body">
+          <div id="progress-stage" class="mb-3 font-weight-bold">Por favor, espere mientras se genera el archivo...
+          </div>
+          <div class="progress" style="height: 20px;">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+              role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+          </div>
+          <div id="detailedStatus" class="small text-muted mt-3 p-2 border-top"></div>
+          <p id="time-info" class="mt-2 small text-muted">Tiempo transcurrido: 0 seg</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- final del modal -->
+</div>
+{% endblock window %}
+
+{% block script %}
+<script>
+  document.getElementById("processingModal").style.display = "none";
+  document.getElementById("download_file").className = 'd-none';
+  var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+  var startTime = 0;
+  var progressInterval = null;
+  var progressBar = document.getElementById("progressBar");
+  let lastProgressValue = 0;
+
+  // Listener para el botón específico submitBtnMatrix
+  document.getElementById("submitBtnMatrix").addEventListener("click", function (event) {
+    event.preventDefault();
+    if (this.getAttribute("data-submitted") === "true") {
+      alert("Ya hay una tarea de generación de Matrix en curso.");
+      return;
+    }
+    var database = window.sessionStorage.getItem("database_name");
+    var IdtReporteIni = document.getElementById("IdtReporteIni").value;
+    var IdtReporteFin = document.getElementById("IdtReporteFin").value;
+    var batchSize = document.getElementById("batch_size").value;
+    if (!database || !IdtReporteIni || !IdtReporteFin) {
+      stopMonitoring("Por favor, seleccione la empresa y ambas fechas.", true, 0);
+      return;
+    }
+    console.log("Iniciando generación Matrix...");
+    this.setAttribute("data-submitted", "true");
+    startTime = new Date().getTime();
+    updateProgressBar(0, "Iniciando generación...");
+    document.getElementById("processingModal").style.display = "flex";
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(updateElapsedTime, 1000);
+    var xhr = new XMLHttpRequest();
+    xhr.responseType = "text";
+    xhr.open("POST", "{% url form_url %}", true);
+    xhr.setRequestHeader("X-CSRFToken", csrf_token);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = function () {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        try {
+          console.log("Respuesta inicio Matrix:", this.responseText);
+          var response = JSON.parse(this.responseText);
+          handleServerResponse(this.status, response);
+        } catch (e) {
+          console.error("Error procesando respuesta inicio Matrix:", e, this.responseText);
+          stopMonitoring("Error al procesar la respuesta del servidor al iniciar la tarea.");
+        }
+      }
+    };
+    xhr.send("database_select=" + encodeURIComponent(database) +
+      "&IdtReporteIni=" + encodeURIComponent(IdtReporteIni) +
+      "&IdtReporteFin=" + encodeURIComponent(IdtReporteFin) +
+      "&batch_size=" + encodeURIComponent(batchSize));
+  });
+
+  function handleServerResponse(status, response) {
+    if (status === 200) {
+      if (typeof response === "object" && "success" in response) {
+        if (response.success) {
+          console.log("Tarea Matrix iniciada. Task ID:", response.task_id);
+          window.sessionStorage.setItem("matrix_task_id", response.task_id);
+          updateProgressBar(5, "Tarea iniciada. Esperando procesamiento...");
+          setTimeout(checkTaskStatus, 1000);
+        } else {
+          stopMonitoring("Hubo un error al iniciar el proceso: " + (response.error_message || "Error desconocido"));
+        }
+      } else {
+        stopMonitoring("La respuesta del servidor no es un objeto JSON válido al iniciar.");
+      }
+    } else {
+      stopMonitoring("Hubo un error al enviar la solicitud, código de estado: " + status);
+    }
+  }
+
+  function checkTaskStatus() {
+    var task_id = window.sessionStorage.getItem("matrix_task_id");
+    if (!task_id) {
+      console.log("No se encontró ID de tarea de Matrix para verificar.");
+      stopMonitoring(null, false);
+      return;
+    }
+    console.log("Verificando estado tarea Matrix:", task_id);
+    var timestamp = new Date().getTime();
+    var xhr = new XMLHttpRequest();
+    xhr.responseType = "text";
+    xhr.open("POST", "{% url 'home_app:check_task_status' %}?t=" + timestamp, true);
+    xhr.setRequestHeader("X-CSRFToken", csrf_token);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = function () {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        try {
+          console.log("Respuesta check_task_status (Matrix):", this.responseText);
+          var response = JSON.parse(this.responseText);
+          handleTaskStatus(this.status, response);
+        } catch (e) {
+          console.error("Error procesando respuesta check_task_status (Matrix):", e, this.responseText);
+          stopMonitoring("Error al procesar la respuesta del servidor sobre el estado de la tarea.");
+        }
+      }
+    };
+    xhr.send("task_id=" + encodeURIComponent(task_id));
+  }
+
+  function handleTaskStatus(status, response) {
+    if (status === 200) {
+      if (typeof response === "object" && "status" in response) {
+        const detailedStatusEl = document.getElementById("detailedStatus");
+        var progressValue = response.progress !== undefined ? response.progress : parseInt(progressBar.getAttribute("aria-valuenow")) || 5;
+        var stageText = response.stage || (response.meta && response.meta.stage) || "Procesando...";
+        updateProgressBar(progressValue, stageText);
+        updateEtaInfo(response.eta);
+        detailedStatusEl.innerText = "";
+        if (response.meta) {
+          let detailText = "";
+          if (response.meta.current_step && response.meta.total_steps) {
+            detailText += `Paso ${response.meta.current_step} de ${response.meta.total_steps}. `;
+          }
+          if (response.meta.records_processed !== undefined && response.meta.total_records_estimate !== undefined) {
+            detailText += `${response.meta.records_processed.toLocaleString()} de ${response.meta.total_records_estimate.toLocaleString()} registros. `;
+          } else if (response.meta.records_processed !== undefined) {
+            detailText += `${response.meta.records_processed.toLocaleString()} registros procesados. `;
+          }
+          detailedStatusEl.innerText = detailText;
+        }
+        var taskStatus = response.status.toLowerCase();
+        if (taskStatus === "completed" || taskStatus === "finished" || taskStatus === "success") {
+          updateProgressBar(100, "Proceso completado exitosamente");
+          document.getElementById("download_file").className = 'd-flex';
+          let message = "¡Proceso completado exitosamente!";
+          if (response.result) {
+            if (response.result.message) message = response.result.message;
+            if (response.result.metadata && response.result.metadata.total_records !== undefined) {
+              message += ` Se procesaron ${response.result.metadata.total_records.toLocaleString()} registros.`;
+            }
+            if (response.result.execution_time !== undefined) {
+              message += ` Tiempo total: ${response.result.execution_time.toFixed(1)} seg.`;
+            }
+            if (response.result.metadata && response.result.metadata.performance_report) {
+              console.info("Reporte de Rendimiento:\n", response.result.metadata.performance_report);
+            }
+          }
+          stopMonitoring(message, true, 1000);
+        } else if (taskStatus === "failed") {
+          updateProgressBar(100, "Proceso fallido");
+          let errorMsg = "Error en el proceso";
+          if (response.error) errorMsg = response.error;
+          else if (response.result && typeof response.result === 'string') errorMsg = response.result;
+          else if (response.result && response.result.error) errorMsg = response.result.error;
+          else if (response.meta && response.meta.error) errorMsg = response.meta.error;
+          else if (response.traceback) {
+            errorMsg = response.traceback.split('\n').slice(-2)[0];
+          }
+          stopMonitoring("Hubo un error en el proceso: " + errorMsg, true, 1000);
+        } else if (taskStatus === "partial_success") {
+          updateProgressBar(100, "Completado con advertencias");
+          document.getElementById("download_file").className = 'd-flex';
+          let partialMsg = "El archivo se generó, pero hubo algunas advertencias.";
+          if (response.result && response.result.message) partialMsg = response.result.message;
+          stopMonitoring(partialMsg, true, 1000);
+        } else {
+          if (response.meta && response.meta.file_ready && progressValue >= 80) {
+            document.getElementById("download_file").className = 'd-flex';
+          }
+          setTimeout(checkTaskStatus, 3000);
+        }
+      } else {
+        stopMonitoring("La respuesta del servidor sobre el estado no es un objeto JSON válido.");
+      }
+    } else {
+      stopMonitoring("Hubo un error al comprobar el estado de la tarea, código de estado: " + status);
+    }
+  }
+
+  function updateProgressBar(value, stageText) {
+    if (value < lastProgressValue) {
+      value = lastProgressValue;
+    } else {
+      lastProgressValue = value;
+    }
+    var progressStage = document.getElementById("progress-stage");
+    value = Math.max(0, Math.min(100, Number(value) || 0));
+    progressBar.style.width = value + "%";
+    progressBar.setAttribute("aria-valuenow", value);
+    progressBar.textContent = value.toFixed(0) + "%";
+    if (value < 100) {
+      progressBar.className = "progress-bar progress-bar-striped progress-bar-animated bg-primary";
+    } else {
+      progressBar.className = "progress-bar bg-primary";
+    }
+    if (stageText) progressStage.textContent = stageText;
+  }
+
+  function updateElapsedTime() {
+    var timeInfoElement = document.getElementById("time-info");
+    var elapsedText = "Tiempo transcurrido: ";
+    if (startTime > 0) {
+      var currentTime = new Date().getTime();
+      var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+      var minutes = Math.floor(elapsedSeconds / 60);
+      var seconds = elapsedSeconds % 60;
+      elapsedText += (minutes > 0 ? minutes + " min " : "") + seconds + " seg";
+    } else {
+      elapsedText += "0 seg";
+    }
+    var currentText = timeInfoElement.textContent;
+    var etaPart = currentText.includes("|") ? " |" + currentText.split("|")[1] : "";
+    timeInfoElement.textContent = elapsedText + etaPart;
+  }
+
+  function updateEtaInfo(etaSeconds) {
+    var timeInfoElement = document.getElementById("time-info");
+    var currentElapsedTimeText = timeInfoElement.textContent.split("|")[0].trim();
+    if (etaSeconds !== undefined && etaSeconds !== null && etaSeconds > 0) {
+      var etaMinutes = Math.floor(etaSeconds / 60);
+      var etaSecs = Math.floor(etaSeconds % 60);
+      var etaText = (etaMinutes > 0 ? etaMinutes + " min " : "") + etaSecs + " seg";
+      timeInfoElement.textContent = currentElapsedTimeText + " | Tiempo restante estimado: " + etaText;
+    } else {
+      timeInfoElement.textContent = currentElapsedTimeText;
+    }
+  }
+
+  function stopMonitoring(alertMessage, showAlert = true, delay = 0) {
+    console.log("Deteniendo monitoreo (Matrix). Mensaje:", alertMessage);
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = null;
+    startTime = 0;
+    let finalBarClass = "progress-bar bg-primary";
+    if (alertMessage) {
+      if (alertMessage.toLowerCase().includes("exitosamente") || alertMessage.toLowerCase().includes("completado")) {
+        finalBarClass = "progress-bar bg-success";
+      } else if (alertMessage.toLowerCase().includes("error") || alertMessage.toLowerCase().includes("fallido")) {
+        finalBarClass = "progress-bar bg-danger";
+      } else if (alertMessage.toLowerCase().includes("advertencia")) {
+        finalBarClass = "progress-bar bg-warning";
+      }
+    }
+    progressBar.className = finalBarClass;
+    const finalize = () => {
+      document.getElementById("processingModal").style.display = "none";
+      if (showAlert && alertMessage) alert(alertMessage);
+      document.getElementById("submitBtnMatrix").setAttribute("data-submitted", "false");
+      window.sessionStorage.removeItem("matrix_task_id");
+      updateProgressBar(0, "Listo para iniciar...");
+      document.getElementById("time-info").textContent = "Tiempo transcurrido: 0 seg";
+      document.getElementById("detailedStatus").innerText = "";
+    };
+    if (delay > 0) setTimeout(finalize, delay);
+    else finalize();
+  }
+
+  function deleteFile() {
+    var downloadLink = document.getElementById("download_link");
+    if (!downloadLink || !downloadLink.href) return;
+    var url = new URL(downloadLink.href, window.location.origin);
+    var fileName = url.searchParams.get("file_name");
+    if (!fileName) return;
+    var xhr = new XMLHttpRequest();
+    xhr.responseType = "text";
+    xhr.open("POST", "{% url 'home_app:delete_file' %}", true);
+    xhr.setRequestHeader("X-CSRFToken", csrf_token);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onreadystatechange = function () {
+      if (this.readyState === XMLHttpRequest.DONE) {
+        console.log(this.status, this.responseText);
+      }
+    };
+    xhr.send("file_name=" + encodeURIComponent(fileName));
+  }
+
+  function reloadForm() {
+    location.reload();
+  }
+
+  document.getElementById("download_file").addEventListener("click", function (event) {
+    console.log("Descarga iniciada...");
+    var downloadLink = document.getElementById("download_link");
+    var delay = 3000;
+    if (downloadLink && downloadLink.hasAttribute("data-filesize")) {
+      var fileSize = parseInt(downloadLink.getAttribute("data-filesize"));
+      if (!isNaN(fileSize) && fileSize > 50 * 1024 * 1024) {
+        delay = 20000;
+      } else if (!isNaN(fileSize) && fileSize > 10 * 1024 * 1024) {
+        delay = 10000;
+      }
+    }
+    setTimeout(function () {
+      deleteFile();
+      setTimeout(function () {
+        location.reload();
+      }, 10000);
+    }, delay);
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("DOM cargado (Matrix). Verificando tareas de Matrix pendientes...");
+    var matrixTaskId = window.sessionStorage.getItem("matrix_task_id");
+    if (matrixTaskId) {
+      console.log("Se encontró ID de tarea de Matrix pendiente:", matrixTaskId);
+      if (confirm("Detectamos una generación de Matrix pendiente. ¿Desea continuar monitoreando su progreso?")) {
+        console.log("Usuario confirmó continuar monitoreo (Matrix).");
+        document.getElementById("submitBtnMatrix").setAttribute("data-submitted", "true");
+        document.getElementById("processingModal").style.display = "flex";
+        updateProgressBar(5, "Reanudando monitoreo...");
+        startTime = new Date().getTime();
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = setInterval(updateElapsedTime, 1000);
+        checkTaskStatus();
+      } else {
+        console.log("Usuario canceló continuar monitoreo (Matrix). Limpiando ID.");
+        window.sessionStorage.removeItem("matrix_task_id");
+        document.getElementById("submitBtnMatrix").setAttribute("data-submitted", "false");
+      }
+    } else {
+      console.log("No se encontraron tareas de Matrix pendientes.");
+      document.getElementById("submitBtnMatrix").setAttribute("data-submitted", "false");
+    }
+  });
+</script>
+{% endblock script %}

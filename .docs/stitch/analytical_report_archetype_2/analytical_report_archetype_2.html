@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dynamic Grouping Report View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "primary-hover": "#1449b8",
+                        "background-light": "#f8f9fc",
+                        "background-dark": "#111621",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a202c",
+                        "border-light": "#e7ebf3",
+                        "border-dark": "#2d3748",
+                        "text-main-light": "#0e121b",
+                        "text-main-dark": "#f8f9fc",
+                        "text-secondary-light": "#4e6797",
+                        "text-secondary-dark": "#a0aec0",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark flex flex-col h-screen overflow-hidden">
+<header class="flex-none flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-3 bg-surface-light dark:bg-surface-dark z-20">
+<div class="flex items-center gap-4">
+<div class="size-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">analytics</span>
+</div>
+<div>
+<h1 class="text-lg font-bold leading-tight">Sales Performance Analysis</h1>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Q3 2024 Financial Overview • Last updated 2 hours ago</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark p-1">
+<button class="px-3 py-1.5 text-sm font-medium rounded hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-colors">Oct 1 - Dec 31, 2024</button>
+<span class="material-symbols-outlined text-text-secondary-light dark:text-text-secondary-dark px-1 text-sm">calendar_today</span>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 h-9 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:bg-background-light dark:hover:bg-gray-800 text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-lg">save</span>
+<span>Save View</span>
+</button>
+<div class="relative group">
+<button class="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-bold shadow-sm transition-colors">
+<span class="material-symbols-outlined text-lg">download</span>
+<span>Export</span>
+<span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+<div class="absolute right-0 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-lg shadow-xl border border-border-light dark:border-border-dark invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all z-50">
+<a class="block px-4 py-2 text-sm hover:bg-background-light dark:hover:bg-gray-700" href="#">Export as CSV</a>
+<a class="block px-4 py-2 text-sm hover:bg-background-light dark:hover:bg-gray-700" href="#">Export as Excel</a>
+<a class="block px-4 py-2 text-sm hover:bg-background-light dark:hover:bg-gray-700" href="#">Export as PDF</a>
+</div>
+</div>
+</div>
+<div class="h-8 w-px bg-border-light dark:bg-border-dark mx-2"></div>
+<button class="relative rounded-full size-9 bg-center bg-cover border border-border-light dark:border-border-dark" data-alt="User profile picture" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBluMNOrhPZ0BuYjIe6nMrIJUtIT9DEAMRLAOCv27oHMdjisF1A1dOLOZVTNxEBgOcgTSfQ95xZZb_kQoWoSJbRkRsztnMx9Sy82mIAcJND3PA9vb19wuSZ-U2Uvpk7aLA3CIUR9m1XJoTAg5CJ36ehTSac_LdMXEmXaeWETstdrveBjjyBJWtjmH2u1SNkdPg0rz416s2Y_fq3q8DWuUWCfr1dpTXkyRpB1msiQi8I3BiRx9Z7uN6nFmQqNeFot8NvzNAoZQQA-HI');"></button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<aside class="w-72 flex-none flex flex-col border-r border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark z-10">
+<div class="p-4 border-b border-border-light dark:border-border-dark">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark text-lg">search</span>
+<input class="w-full pl-9 pr-3 h-9 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none" placeholder="Search fields..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-6">
+<div>
+<h3 class="text-xs font-bold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark mb-3 flex items-center justify-between">
+                        Dimension Selector
+                        <span class="material-symbols-outlined text-sm cursor-pointer hover:text-primary">add</span>
+</h3>
+<div class="space-y-2">
+<div class="group flex items-center gap-2 p-2 rounded bg-background-light dark:bg-background-dark hover:bg-primary/5 border border-transparent hover:border-primary/20 cursor-grab active:cursor-grabbing transition-colors">
+<span class="material-symbols-outlined text-text-secondary-light dark:text-text-secondary-dark text-lg">drag_indicator</span>
+<span class="text-sm font-medium">Region</span>
+</div>
+<div class="group flex items-center gap-2 p-2 rounded bg-background-light dark:bg-background-dark hover:bg-primary/5 border border-transparent hover:border-primary/20 cursor-grab active:cursor-grabbing transition-colors">
+<span class="material-symbols-outlined text-text-secondary-light dark:text-text-secondary-dark text-lg">drag_indicator</span>
+<span class="text-sm font-medium">Sales Rep</span>
+</div>
+<div class="group flex items-center gap-2 p-2 rounded bg-background-light dark:bg-background-dark hover:bg-primary/5 border border-transparent hover:border-primary/20 cursor-grab active:cursor-grabbing transition-colors">
+<span class="material-symbols-outlined text-text-secondary-light dark:text-text-secondary-dark text-lg">drag_indicator</span>
+<span class="text-sm font-medium">Product Category</span>
+</div>
+<div class="group flex items-center gap-2 p-2 rounded bg-background-light dark:bg-background-dark hover:bg-primary/5 border border-transparent hover:border-primary/20 cursor-grab active:cursor-grabbing transition-colors">
+<span class="material-symbols-outlined text-text-secondary-light dark:text-text-secondary-dark text-lg">drag_indicator</span>
+<span class="text-sm font-medium">Customer Segment</span>
+</div>
+</div>
+</div>
+<div>
+<h3 class="text-xs font-bold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark mb-3 flex items-center justify-between">
+                        Metric Selector
+                        <span class="material-symbols-outlined text-sm cursor-pointer hover:text-primary">add</span>
+</h3>
+<div class="space-y-2">
+<div class="group flex items-center gap-2 p-2 rounded bg-background-light dark:bg-background-dark hover:bg-primary/5 border border-transparent hover:border-primary/20 cursor-grab active:cursor-grabbing transition-colors">
+<span class="material-symbols-outlined text-primary text-lg">123</span>
+<span class="text-sm font-medium">Metric A (Revenue)</span>
+</div>
+<div class="group flex items-center gap-2 p-2 rounded bg-background-light dark:bg-background-dark hover:bg-primary/5 border border-transparent hover:border-primary/20 cursor-grab active:cursor-grabbing transition-colors">
+<span class="material-symbols-outlined text-primary text-lg">123</span>
+<span class="text-sm font-medium">Metric B (COGS)</span>
+</div>
+<div class="group flex items-center gap-2 p-2 rounded bg-background-light dark:bg-background-dark hover:bg-primary/5 border border-transparent hover:border-primary/20 cursor-grab active:cursor-grabbing transition-colors">
+<span class="material-symbols-outlined text-primary text-lg">percent</span>
+<span class="text-sm font-medium">Gross Margin %</span>
+</div>
+<div class="group flex items-center gap-2 p-2 rounded bg-background-light dark:bg-background-dark hover:bg-primary/5 border border-transparent hover:border-primary/20 cursor-grab active:cursor-grabbing transition-colors">
+<span class="material-symbols-outlined text-primary text-lg">show_chart</span>
+<span class="text-sm font-medium">YoY Growth</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+<div class="flex items-center justify-between text-xs text-text-secondary-light dark:text-text-secondary-dark">
+<span>Dataset: Sales_Trans_2024</span>
+<span class="flex items-center gap-1"><span class="block size-2 rounded-full bg-green-500"></span> Live</span>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark relative">
+<div class="flex-none p-4 pb-0">
+<div class="flex flex-col gap-4">
+<div class="flex flex-wrap items-start gap-4">
+<div class="flex flex-col gap-1.5 flex-1 min-w-[300px]">
+<span class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide">Grouping By</span>
+<div class="flex flex-wrap gap-2 p-2 min-h-[44px] rounded-lg border border-dashed border-primary/40 bg-primary/5">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm text-sm">
+<span class="material-symbols-outlined text-base text-text-secondary-light">map</span>
+                                    Region
+                                    <button class="hover:text-red-500 ml-1"><span class="material-symbols-outlined text-base">close</span></button>
+</span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm text-sm">
+<span class="material-symbols-outlined text-base text-text-secondary-light">person</span>
+                                    Sales Rep
+                                    <button class="hover:text-red-500 ml-1"><span class="material-symbols-outlined text-base">close</span></button>
+</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 flex-1 min-w-[300px]">
+<span class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wide">Columns</span>
+<div class="flex flex-wrap gap-2 p-2 min-h-[44px] rounded-lg border border-dashed border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                    Metric A (Rev)
+                                </span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                    Metric B (COGS)
+                                </span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                    Growth %
+                                </span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                                    Margin
+                                </span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between border-b border-border-light dark:border-border-dark pb-4">
+<div class="flex items-center gap-3">
+<div class="flex bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark p-0.5">
+<button class="p-1.5 rounded bg-background-light dark:bg-gray-700 shadow-sm text-primary">
+<span class="material-symbols-outlined text-xl">table_chart</span>
+</button>
+<button class="p-1.5 rounded hover:bg-background-light dark:hover:bg-gray-700 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+<span class="material-symbols-outlined text-xl">bar_chart</span>
+</button>
+<button class="p-1.5 rounded hover:bg-background-light dark:hover:bg-gray-700 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+<span class="material-symbols-outlined text-xl">pie_chart</span>
+</button>
+</div>
+<div class="h-6 w-px bg-border-light dark:bg-border-dark"></div>
+<label class="flex items-center gap-2 text-sm text-text-secondary-light dark:text-text-secondary-dark cursor-pointer select-none">
+<input checked="" class="rounded border-border-light text-primary focus:ring-primary" type="checkbox"/>
+                                Show Subtotals
+                            </label>
+<label class="flex items-center gap-2 text-sm text-text-secondary-light dark:text-text-secondary-dark cursor-pointer select-none">
+<input class="rounded border-border-light text-primary focus:ring-primary" type="checkbox"/>
+                                Compact Mode
+                            </label>
+</div>
+<button class="text-sm font-medium text-primary hover:underline">Reset to Default</button>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-auto p-4 pt-0">
+<div class="mt-4 min-w-[800px] border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead class="bg-background-light dark:bg-background-dark sticky top-0 z-10">
+<tr>
+<th class="p-3 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary-dark border-b border-border-light dark:border-border-dark w-12 text-center">
+<span class="material-symbols-outlined text-base align-middle">unfold_more</span>
+</th>
+<th class="p-3 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary-dark border-b border-border-light dark:border-border-dark cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<div class="flex items-center gap-1">
+                                        Sales Rep
+                                        <span class="material-symbols-outlined text-base opacity-0 group-hover:opacity-100 transition-opacity">arrow_drop_down</span>
+</div>
+</th>
+<th class="p-3 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary-dark border-b border-border-light dark:border-border-dark text-right cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<div class="flex items-center justify-end gap-1">
+                                        Metric A (Rev)
+                                        <span class="material-symbols-outlined text-base text-primary">arrow_drop_down</span>
+</div>
+</th>
+<th class="p-3 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary-dark border-b border-border-light dark:border-border-dark text-right cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<div class="flex items-center justify-end gap-1">
+                                        Metric B (COGS)
+                                        <span class="material-symbols-outlined text-base opacity-0 group-hover:opacity-100 transition-opacity">arrow_drop_down</span>
+</div>
+</th>
+<th class="p-3 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary-dark border-b border-border-light dark:border-border-dark text-right cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<div class="flex items-center justify-end gap-1">
+                                        Growth %
+                                        <span class="material-symbols-outlined text-base opacity-0 group-hover:opacity-100 transition-opacity">arrow_drop_down</span>
+</div>
+</th>
+<th class="p-3 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary-dark border-b border-border-light dark:border-border-dark text-right cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<div class="flex items-center justify-end gap-1">
+                                        Margin
+                                        <span class="material-symbols-outlined text-base opacity-0 group-hover:opacity-100 transition-opacity">arrow_drop_down</span>
+</div>
+</th>
+<th class="p-3 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary-dark border-b border-border-light dark:border-border-dark text-right w-24">
+                                    Action
+                                </th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="bg-background-light dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800">
+<td class="p-3 border-b border-border-light dark:border-border-dark text-center cursor-pointer">
+<span class="material-symbols-outlined text-lg text-text-secondary-light dark:text-text-secondary-dark">expand_more</span>
+</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark font-bold text-primary" colspan="6">
+                                    Region: North America <span class="text-text-secondary-light dark:text-text-secondary-dark font-normal ml-2 text-xs">(3 Records)</span>
+</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<td class="p-3 border-b border-border-light dark:border-border-dark"></td>
+<td class="p-3 border-b border-border-light dark:border-border-dark font-medium">John Doe</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">$1,200,000</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">$912,000</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono text-green-600 font-medium">+15.2%</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">24%</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right">
+<button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-all text-text-secondary-light dark:text-text-secondary-dark">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<td class="p-3 border-b border-border-light dark:border-border-dark"></td>
+<td class="p-3 border-b border-border-light dark:border-border-dark font-medium">Jane Smith</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">$800,000</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">$576,000</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono text-green-600 font-medium">+8.5%</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">28%</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right">
+<button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-all text-text-secondary-light dark:text-text-secondary-dark">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<td class="p-3 border-b border-border-light dark:border-border-dark"></td>
+<td class="p-3 border-b border-border-light dark:border-border-dark font-medium">Carlos R.</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">$600,000</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">$474,000</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono text-red-500 font-medium">-2.1%</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">21%</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right">
+<button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-all text-text-secondary-light dark:text-text-secondary-dark">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</td>
+</tr>
+<tr class="bg-gray-50 dark:bg-gray-800 font-bold text-text-main-light dark:text-text-main-dark">
+<td class="p-3 border-b border-border-light dark:border-border-dark"></td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right uppercase text-xs tracking-wider text-text-secondary-light">Subtotal</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">$2,600,000</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">$1,962,000</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono text-green-600">Avg: +7.2%</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark text-right font-mono">Avg: 24.3%</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark"></td>
+</tr>
+<tr class="bg-background-light dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800">
+<td class="p-3 border-b border-border-light dark:border-border-dark text-center cursor-pointer">
+<span class="material-symbols-outlined text-lg text-text-secondary-light dark:text-text-secondary-dark">chevron_right</span>
+</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark font-bold text-text-main-light dark:text-text-main-dark" colspan="6">
+                                    Region: Europe <span class="text-text-secondary-light dark:text-text-secondary-dark font-normal ml-2 text-xs">(2 Records)</span>
+</td>
+</tr>
+<tr class="bg-background-light dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800">
+<td class="p-3 border-b border-border-light dark:border-border-dark text-center cursor-pointer">
+<span class="material-symbols-outlined text-lg text-text-secondary-light dark:text-text-secondary-dark">chevron_right</span>
+</td>
+<td class="p-3 border-b border-border-light dark:border-border-dark font-bold text-text-main-light dark:text-text-main-dark" colspan="6">
+                                    Region: APAC <span class="text-text-secondary-light dark:text-text-secondary-dark font-normal ml-2 text-xs">(5 Records)</span>
+</td>
+</tr>
+<tr class="bg-primary/5 border-t-2 border-primary sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+<td class="p-4"></td>
+<td class="p-4 font-black uppercase tracking-wider text-sm">Grand Total</td>
+<td class="p-4 text-right font-black font-mono text-base">$8,450,200</td>
+<td class="p-4 text-right font-bold font-mono text-gray-600 dark:text-gray-300 text-base">$6,244,700</td>
+<td class="p-4 text-right font-bold font-mono text-green-600 text-base">+11.4%</td>
+<td class="p-4 text-right font-bold font-mono text-base">26.1%</td>
+<td class="p-4"></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="flex-none p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex items-center justify-between">
+<div class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                    Showing <span class="font-medium text-text-main-light dark:text-text-main-dark">1-50</span> of <span class="font-medium text-text-main-light dark:text-text-main-dark">1,240</span> records
+                </div>
+<div class="flex items-center gap-2">
+<select class="form-select text-sm py-1 pl-2 pr-8 border border-border-light dark:border-border-dark rounded bg-background-light dark:bg-background-dark focus:ring-primary focus:border-primary">
+<option>50 per page</option>
+<option>100 per page</option>
+<option>500 per page</option>
+</select>
+<div class="flex rounded-md shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+<button class="px-3 py-1 bg-white dark:bg-surface-dark border-r border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-background-light dark:hover:bg-gray-700 disabled:opacity-50">
+<span class="material-symbols-outlined text-lg align-middle">first_page</span>
+</button>
+<button class="px-3 py-1 bg-white dark:bg-surface-dark border-r border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-background-light dark:hover:bg-gray-700 disabled:opacity-50">
+<span class="material-symbols-outlined text-lg align-middle">chevron_left</span>
+</button>
+<span class="px-4 py-1 text-sm flex items-center bg-background-light dark:bg-gray-800 font-medium">Page 1 of 25</span>
+<button class="px-3 py-1 bg-white dark:bg-surface-dark border-r border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-background-light dark:hover:bg-gray-700">
+<span class="material-symbols-outlined text-lg align-middle">chevron_right</span>
+</button>
+<button class="px-3 py-1 bg-white dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-background-light dark:hover:bg-gray-700">
+<span class="material-symbols-outlined text-lg align-middle">last_page</span>
+</button>
+</div>
+</div>
+</div>
+<div class="absolute bottom-6 right-6 w-96 bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl border border-border-light dark:border-border-dark overflow-hidden z-50 animate-pulse">
+<div class="p-4">
+<div class="flex items-center justify-between mb-2">
+<h4 class="text-sm font-bold text-text-main-light dark:text-text-main-dark">Generating PDF Report...</h4>
+<span class="text-xs font-mono text-primary font-bold">78%</span>
+</div>
+<div class="h-2 w-full bg-background-light dark:bg-gray-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[78%] rounded-full"></div>
+</div>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-2">Processing 840 of 1,240 records</p>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

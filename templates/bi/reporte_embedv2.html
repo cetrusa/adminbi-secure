@@ -1,0 +1,81 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block style %}
+<script src="https://microsoft.github.io/PowerBI-JavaScript/demo/node_modules/powerbi-client/dist/powerbi.js"></script>
+{% endblock style %}
+
+{% block title %}BI Embedded{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_bi.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<div id="reportContainer" style="height: 100vh;"></div>
+
+{% if error_message %}
+<p>{{ error_message }}</p>
+{% else %}
+<script type="text/javascript">
+    $(function () {
+        var reportContainer = $("#reportContainer").get(0);
+
+        // Initialize iframe for embedding report
+        powerbi.bootstrap(reportContainer, { type: "report" });
+
+        var models = window["powerbi-client"].models;
+        var reportLoadConfig = {
+            type: "report",
+            tokenType: models.TokenType.Embed,
+
+            // Enable this setting to remove gray shoulders from embedded report
+            // settings: {
+            //     background: models.BackgroundType.Transparent
+            // }
+
+            // Enable these settings to hide filter pane and/or page navigation
+            // settings: {
+            //     filterPaneEnabled: false,
+            //     navContentPaneEnabled: true
+            // }
+
+            accessToken: "{{EMBED_ACCESS_TOKEN}}",
+            embedUrl: "{{EMBED_URL}}",
+            id: "{{REPORT_ID}}",
+            permissions: models.Permissions.All,
+            settings: {
+                filterPaneEnabled: false
+            }
+        };
+
+        // Embed BI report
+        var report = powerbi.embed(reportContainer, reportLoadConfig);
+
+        // Clear any other loaded handler events
+        report.off("loaded");
+
+        // Report.on will add an event handler
+        report.on("loaded", function () {
+            console.log("Reporte BI cargado");
+        });
+
+        // Report.off removes a given event handler if it exists
+        report.off("error");
+
+        report.on("error", function (event) {
+            console.log(event.detail);
+        });
+
+        report.off("rendered");
+
+        // Report.on will add an event handler
+        report.on("rendered", function () {
+            console.log("Reporte renderizado");
+        });
+    });
+</script>
+{% endif %}
+{% endblock window %}
+
+{% block script %}
+
+{% endblock script %}

@@ -1,0 +1,435 @@
+{% extends "black.html" %}
+{% load static %}
+
+{% block title %}
+Cargue Información Ventas
+{% endblock title %}
+
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_interface.html' %}
+{% endblock barra_lateral %}
+
+{% block window %}
+{% include 'includes/datepicker_range.html' %}
+<br>
+<br>
+<div class="container">
+    {% if messages %}
+    <div class="alert alert-warning" role="alert">
+        {% for message in messages %}
+        <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="card" style="width: 25rem;">
+        <div class="card-header text-center">
+            <h2>Cargue Masivo de Ventas</h2>
+        </div>
+        <div class="card-body">
+            <form action="{% url 'cargues_app:cargue_infoventas' %}" method="post" enctype="multipart/form-data"
+                id="cargue-form">
+                {% csrf_token %}
+                <label for="date_input">Fecha:</label>
+                <div id="reportrange"
+                    style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+                    <i class="fa fa-calendar"></i>&nbsp;
+                    <span></span> <i class="fa fa-caret-down"></i>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th><label class="lh-1" for="IdtReporteIni">Fecha Inicial:</label></th>
+                            <th><label class="lh-1" for="IdtReporteFin">Fecha Final:</label></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th><input type="date" name="IdtReporteIni" id="IdtReporteIni" readonly></th>
+                            <th><input type="date" name="IdtReporteFin" id="IdtReporteFin" readonly></th>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="mb-3">
+                    <label for="excel_file" class="form-label">Archivo Excel (.xlsx)</label>
+                    <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx" required>
+                </div>
+                <span class="card text-center">
+                    <button id="submitBtnCargueVentas" type="submit" class="btn btn-primary"
+                        data-submitted="false">Cargar
+                        archivo</button>
+                </span>
+                <!-- Input oculto para database_name -->
+                <!-- <input type="hidden" id="database_name" name="database_name" value=""> -->
+            </form>
+        </div>
+
+        <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+            aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.5);">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content bg-dark text-white">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="processingModalLabel">Procesando Cargue de Ventas...</h5>
+                    </div>
+                    <div class="modal-body">
+                        <div id="progress-stage" class="mb-3 font-weight-bold">Por favor, espere mientras se carga el
+                            archivo...</div>
+                        <div class="progress" style="height: 20px;">
+                            <div id="progressBar"
+                                class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0"
+                                aria-valuemax="100">0%</div>
+                        </div>
+                        <div id="detailedStatus" class="small text-muted mt-3 p-2 border-top"></div>
+                        <div id="updateReport" class="mt-3"></div>
+                        <div id="tabla-actual" class="mt-3 font-weight-bold text-info"></div>
+                        <div id="errores-tablas" class="mt-2 text-danger small"></div>
+                        <p id="time-info" class="mt-2 small text-muted">Tiempo transcurrido: 0 seg</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if resultado %}
+    <div class="alert alert-info mt-3">
+        <h5>Resultado del cargue:</h5>
+        <pre>{{ resultado }}</pre>
+    </div>
+    {% endif %}
+</div>
+{% endblock window %}
+
+{% block script %}
+<script>
+    document.getElementById("processingModal").style.display = "none";
+    var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+    var startTime = 0;
+    var progressInterval = null;
+    var progressBar = document.getElementById("progressBar");
+    var progressStage = document.getElementById("progress-stage");
+    var detailedStatus = document.getElementById("detailedStatus");
+    var updateReport = document.getElementById("updateReport");
+    var tablaActual = document.getElementById("tabla-actual");
+    var erroresTablas = document.getElementById("errores-tablas");
+    let lastProgressValue = 0;
+
+    // --- Validación y envío robusto del formulario ---
+    // Elimina cualquier event listener en el botón submitBtnCargueVentas
+    // document.getElementById("submitBtnCargueVentas").addEventListener("click", ... );
+    document.getElementById("cargue-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var submitBtn = document.getElementById("submitBtnCargueVentas");
+        if (submitBtn.getAttribute("data-submitted") === "true") {
+            alert("Ya hay un cargue en curso.");
+            return;
+        }
+        var IdtReporteIni = document.getElementById("IdtReporteIni").value;
+        var IdtReporteFin = document.getElementById("IdtReporteFin").value;
+        var database = window.sessionStorage.getItem("database_name");
+        var fileInput = document.getElementById("excel_file");
+        if (!database || !IdtReporteIni || !IdtReporteFin) {
+            stopMonitoring("Por favor, seleccione la base de datos y ambas fechas.", true, 0);
+            return;
+        }
+        if (!fileInput.files || fileInput.files.length === 0) {
+            stopMonitoring("Debe seleccionar un archivo Excel.", true, 0);
+            return;
+        }
+        // Validación adicional del archivo
+        var selectedFile = fileInput.files[0];
+        if (!selectedFile || selectedFile.size === 0) {
+            stopMonitoring("El archivo seleccionado está vacío o corrupto.", true, 0);
+            return;
+        }
+        if (!selectedFile.name.toLowerCase().endsWith('.xlsx')) {
+            stopMonitoring("Debe seleccionar un archivo Excel (.xlsx).", true, 0);
+            return;
+        }
+        console.log("Archivo validado:", selectedFile.name, "Tamaño:", selectedFile.size, "bytes");
+        submitBtn.setAttribute("data-submitted", "true");
+        startTime = new Date().getTime();
+        updateProgressBar(0, "Iniciando cargue...");
+        document.getElementById("processingModal").style.display = "flex";
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = setInterval(updateElapsedTime, 1000);
+        var form = document.getElementById("cargue-form");
+        var formData = new FormData(form);
+        // Refuerza los campos clave (sin sobrescribir el archivo)
+        formData.set("IdtReporteIni", IdtReporteIni);
+        formData.set("IdtReporteFin", IdtReporteFin);
+        formData.set("database_name", database);
+        // Verificar que el archivo esté incluido en FormData
+        var fileInFormData = formData.get("excel_file");
+        if (!fileInFormData || !(fileInFormData instanceof File) || !fileInFormData.name) {
+            console.error("Error: Archivo no encontrado en FormData");
+            stopMonitoring("Error: El archivo Excel no se pudo procesar correctamente.", true, 0);
+            return;
+        }
+        console.log("Archivo en FormData:", fileInFormData.name, "Tamaño:", fileInFormData.size, "bytes");
+        // Debug: verificar contenido del FormData
+        console.log("FormData contents:");
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + (pair[1] instanceof File ? pair[1].name : pair[1]));
+        }
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", form.getAttribute("action"), true);
+        xhr.setRequestHeader("X-CSRFToken", csrf_token);
+        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+        // NO establecer Content-Type manualmente - el navegador lo hace automáticamente para FormData con archivos
+        xhr.onreadystatechange = function () {
+            if (this.readyState === XMLHttpRequest.DONE) {
+                console.log("XMLHttpRequest completado:");
+                console.log("Status:", this.status);
+                console.log("Response text:", this.responseText);
+                console.log("Response headers:", this.getAllResponseHeaders());
+                try {
+                    var response = JSON.parse(this.responseText);
+                    console.log("Response parsed:", response);
+                    handleServerResponse(this.status, response);
+                } catch (e) {
+                    console.error("Error parsing JSON response:", e);
+                    console.error("Raw response text:", this.responseText);
+                    stopMonitoring("Error al procesar la respuesta del servidor al iniciar el cargue. Respuesta no válida: " + this.responseText.substring(0, 200));
+                }
+            }
+        };
+        xhr.send(formData);
+    });
+
+    function handleServerResponse(status, response) {
+        console.log("handleServerResponse called with:", { status, response });
+
+        if (status === 200 && response.success) {
+            console.log("Success response, task_id:", response.task_id);
+            window.sessionStorage.setItem("cargue_ventas_task_id", response.task_id);
+            updateProgressBar(5, "Tarea iniciada. Procesando...");
+            setTimeout(checkTaskStatus, 1000);
+        } else {
+            console.error("Error response:", { status, response });
+            var errorMsg = "Hubo un error al iniciar el cargue: " + (response.error_message || response.message || "Error desconocido");
+            console.error("Error message:", errorMsg);
+            stopMonitoring(errorMsg);
+        }
+    } function checkTaskStatus() {
+        var task_id = window.sessionStorage.getItem("cargue_ventas_task_id");
+        if (!task_id) {
+            console.log("No task_id found, stopping monitoring");
+            stopMonitoring(null, false);
+            return;
+        }
+
+        console.log("Checking task status for:", task_id);
+        var timestamp = new Date().getTime(); var xhr = new XMLHttpRequest();
+        xhr.responseType = "text";
+        xhr.open("POST", "{% url 'cargues_app:check_task_status' %}?t=" + timestamp, true);
+        xhr.setRequestHeader("X-CSRFToken", csrf_token);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"); xhr.onreadystatechange = function () {
+            if (this.readyState === XMLHttpRequest.DONE) {
+                // Si la tarea ya fue completada exitosamente, no mostrar errores de peticiones posteriores
+                var currentTaskId = window.sessionStorage.getItem("cargue_ventas_task_id");
+                if (!currentTaskId) {
+                    console.log("Task already completed, ignoring response");
+                    return;
+                } try {
+                    var response = JSON.parse(this.responseText);
+                    console.log("JSON parsed successfully:", response);
+                    handleTaskStatus(this.status, response);
+                } catch (parseError) {
+                    console.error("Error in checkTaskStatus:", parseError);
+                    console.error("Response text:", this.responseText);
+                    console.error("Status:", this.status);
+                    console.error("Error details:", parseError.message, parseError.stack);
+
+                    // Si es una respuesta vacía o conexión interrumpida, es normal al final del proceso
+                    if (!this.responseText || this.responseText.trim() === "" || this.status === 0) {
+                        console.log("Empty response or connection aborted - process likely completed");
+                        // Verificar si ya no hay task_id (proceso completado)
+                        var currentTaskId = window.sessionStorage.getItem("cargue_ventas_task_id");
+                        if (!currentTaskId) {
+                            console.log("Task already completed successfully, ignoring error");
+                            return;
+                        }
+                        // Si aún hay task_id, asumir que el proceso se completó exitosamente
+                        console.log("Assuming process completed successfully due to empty response");
+                        window.sessionStorage.removeItem("cargue_ventas_task_id");
+                        updateProgressBar(100, "Cargue completado exitosamente");
+                        stopMonitoring("Cargue completado exitosamente.", true, 1000);
+                        return;
+                    }
+
+                    // Solo mostrar error si realmente hay un problema y aún hay task_id
+                    var currentTaskId = window.sessionStorage.getItem("cargue_ventas_task_id");
+                    if (currentTaskId) {
+                        console.error("Real error occurred while task is still active");
+                        stopMonitoring("Error al procesar la respuesta del servidor sobre el estado del cargue: " + parseError.message);
+                    } else {
+                        console.log("Ignoring error because task was already completed");
+                    }
+                }
+            }
+        };
+        xhr.send("task_id=" + encodeURIComponent(task_id));
+    } function handleTaskStatus(status, response) {
+        console.log("handleTaskStatus called with status:", status, "response:", response);
+
+        try {
+            if (status === 200 && typeof response === "object" && "status" in response) {
+                var progressValue = response.progress !== undefined ? response.progress : parseInt(progressBar.getAttribute("aria-valuenow")) || 5;
+                var stageText = response.stage || "Procesando...";
+                updateProgressBar(progressValue, stageText);
+
+                // --- Detalles adicionales de progreso ---
+                if (detailedStatus) {
+                    detailedStatus.innerText = "";
+                    if (response.meta && typeof response.meta === "object") {
+                        let detailText = "";
+                        if (response.meta.records_processed !== undefined) {
+                            detailText += `Registros procesados: ${response.meta.records_processed}\n`;
+                        }
+                        if (response.meta.total_records_estimate !== undefined) {
+                            detailText += `Total estimado: ${response.meta.total_records_estimate}\n`;
+                        }                        if (response.meta.memory_usage) {
+                            detailText += `Memoria usada: ${response.meta.memory_usage}MB\n`;
+                        }
+                        if (detailText) {
+                            detailedStatus.innerText = detailText;
+                        }
+                    }
+                }
+                // --- Fin detalles adicionales ---
+                
+                var taskStatus = response.status ? response.status.toLowerCase() : "";
+                console.log("Task status received:", taskStatus, "Progress:", progressValue);
+
+                if (taskStatus === "finished" || taskStatus === "success" || taskStatus === "completed") {
+                    console.log("Task completed successfully! Cleaning up...");
+                    // Eliminar inmediatamente el task_id para evitar peticiones adicionales
+                    window.sessionStorage.removeItem("cargue_ventas_task_id");
+
+                    updateProgressBar(100, "Cargue completado exitosamente");
+                    var resultMessage = "Cargue completado exitosamente.";
+                    if (response.result && typeof response.result === "object") {
+                        if (response.result.message) resultMessage = response.result.message;
+                        if (response.result.registros_procesados !== undefined) resultMessage += `\nRegistros procesados: ${response.result.registros_procesados}`;
+                        if (response.result.registros_insertados !== undefined) resultMessage += `\nRegistros insertados: ${response.result.registros_insertados}`;
+                        if (response.result.registros_descartados !== undefined) resultMessage += `\nRegistros descartados: ${response.result.registros_descartados}`;
+                        if (response.result.tiempo_transcurrido !== undefined) resultMessage += `\nTiempo total: ${response.result.tiempo_transcurrido.toFixed(1)} seg.`;
+                    }
+                    // Mostrar advertencias y detalles si existen
+                    if (response.result && Array.isArray(response.result.warnings) && response.result.warnings.length > 0) {
+                        resultMessage += "\nADVERTENCIAS:\n" + response.result.warnings.join("\n");
+                    }
+                    if (response.result && response.result.details) {
+                        resultMessage += "\nDETALLES:\n" + response.result.details;
+                    }
+                    console.log("Showing success message:", resultMessage);
+                    stopMonitoring(resultMessage, true, 1000);
+                    return; // Importante: salir inmediatamente para evitar más peticiones                } else if (taskStatus === "failed") {
+                    console.log("Task failed! Cleaning up...");
+                    // Eliminar inmediatamente el task_id para evitar peticiones adicionales
+                    window.sessionStorage.removeItem("cargue_ventas_task_id");
+
+                    updateProgressBar(100, "Cargue fallido");
+                    var errorMessage = "Hubo un error en el cargue.";
+                    if (response.result) errorMessage += " Detalle: " + (typeof response.result === 'string' ? response.result : JSON.stringify(response.result));
+                    console.log("Showing error message:", errorMessage);
+                    stopMonitoring(errorMessage, true, 1000);
+                    return; // Importante: salir inmediatamente para evitar más peticiones
+                } else {
+                    console.log("Task still in progress, will check again in 3 seconds");
+                    setTimeout(checkTaskStatus, 3000);
+                }
+            } else {
+                stopMonitoring("Hubo un error al comprobar el estado del cargue (Código: " + status + ").");
+            }
+        } catch (e) {
+            console.error("Error in handleTaskStatus:", e);
+            stopMonitoring("Error al procesar el estado de la tarea: " + e.message);
+        }
+    }
+
+    function updateProgressBar(value, stageText) {
+        if (value < lastProgressValue) {
+            value = lastProgressValue;
+        } else {
+            lastProgressValue = value;
+        }
+        value = Math.max(0, Math.min(100, Number(value) || 0));
+        progressBar.style.width = value + "%";
+        progressBar.setAttribute("aria-valuenow", value);
+        progressBar.textContent = value.toFixed(0) + "%";
+        if (value < 100) {
+            progressBar.className = "progress-bar progress-bar-striped progress-bar-animated bg-success";
+        } else {
+            progressBar.className = "progress-bar bg-success";
+        }
+        if (stageText) progressStage.textContent = stageText;
+    }
+
+    function updateElapsedTime() {
+        var timeInfoElement = document.getElementById("time-info");
+        var elapsedText = "Tiempo transcurrido: ";
+        if (startTime > 0) {
+            var currentTime = new Date().getTime();
+            var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+            var minutes = Math.floor(elapsedSeconds / 60);
+            var seconds = elapsedSeconds % 60;
+            elapsedText += (minutes > 0 ? minutes + " min " : "") + seconds + " seg";
+        } else {
+            elapsedText += "0 seg";
+        }
+        timeInfoElement.textContent = elapsedText;
+    }
+
+    function stopMonitoring(alertMessage, showAlert = true, delay = 0) {
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = null;
+        startTime = 0;
+        let finalBarClass = "progress-bar bg-success";
+        if (alertMessage) {
+            if (alertMessage.toLowerCase().includes("exitosamente") || alertMessage.toLowerCase().includes("completado")) {
+                finalBarClass = "progress-bar bg-success";
+            } else if (alertMessage.toLowerCase().includes("error") || alertMessage.toLowerCase().includes("fallido")) {
+                finalBarClass = "progress-bar bg-danger";
+            } else if (alertMessage.toLowerCase().includes("advertencia")) {
+                finalBarClass = "progress-bar bg-warning";
+            }
+        }
+        progressBar.className = finalBarClass;
+        const finalize = () => {
+            document.getElementById("processingModal").style.display = "none";
+            if (showAlert && alertMessage) {
+                alert(alertMessage);
+                if (alertMessage.toLowerCase().includes("exitosamente") || alertMessage.toLowerCase().includes("completado")) {
+                    location.reload();
+                    return;
+                }
+            }
+            document.getElementById("submitBtnCargueVentas").setAttribute("data-submitted", "false");
+            updateProgressBar(0, "Listo para iniciar...");
+            document.getElementById("time-info").textContent = "Tiempo transcurrido: 0 seg";
+            detailedStatus.innerText = "";
+        };
+        if (delay > 0) setTimeout(finalize, delay);
+        else finalize();
+    }    // Sincroniza el input oculto con sessionStorage al cargar la página
+    document.addEventListener("DOMContentLoaded", function () {
+        var cargueTaskId = window.sessionStorage.getItem("cargue_ventas_task_id");
+        if (cargueTaskId) {
+            if (confirm("Detectamos un cargue pendiente. ¿Desea continuar monitoreando su progreso?")) {
+                document.getElementById("submitBtnCargueVentas").setAttribute("data-submitted", "true");
+                document.getElementById("processingModal").style.display = "flex";
+                updateProgressBar(5, "Reanudando monitoreo...");
+                startTime = new Date().getTime();
+                if (progressInterval) clearInterval(progressInterval);
+                progressInterval = setInterval(updateElapsedTime, 1000);
+                checkTaskStatus();
+            } else {
+                window.sessionStorage.removeItem("cargue_ventas_task_id");
+                document.getElementById("submitBtnCargueVentas").setAttribute("data-submitted", "false");
+            }
+        } else {
+            document.getElementById("submitBtnCargueVentas").setAttribute("data-submitted", "false");
+        }
+    });
+</script>
+{% endblock script %}

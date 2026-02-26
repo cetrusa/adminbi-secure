@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Standard Data Table Component</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1754cf",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a202c",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for table body */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #475569;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
+        }
+        
+        /* Resize handle simulation */
+        .resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            cursor: col-resize;
+            transition: background-color 0.2s;
+        }
+        .resize-handle:hover, .group:hover .resize-handle {
+            background-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen flex flex-col overflow-hidden">
+<!-- Top Navigation Bar -->
+<header class="flex-none flex items-center justify-between whitespace-nowrap border-b border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-surface-dark px-6 py-3 z-20 shadow-sm">
+<div class="flex items-center gap-4">
+<div class="size-8 text-primary flex items-center justify-center bg-primary/10 rounded-lg">
+<span class="material-symbols-outlined text-2xl">dataset</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">ERP System</h2>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+<span class="material-symbols-outlined text-[20px]">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-h-0 w-full max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+<div class="flex flex-col gap-1">
+<h1 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Inventory Management</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Standard Data Table - Variant 2</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 h-10 px-4 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                    Export Data
+                </button>
+<button class="flex items-center gap-2 h-10 px-4 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    New Item
+                </button>
+</div>
+</div>
+<!-- Table Container -->
+<div class="flex flex-col flex-1 min-h-0 bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+<!-- Table Toolbar -->
+<div class="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+<!-- Search & Filters -->
+<div class="flex items-center gap-2 flex-1 min-w-[280px]">
+<div class="relative flex-1 max-w-md group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</span>
+<input class="w-full h-10 pl-10 pr-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow" placeholder="Search by ID, SKU, or Name..." type="text"/>
+</div>
+<button class="flex items-center justify-center h-10 w-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors tooltip" title="Filter">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+<div class="h-6 w-px bg-slate-300 dark:bg-slate-700 mx-1"></div>
+<button class="flex items-center gap-2 h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+<span class="material-symbols-outlined text-[18px]">view_column</span>
+                        Columns
+                    </button>
+</div>
+<!-- Density & View Settings -->
+<div class="flex items-center gap-2">
+<span class="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1">Density</span>
+<div class="flex bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-700 p-1">
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[18px]">density_large</span>
+</button>
+<button class="p-1 rounded bg-slate-100 dark:bg-slate-800 text-primary shadow-sm">
+<span class="material-symbols-outlined text-[18px]">density_medium</span>
+</button>
+<button class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[18px]">density_small</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Table Header (Sticky) -->
+<div class="overflow-hidden flex-1 relative flex flex-col">
+<div class="overflow-auto custom-scrollbar flex-1 relative">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900 shadow-sm text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+<tr>
+<th class="w-12 px-4 py-3 border-b border-slate-200 dark:border-slate-700 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-800" type="checkbox"/>
+</th>
+<th class="group px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative select-none">
+<div class="flex items-center gap-1 cursor-pointer hover:text-primary">
+                                        ID
+                                        <span class="material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-50">arrow_upward</span>
+</div>
+<div class="resize-handle"></div>
+</th>
+<th class="group px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative select-none min-w-[200px]">
+<div class="flex items-center gap-1 cursor-pointer hover:text-primary">
+                                        Product Name
+                                        <span class="material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-50">swap_vert</span>
+</div>
+<div class="resize-handle"></div>
+</th>
+<th class="group px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative select-none">
+<div class="flex items-center gap-1 cursor-pointer hover:text-primary">
+                                        SKU
+                                        <span class="material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-50">swap_vert</span>
+</div>
+<div class="resize-handle"></div>
+</th>
+<th class="group px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative select-none text-right">
+<div class="flex items-center justify-end gap-1 cursor-pointer hover:text-primary">
+                                        Stock
+                                        <span class="material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-50">swap_vert</span>
+</div>
+<div class="resize-handle"></div>
+</th>
+<th class="group px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative select-none text-right">
+<div class="flex items-center justify-end gap-1 cursor-pointer hover:text-primary">
+                                        Price
+                                        <span class="material-symbols-outlined text-[16px] text-primary opacity-100 font-bold">arrow_downward</span>
+</div>
+<div class="resize-handle"></div>
+</th>
+<th class="group px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative select-none">
+<div class="flex items-center gap-1 cursor-pointer hover:text-primary">
+                                        Status
+                                        <span class="material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-50">filter_list</span>
+</div>
+<div class="resize-handle"></div>
+</th>
+<th class="group px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative select-none">
+<div class="flex items-center gap-1 cursor-pointer hover:text-primary">
+                                        Last Updated
+                                        <span class="material-symbols-outlined text-[16px] opacity-0 group-hover:opacity-50">swap_vert</span>
+</div>
+<div class="resize-handle"></div>
+</th>
+<th class="w-16 px-4 py-3 border-b border-slate-200 dark:border-slate-700 text-center sticky right-0 bg-slate-50 dark:bg-slate-900 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
+<span class="sr-only">Actions</span>
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</th>
+</tr>
+</thead>
+<tbody class="text-sm text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-4 py-2 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-xs text-slate-500">#1024</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Industrial Steel Bearings</td>
+<td class="px-4 py-2 text-slate-500">BRG-500</td>
+<td class="px-4 py-2 text-right tabular-nums">450</td>
+<td class="px-4 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-white">$1,240.50</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                        STATE_ACTIVE
+                                    </span>
+</td>
+<td class="px-4 py-2 text-slate-500 text-xs">2 mins ago</td>
+<td class="px-4 py-2 text-center sticky right-0 bg-white dark:bg-surface-dark group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-slate-50/30 dark:bg-slate-900/10">
+<td class="px-4 py-2 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-xs text-slate-500">#1025</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Hydraulic Pump v2</td>
+<td class="px-4 py-2 text-slate-500">HYD-200</td>
+<td class="px-4 py-2 text-right tabular-nums text-red-600 dark:text-red-400 font-bold">12</td>
+<td class="px-4 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-white">$5,400.00</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                        STATE_DRAFT
+                                    </span>
+</td>
+<td class="px-4 py-2 text-slate-500 text-xs">5 mins ago</td>
+<td class="px-4 py-2 text-center sticky right-0 bg-slate-50/30 dark:bg-slate-900/10 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-4 py-2 text-center">
+<input checked="" class="rounded border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-xs text-slate-500">#1026</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Copper Wire Spool</td>
+<td class="px-4 py-2 text-slate-500">CW-100</td>
+<td class="px-4 py-2 text-right tabular-nums">800</td>
+<td class="px-4 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-white">$240.00</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                        STATE_ACTIVE
+                                    </span>
+</td>
+<td class="px-4 py-2 text-slate-500 text-xs">1 hour ago</td>
+<td class="px-4 py-2 text-center sticky right-0 bg-white dark:bg-surface-dark group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-slate-50/30 dark:bg-slate-900/10">
+<td class="px-4 py-2 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-xs text-slate-500">#1027</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Safety Valves Set</td>
+<td class="px-4 py-2 text-slate-500">SV-050</td>
+<td class="px-4 py-2 text-right tabular-nums">35</td>
+<td class="px-4 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-white">$890.00</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                        STATE_ACTIVE
+                                    </span>
+</td>
+<td class="px-4 py-2 text-slate-500 text-xs">3 hours ago</td>
+<td class="px-4 py-2 text-center sticky right-0 bg-slate-50/30 dark:bg-slate-900/10 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-4 py-2 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-xs text-slate-500">#1028</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Control Panel Unit</td>
+<td class="px-4 py-2 text-slate-500">CPU-X1</td>
+<td class="px-4 py-2 text-right tabular-nums text-red-600 dark:text-red-400 font-bold">5</td>
+<td class="px-4 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-white">$12,500.00</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                        STATE_DRAFT
+                                    </span>
+</td>
+<td class="px-4 py-2 text-slate-500 text-xs">1 day ago</td>
+<td class="px-4 py-2 text-center sticky right-0 bg-white dark:bg-surface-dark group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-slate-50/30 dark:bg-slate-900/10">
+<td class="px-4 py-2 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-xs text-slate-500">#1029</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Generic Bolt M10</td>
+<td class="px-4 py-2 text-slate-500">BLT-M10</td>
+<td class="px-4 py-2 text-right tabular-nums">5000</td>
+<td class="px-4 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-white">$0.45</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                        STATE_ACTIVE
+                                    </span>
+</td>
+<td class="px-4 py-2 text-slate-500 text-xs">2 days ago</td>
+<td class="px-4 py-2 text-center sticky right-0 bg-slate-50/30 dark:bg-slate-900/10 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 7 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-4 py-2 text-center">
+<input class="rounded border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-xs text-slate-500">#1030</td>
+<td class="px-4 py-2 font-medium text-slate-900 dark:text-white">Conveyor Belt Segment</td>
+<td class="px-4 py-2 text-slate-500">CNV-1000</td>
+<td class="px-4 py-2 text-right tabular-nums">150</td>
+<td class="px-4 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-white">$3,200.00</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                        STATE_ACTIVE
+                                    </span>
+</td>
+<td class="px-4 py-2 text-slate-500 text-xs">3 days ago</td>
+<td class="px-4 py-2 text-center sticky right-0 bg-white dark:bg-surface-dark group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 8 (Selected) -->
+<tr class="group bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors border-l-2 border-primary">
+<td class="px-4 py-2 text-center">
+<input checked="" class="rounded border-slate-300 text-primary focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-800" type="checkbox"/>
+</td>
+<td class="px-4 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">#1031</td>
+<td class="px-4 py-2 font-medium text-primary dark:text-blue-400">Pneumatic Cylinder (Archive)</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400">PNU-CYL-40</td>
+<td class="px-4 py-2 text-right tabular-nums text-slate-900 dark:text-white">0</td>
+<td class="px-4 py-2 text-right tabular-nums font-semibold text-slate-900 dark:text-white">$560.00</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                        STATE_DRAFT
+                                    </span>
+</td>
+<td class="px-4 py-2 text-slate-600 dark:text-slate-400 text-xs">1 week ago</td>
+<td class="px-4 py-2 text-center sticky right-0 bg-blue-50 dark:bg-transparent group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+<button class="text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Sticky Footer -->
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-500 dark:text-slate-400">
+<div class="flex items-center gap-6">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-slate-400">table_rows</span>
+                        Total Rows: <span class="text-slate-900 dark:text-white font-bold">1,450</span>
+</span>
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-slate-400">speed</span>
+                        Execution: <span class="text-slate-900 dark:text-white font-mono">45ms</span>
+</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center gap-2">
+<span class="uppercase tracking-wider text-[10px] text-slate-400">Calculated Totals:</span>
+<span class="text-slate-900 dark:text-white text-sm font-bold tabular-nums">$4,200,500.00</span>
+</div>
+<!-- Pagination Controls -->
+<div class="flex items-center gap-2 ml-4">
+<span class="hidden sm:inline">Page 1 of 145</span>
+<div class="flex rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 overflow-hidden">
+<button class="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<div class="w-px bg-slate-200 dark:bg-slate-700"></div>
+<button class="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

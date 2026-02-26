@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block head %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css" />
+{% endblock head %}
+
+{% block style %}
+{% endblock style %}
+{% block title %}
+{% endblock title %}
+{% block selector_base %}
+{% include 'includes/database_selector.html' %}
+{% endblock selector_base %}
+
+{% block barra_superior %}
+{% include 'includes/top_nav.html' %}
+{% endblock barra_superior %}
+
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        {% block barra_lateral %}
+      
+        {% endblock barra_lateral %}
+
+        <div class="col">
+            {% block window %}
+            {% endblock window %}
+        </div>
+    </div>
+</div>
+{% endblock content %}
+{% block script %}
+
+{% endblock script %}

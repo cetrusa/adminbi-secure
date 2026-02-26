@@ -1,0 +1,40 @@
+<!-- Selector de reportes -->
+<div class="reporte-selector-wrapper bg-dark">
+    <div class="d-flex justify-content-center align-items-center">
+        <div class="form-group w-100">
+            <select class="form-control" id="reporte_id" name="reporte_id">
+                <option disabled selected>Seleccione un reporte</option>
+                {# Las opciones se llenan dinámicamente por JS #}
+            </select>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        var reporte_id = window.sessionStorage.getItem("reporte_id");
+        $.get("{% url 'home_app:reporte_list' %}", function (data) {
+            var reporteSelect = $('#reporte_id');
+            if (data.status === "success") {
+                $.each(data.reportes_list, function (index, reporte) {
+                    reporteSelect.append('<option value="' + reporte.id + '">' + reporte.nombre + '</option>');
+                });
+            }
+            if (reporte_id) {
+                updateReporteId(reporte_id);
+                document.getElementById("reporte_id").value = reporte_id;
+            }
+        });
+
+        document.getElementById("reporte_id").addEventListener("change", function () {
+            var select = this;
+            reporte_id = select.options[select.selectedIndex].value;
+            window.sessionStorage.setItem("reporte_id", reporte_id);
+            updateReporteId(reporte_id);
+        });
+    });
+
+    function updateReporteId(newReporteId) {
+        console.log("Updating reporte_id:", newReporteId);
+        // No envía POST, solo actualiza sessionStorage
+    }
+</script>

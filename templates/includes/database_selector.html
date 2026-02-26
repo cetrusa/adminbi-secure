@@ -1,0 +1,65 @@
+<!-- Selector de bases de datos -->
+<!-- <input type="checkbox" name="" id="check" /> -->
+<div class="database-selector-wrapper bg-dark">
+    <div class="d-flex justify-content-center align-items-center">
+        <form class="d-flex ml-auto" action="{% url form_url %}" method="post" id="FormSelectorBase">
+            {% csrf_token %}
+            <div class="form-group w-100">
+                <select class="form-control" id="database_select" name="database_select">
+                    <option disabled selected>Seleccione una empresa</option>
+                    {% for database_name,database_nmEmpresa in databases_list %}
+                    <option value="{{ database_name }}">{{ database_nmEmpresa }} </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- Código JavaScript relacionado con el selector de bases de datos -->
+<script>
+
+    $(document).ready(function () {
+        var database = window.sessionStorage.getItem("database_name");
+        $.get('{% url "users_app:database_list" %}', function (data) {
+            var databaseSelect = $('#database_select');
+            $.each(data.database_list, function (index, database) {
+                databaseSelect.append('<option value="' + database.database_name + '">' + database.database_nmEmpresa + '</option>');
+            });
+
+            if (database) {
+                updateDatabaseName(database);
+                document.getElementById("database_select").value = database;
+
+
+            }
+        });
+
+        document.getElementById("database_select").addEventListener("change", function () {
+            var select = this;
+            database = select.options[select.selectedIndex].value;
+            window.sessionStorage.setItem("database_name", database);
+            updateDatabaseName(database);
+        });
+    });
+
+    function updateDatabaseName(newDatabase) {
+        console.log("Updating database name:", newDatabase);
+        var csrfToken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "{% url form_url %}", true);
+        xhr.setRequestHeader("X-CSRFToken", csrfToken);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onreadystatechange = function () {
+            if (this.readyState === XMLHttpRequest.DONE) {
+                if (this.status === 200) {
+                    console.log("Database name updated successfully:", newDatabase);
+                    database = newDatabase;
+                } else {
+                    console.log("Error al actualizar el valor de database_name en la sesión:", this.status, this.responseText);
+                }
+            }
+        };
+        xhr.send("database_select=" + encodeURIComponent(newDatabase));
+    }
+
+</script>

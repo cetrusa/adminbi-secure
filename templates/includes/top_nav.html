@@ -1,0 +1,75 @@
+{% load static %}
+<header>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <!-- Branding/Logo -->
+            <a class="navbar-brand" href="{% url 'home_app:panel_cubo' %}">
+                <img src="{% static 'images/Logo-Blanco.png' %}" alt="Logo" style="height: 30px;">
+            </a>
+
+            <!-- Toggler for Mobile -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown"
+                aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Navbar Links -->
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+
+                <!-- Menú para la barra superior -->
+                <ul class="navbar-nav ms-auto">
+                    {% if perms.permisos.panel_cubo %}
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="{% url 'home_app:panel_cubo' %}"><i
+                                class="fas fa-chart-bar me-2"></i><span>Cubos de Ventas</span></a>
+                    </li>
+                    {% endif %}
+                    {% if perms.permisos.panel_interface %}
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="{% url 'home_app:panel_interface' %}"><i
+                                class="fas fa-calculator me-2"></i><span>Interface Contable</span></a>
+                    </li>
+                    {% endif %}
+                    {% if perms.permisos.panel_bi %}
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="{% url 'home_app:panel_bi' %}"><i
+                                class="fas fa-chart-line me-2"></i><span>Business Intelligence</span></a>
+                    </li>
+                    {% endif %}
+                    {% if perms.permisos.panel_actualizacion %}
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="{% url 'home_app:panel_actualizacion' %}"><i
+                                class="fas fa-sync-alt me-2"></i><span>Actualización de Información</span></a>
+                    </li>
+                    {% endif %}
+                    {% if perms.permisos.reportes_bimbo %}
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="{% url 'home_app:panel_bimbo' %}"><i
+                                class="fas fa-chart-line me-2"></i><span>Panel Bimbo</span></a>
+                    </li>
+                    {% endif %}
+                    {% if perms.permisos.admin %}
+                    <li class="nav-item">
+                        <a href="{% url 'admin:index' %}" class="nav-link text-white align-middle px-0">
+                            <i class="fas fa-sliders-h me-2"></i> <span
+                                class="ms-1 d-none d-sm-inline">Configuración</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if perms.monitor.panel_monitor %}
+                    <li class="nav-item">
+                    <a class="nav-link text-white" href="{% url 'monitor:dashboard' %}"><i class="fas fa-chart-line"></i><span> Monitoreo</span></a>
+                    </li>
+                    {% endif %}
+
+                </ul>
+
+                <!-- Logout Button -->
+                {% if user.is_authenticated %}
+                <a href="{% url 'users_app:user-logout' %}" class="logout-btn">Logout <i
+                        class="fas fa-sign-out-alt"></i></a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+</header>

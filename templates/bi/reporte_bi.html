@@ -1,0 +1,259 @@
+<!-- 
+  reporte_bi.html - Template para vista temporal de Power BI con URLs públicas
+  
+  CONTEXTO REQUERIDO:
+  - url_powerbi: URL pública del reporte de Power BI para la empresa seleccionada
+  - selected_database: Objeto con información de la empresa (name, nmEmpresa, id)
+  - form_url: URL para el selector de base de datos (compatible con database_selector.html)
+  
+  FUNCIONALIDAD:
+  - Carga reportes de Power BI usando URLs públicas (sin tokens de autenticación)
+  - Solución temporal mientras se resuelven problemas de tokens vencidos
+  - Compatible con el selector de empresas existente
+-->
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}
+{% if selected_database.nmEmpresa %}BI - {{selected_database.nmEmpresa}}{% else %}BI Dashboard{% endif %}
+{% endblock title %}
+
+{% block barra_lateral %}
+{# En este reporte NO se muestra barra lateral para evitar confusión y bloqueo de interacción #}
+{% endblock barra_lateral %}
+
+{% block window %}
+
+<!-- 
+  IMPORTANTE: Para que el selector de base de datos funcione correctamente en esta página, 
+  la vista de Django que renderiza esta plantilla DEBE pasar la variable de contexto 'form_url'.
+  Esta variable debe contener el nombre de la URL (ej: 'home_app:database_select') 
+  de la vista que maneja la actualización de la base de datos en la sesión del servidor.
+-->
+<div class="container-fluid mt-4 main-content">
+    {% if error_message %}
+    <div class="alert alert-danger">
+        <p>{{ error_message }}</p>
+    </div>
+    {% else %}
+    
+    <!-- Mensajes de alerta -->
+    {% if messages %}
+    <div class="alert alert-warning" role="alert">
+      {% for message in messages %}
+        <p>{{ message }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Modal de carga (Bootstrap) -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-body text-center">
+            <div class="spinner-border text-primary mb-3" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <div>
+              <strong>Preparando los datos para su visualización...</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenedor del reporte usando iframe para URL pública -->
+    <div id="reportContainer" style="height: 85vh; width: 100%;">
+        {% if url_powerbi %}
+        <iframe 
+            class="embed-responsive-item" 
+            src="{{url_powerbi}}"
+            title="{% if selected_database.nmEmpresa %}{{selected_database.nmEmpresa}} - Dashboard BI{% else %}Dashboard BI{% endif %}" 
+            allowfullscreen="true" 
+            id="powerbi-iframe"
+            style="width: 100%; height: 100%; border: none;"
+            loading="eager">
+        </iframe>
+        {% else %}
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+            <h4>URL de Power BI no configurada</h4>
+            {% if selected_database.nmEmpresa %}
+            <p>No se encontró una URL pública de Power BI configurada para <strong>{{selected_database.nmEmpresa}}</strong>.</p>
+            {% else %}
+            <p>No se encontró una URL pública de Power BI configurada para esta empresa.</p>
+            {% endif %}
+            <p>Contacte al administrador para configurar la URL en el sistema.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script type="text/javascript">
+        // IIFE para evitar contaminación del scope global
+        (function() {
+            'use strict';
+            
+            // Constantes y configuración
+            const CONFIG = {
+                LOADING_TIMEOUT: 15000, // 15 segundos
+                DEBUG_MODE: true
+            };
+            
+            // Logger simple y reutilizable
+            const Logger = {
+                debug: (msg) => { if (CONFIG.DEBUG_MODE) console.log('[PowerBI] ' + msg); },
+                warn: (msg) => { console.warn('[PowerBI] ' + msg); },
+                error: (msg) => { console.error('[PowerBI] ' + msg); }
+            };
+            
+            // Estado de la aplicación
+            let state = {
+                loadingModal: null,
+                powerbiIframe: null,
+                loadingTimeout: null
+            };
+            
+            /**
+             * Manejar carga exitosa del iframe
+             */
+            function handleIframeLoad() {
+                Logger.debug('Reporte BI cargado correctamente');
+                clearTimeout(state.loadingTimeout);
+                
+                // Ocultar modal con pequeño delay
+                setTimeout(() => {
+                    if (state.loadingModal) {
+                        try {
+                            state.loadingModal.hide();
+                        } catch (e) {
+                            Logger.warn('Error al ocultar modal: ' + e.message);
+                        }
+                    }
+                }, 500);
+            }
+            
+            /**
+             * Manejar errores del iframe
+             */
+            function handleIframeError() {
+                Logger.error('Error al cargar el reporte BI');
+                clearTimeout(state.loadingTimeout);
+                
+                const reportContainer = document.getElementById('reportContainer');
+                if (reportContainer) {
+                    reportContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Ocurrió un error al cargar el reporte. Por favor, verifique su conexión o contacte al administrador.</div>';
+                }
+                
+                if (state.loadingModal) {
+                    try {
+                        state.loadingModal.hide();
+                    } catch (e) {
+                        Logger.warn('Error al ocultar modal en error: ' + e.message);
+                    }
+                }
+            }
+            
+            /**
+             * Configurar timeout de carga para modal
+             */
+            function setupLoadingTimeout() {
+                state.loadingTimeout = setTimeout(() => {
+                    Logger.warn('Tiempo de carga de Power BI excedido');
+                    if (state.loadingModal) {
+                        try {
+                            state.loadingModal.hide();
+                        } catch (e) {
+                            Logger.warn('Error al ocultar modal en timeout: ' + e.message);
+                        }
+                    }
+                }, CONFIG.LOADING_TIMEOUT);
+            }
+            
+            /**
+             * Inicialización de la aplicación
+             */
+            function init() {
+                Logger.debug('Inicializando aplicación Power BI');
+                
+                // Validar existencia de iframe de Power BI
+                state.powerbiIframe = document.getElementById('powerbi-iframe');
+                if (!state.powerbiIframe) {
+                    Logger.debug('Power BI iframe no encontrado (probablemente sin URL configurada)');
+                } else {
+                    Logger.debug('Power BI iframe encontrado');
+                    setupLoadingTimeout();
+
+                    // Manejar carga/errores del iframe sin depender de handlers globales
+                    state.powerbiIframe.addEventListener('load', handleIframeLoad);
+                    state.powerbiIframe.addEventListener('error', handleIframeError);
+                }
+                
+                // Mostrar modal de carga si hay URL de Power BI
+                const loadingModalEl = document.getElementById('loadingModal');
+                if (loadingModalEl && state.powerbiIframe) {
+                    try {
+                        state.loadingModal = new bootstrap.Modal(loadingModalEl);
+                        state.loadingModal.show();
+                    } catch (e) {
+                        Logger.warn('Error al mostrar modal: ' + e.message);
+                    }
+                }
+                
+                // Obtener base de datos seleccionada
+                const database = window.sessionStorage ? window.sessionStorage.getItem('database_name') : null;
+                Logger.debug('Base de datos seleccionada: ' + (database || 'ninguna'));
+            }
+            
+            /**
+             * Configurar manejadores de eventos
+             */
+            function setupEventHandlers() {
+                // No hay barra lateral en este reporte; no se configuran atajos ni toggles.
+            }
+            
+            /**
+             * Punto de entrada - ejecutar cuando el DOM está listo
+             */
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    setupEventHandlers();
+                    init();
+                });
+            } else {
+                // El DOM ya está listo
+                setupEventHandlers();
+                init();
+            }
+            
+        })(); // Fin de IIFE
+    </script>
+    {% endif %}
+</div>
+{% endblock window %}
+
+{% block style %}
+<style>
+    /* En esta vista el reporte debe ocupar todo el ancho disponible */
+    .main-content {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #reportContainer {
+        position: relative;
+        width: 100%;
+    }
+
+    #powerbi-iframe {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+</style>
+{% endblock style %}
+
+{# Eliminar cualquier bloque script personalizado que intente sincronizar la DB en esta página #}
+{% block script %}
+{# Dejar vacío o añadir scripts específicos de esta página que NO interfieran con database_selector.html #}
+{% endblock script %}

@@ -1,0 +1,277 @@
+{% extends "black.html" %}
+{% load static %}
+
+{% block title %}
+Cargue InfoProducto
+{% endblock title %}
+
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_actualizacion.html' %}
+{% endblock barra_lateral %}
+
+{% block window %}
+<div class="container py-4">
+    <h2 class="text-white mb-4"><i class="fas fa-box-open me-2"></i> Cargue diario de InfoProducto</h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="form-infoproducto" action="{% url form_url %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="fecha_reporte" class="form-label">Fecha del reporte</label>
+                        <input type="date" class="form-control" id="fecha_reporte" name="fecha_reporte" required>
+                    </div>
+                </div>
+
+                <hr class="text-secondary">
+
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="border rounded p-3 bg-dark text-white">
+                            <h5 class="mb-1"><i class="fas fa-file-excel me-2 text-success"></i>Archivos InfoProducto</h5>
+                            <p class="small text-muted mb-3">
+                                Seleccione uno o varios archivos generados el mismo día. Todos los archivos deben compartir la misma estructura de columnas.
+                            </p>
+                            <input type="file" class="form-control" name="archivos" id="archivos" accept=".xls,.xlsx,.htm,.html" multiple>
+                            <small class="text-secondary">Puede seleccionar hasta 4 archivos por lote (Nestlé Cali, Nestlé Popayán, Distrijass Cali y Eje Cafetero).</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end">
+                    <button type="submit" id="btn-submit-infoproducto" class="btn btn-primary btn-lg">
+                        <i class="fas fa-upload me-2"></i>Iniciar cargue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="resultSummary" class="mt-4"></div>
+</div>
+
+<div class="modal fade" id="processingModal" tabindex="-1" aria-labelledby="processingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="processingModalLabel"><i class="fas fa-sync fa-spin me-2"></i>Procesando InfoProducto…</h5>
+            </div>
+            <div class="modal-body">
+                <div id="progress-stage" class="mb-3">Preparando proceso…</div>
+                <div class="progress" style="height: 24px;">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                <div class="mt-3 small text-muted" id="progress-meta"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock window %}
+
+{% block script %}
+<script>
+(function() {
+    const form = document.getElementById('form-infoproducto');
+    const submitBtn = document.getElementById('btn-submit-infoproducto');
+    const progressModalEl = document.getElementById('processingModal');
+    const progressModal = new bootstrap.Modal(progressModalEl, {backdrop: 'static', keyboard: false});
+    const progressBar = document.getElementById('progressBar');
+    const progressStage = document.getElementById('progress-stage');
+    const progressMeta = document.getElementById('progress-meta');
+    const resultSummary = document.getElementById('resultSummary');
+    const csrfToken = document.getElementsByName('csrfmiddlewaretoken')[0].value;
+    const progressStatusUrl = "{% url 'cargues_app:check_task_status' %}";
+
+    let currentTaskId = null;
+    let progressInterval = null;
+
+    function setButtonState(disabled) {
+        submitBtn.disabled = disabled;
+        submitBtn.classList.toggle('btn-secondary', disabled);
+        submitBtn.classList.toggle('btn-primary', !disabled);
+    }
+
+    function validateForm() {
+        const fecha = document.getElementById('fecha_reporte').value;
+        if (!fecha) {
+            showToast('Debe seleccionar la fecha del reporte.', 'danger');
+            return false;
+        }
+    const input = document.getElementById('archivos');
+    const hasFile = input && input.files && input.files.length > 0;
+        if (!hasFile) {
+            showToast('Debe adjuntar al menos un archivo InfoProducto.', 'warning');
+            return false;
+        }
+        return true;
+    }
+
+    function resetProgress() {
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.classList.remove('bg-danger', 'bg-warning');
+        progressBar.classList.add('bg-success');
+        progressStage.textContent = 'Preparando proceso…';
+        progressMeta.textContent = '';
+    }
+
+    function updateProgress(percent, stage, meta) {
+        const value = Math.max(0, Math.min(100, Number(percent) || 0));
+        progressBar.style.width = value + '%';
+        progressBar.textContent = value.toFixed(0) + '%';
+        progressBar.setAttribute('aria-valuenow', value.toFixed(0));
+        progressStage.textContent = stage || 'Procesando…';
+        if (meta) {
+            const parts = [];
+            if (meta.archivo) parts.push('Archivo: ' + meta.archivo);
+            if (meta.fuente) parts.push('Fuente: ' + meta.fuente);
+            if (meta.total_insertados !== undefined) parts.push('Insertados: ' + meta.total_insertados);
+            if (meta.total_filas !== undefined) parts.push('Filas: ' + meta.total_filas);
+            progressMeta.textContent = parts.join(' | ');
+        }
+    }
+
+    function stopMonitoring(finalMessage, status, result) {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+        if (status === 'failed') {
+            progressBar.classList.remove('bg-success');
+            progressBar.classList.add('bg-danger');
+        }
+        progressStage.textContent = finalMessage;
+        setButtonState(false);
+        progressModal.hide();
+        if (result) {
+            renderResult(result);
+        }
+    }
+
+    function renderResult(result) {
+        if (!result || typeof result !== 'object') {
+            resultSummary.innerHTML = '<div class="alert alert-info">No se recibieron detalles del proceso.</div>';
+            return;
+        }
+        const data = result.data || {};
+        const advertencias = result.advertencias || [];
+        let html = '<div class="card bg-dark text-white">';
+        html += '<div class="card-header border-secondary"><strong>Resumen del cargue</strong></div>';
+        html += '<div class="card-body">';
+        html += '<p class="mb-3">Total registros insertados: <strong>' + (result.total_insertados || 0) + '</strong></p>';
+        if (advertencias.length) {
+            html += '<div class="alert alert-warning"><strong>Advertencias:</strong><ul class="mb-0">';
+            advertencias.forEach(w => {
+                html += '<li>' + w + '</li>';
+            });
+            html += '</ul></div>';
+        }
+        html += '<div class="row g-3">';
+        Object.entries(data).forEach(([fuenteId, detalle]) => {
+            html += '<div class="col-md-6">';
+            html += '<div class="border rounded p-3 h-100">';
+            html += '<h5 class="text-info">' + (detalle.fuente || fuenteId) + '</h5>';
+            html += '<p class="small mb-2">Sede: ' + (detalle.sede || 'N/A') + '</p>';
+            if (detalle.status === 'error') {
+                html += '<div class="alert alert-danger">' + (detalle.error || 'Error no especificado') + '</div>';
+            } else {
+                html += '<ul class="list-unstyled small mb-2">';
+                html += '<li>Filas originales: <strong>' + (detalle.filas_originales || 0) + '</strong></li>';
+                html += '<li>Filas útiles: <strong>' + (detalle.filas_utiles || 0) + '</strong></li>';
+                html += '<li>Insertados: <strong>' + (detalle.insertados || 0) + '</strong></li>';
+                html += '<li>Facturado total: <strong>' + (detalle.facturado_total || 0).toLocaleString() + '</strong></li>';
+                html += '<li>Valor venta total: <strong>' + (detalle.valor_venta_total || 0).toLocaleString() + '</strong></li>';
+                html += '</ul>';
+                const avisos = detalle.advertencias || [];
+                if (avisos.length) {
+                    html += '<div class="alert alert-warning py-2"><ul class="mb-0 small">';
+                    avisos.forEach(aviso => html += '<li>' + aviso + '</li>');
+                    html += '</ul></div>';
+                }
+            }
+            html += '</div></div>';
+        });
+        html += '</div></div></div>';
+        resultSummary.innerHTML = html;
+    }
+
+    function pollTask(taskId) {
+        const payload = new FormData();
+        payload.append('task_id', taskId);
+        payload.append('csrfmiddlewaretoken', csrfToken);
+
+        fetch(progressStatusUrl, {
+            method: 'POST',
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            body: payload
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'completed') {
+                updateProgress(100, 'Finalizado', data.meta);
+                stopMonitoring('Proceso finalizado.', 'completed', data.result);
+            } else if (data.status === 'failed') {
+                stopMonitoring('El proceso finalizó con errores.', 'failed', data.result);
+                showToast('El proceso falló. Revisa el detalle.', 'danger');
+            } else {
+                updateProgress(data.progress || 0, data.stage || 'Procesando…', data.meta);
+            }
+        })
+        .catch(() => {
+            stopMonitoring('No fue posible consultar el estado de la tarea.', 'failed');
+        });
+    }
+
+    function startMonitoring(taskId) {
+        currentTaskId = taskId;
+        resetProgress();
+        progressModal.show();
+        pollTask(taskId);
+        progressInterval = setInterval(() => pollTask(taskId), 2500);
+    }
+
+    function showToast(message, level) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-bg-${level || 'info'} border-0 show position-fixed top-0 end-0 m-3`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+    }
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        if (!validateForm()) {
+            return;
+        }
+        setButtonState(true);
+        const formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => Promise.reject(err));
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.task_id) {
+                startMonitoring(data.task_id);
+            } else {
+                setButtonState(false);
+                showToast(data.error || 'No fue posible iniciar la tarea.', 'danger');
+            }
+        })
+        .catch(error => {
+            setButtonState(false);
+            const message = error && error.error ? error.error : 'Error al iniciar el cargue.';
+            showToast(message, 'danger');
+        });
+    });
+})();
+</script>
+{% endblock script %}
