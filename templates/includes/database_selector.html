@@ -1,65 +1,80 @@
 <!-- Selector de bases de datos -->
-<!-- <input type="checkbox" name="" id="check" /> -->
-<div class="database-selector-wrapper bg-dark">
-    <div class="d-flex justify-content-center align-items-center">
-        <form class="d-flex ml-auto" action="{% url form_url %}" method="post" id="FormSelectorBase">
+<div class="database-selector-wrapper">
+    <div class="d-flex align-items-center gap-2">
+        <i class="fas fa-building text-primary"></i>
+        <label class="selector-label fw-semibold mb-0 d-none d-sm-inline">Empresa:</label>
+        <form class="flex-grow-1" style="max-width: 350px;" action="{% url form_url %}" method="post"
+            id="FormSelectorBase">
             {% csrf_token %}
-            <div class="form-group w-100">
-                <select class="form-control" id="database_select" name="database_select">
-                    <option disabled selected>Seleccione una empresa</option>
-                    {% for database_name,database_nmEmpresa in databases_list %}
-                    <option value="{{ database_name }}">{{ database_nmEmpresa }} </option>
-                    {% endfor %}
-                </select>
-            </div>
+            <select class="form-select form-select-sm" id="database_select" name="database_select">
+                <option disabled selected>Seleccione una empresa</option>
+            </select>
         </form>
     </div>
 </div>
-<!-- Código JavaScript relacionado con el selector de bases de datos -->
+<!-- JavaScript del selector de bases de datos -->
 <script>
+    (function initDatabaseSelector() {
+        function init() {
+            var database = window.sessionStorage.getItem("database_name");
+            $.get('{% url "users_app:database_list" %}', function (data) {
+                var databaseSelect = $('#database_select');
+                $.each(data.databases_list, function (index, db) {
+                    databaseSelect.append('<option value="' + db.database_name + '">' + db.database_nmEmpresa + '</option>');
+                });
 
-    $(document).ready(function () {
-        var database = window.sessionStorage.getItem("database_name");
-        $.get('{% url "users_app:database_list" %}', function (data) {
-            var databaseSelect = $('#database_select');
-            $.each(data.database_list, function (index, database) {
-                databaseSelect.append('<option value="' + database.database_name + '">' + database.database_nmEmpresa + '</option>');
+                if (database) {
+                    // Solo actualizamos visualmente el select en la carga inicial,
+                    // NO disparamos updateDatabaseName para evitar el bucle infinito de recargas.
+                    document.getElementById("database_select").value = database;
+                }
             });
 
-            if (database) {
-                updateDatabaseName(database);
-                document.getElementById("database_select").value = database;
+            document.getElementById("database_select").addEventListener("change", function () {
+                var select = this;
+                database = select.options[select.selectedIndex].value;
+                window.sessionStorage.setItem("database_name", database);
+                updateDatabaseName(database, true);
+            });
+        }
 
-
-            }
-        });
-
-        document.getElementById("database_select").addEventListener("change", function () {
-            var select = this;
-            database = select.options[select.selectedIndex].value;
-            window.sessionStorage.setItem("database_name", database);
-            updateDatabaseName(database);
-        });
-    });
-
-    function updateDatabaseName(newDatabase) {
-        console.log("Updating database name:", newDatabase);
-        var csrfToken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", "{% url form_url %}", true);
-        xhr.setRequestHeader("X-CSRFToken", csrfToken);
-        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xhr.onreadystatechange = function () {
-            if (this.readyState === XMLHttpRequest.DONE) {
-                if (this.status === 200) {
-                    console.log("Database name updated successfully:", newDatabase);
-                    database = newDatabase;
-                } else {
-                    console.log("Error al actualizar el valor de database_name en la sesión:", this.status, this.responseText);
+        function updateDatabaseName(newDatabase, shouldReload) {
+            console.log("Updating database name:", newDatabase);
+            var csrfToken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "{% url form_url %}", true);
+            xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.onreadystatechange = function () {
+                if (this.readyState === XMLHttpRequest.DONE) {
+                    if (this.status === 200) {
+                        console.log("Database name updated successfully:", newDatabase);
+                        database = newDatabase;
+                        if (shouldReload) {
+                            window.location.reload(); // Requerido para recargar catálogos (CEVEs) del servidor
+                        }
+                    } else {
+                        console.log("Error al actualizar:", this.status, this.responseText);
+                    }
                 }
-            }
-        };
-        xhr.send("database_select=" + encodeURIComponent(newDatabase));
-    }
+            };
+            xhr.send("database_select=" + encodeURIComponent(newDatabase));
+        }
 
+        // Esperar a que jQuery esté disponible (se carga al final del body)
+        function waitForJQuery() {
+            if (typeof window.$ !== "undefined" && typeof window.$.fn !== "undefined") {
+                init();
+            } else {
+                setTimeout(waitForJQuery, 50);
+            }
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", waitForJQuery);
+        } else {
+            waitForJQuery();
+        }
+    })();
 </script>

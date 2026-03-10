@@ -3,7 +3,7 @@
 
 {% block title %}Informe Inventarios{% endblock title %}
 {% block barra_lateral %}
-{% include 'includes/left_sidebar_bimbo.html' %}
+{% include 'bimbo/includes/sidebar.html' %}
 {% endblock barra_lateral %}
 {% block window %}
 <div class="container-fluid py-4 bg-light">
@@ -174,7 +174,7 @@
     </div>
 
     <!-- Progress Area -->
-    <div id="processingModal" class="modal" tabindex="-1" role="dialog" style="display:none; background-color: rgba(0,0,0,0.6);">
+    <div id="processingModal" class="modal fade" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content bg-dark text-white border-0 shadow">
                 <div class="modal-body text-center py-4">
@@ -194,6 +194,7 @@
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 <script>
   const csrfToken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
   const progressBar = document.getElementById("progressBar");
@@ -201,6 +202,7 @@
   const ceveSelect = document.getElementById("ceves_code_select");
   let progressInterval = null;
   let startTime = 0;
+  const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
 
   function updateProgressBar(value, stageText) {
     const safeValue = Math.max(0, Math.min(100, Number(value) || 0));
@@ -220,7 +222,7 @@
   }
 
   function resetUI() {
-    document.getElementById("processingModal").style.display = "none";
+    bsProcessingModal.hide();
     document.getElementById("btnSubmit").setAttribute("data-submitted", "false");
     clearInterval(progressInterval);
   }
@@ -305,7 +307,7 @@
     this.setAttribute("data-submitted", "true");
     startTime = Date.now();
     updateProgressBar(0, "Iniciando...");
-    document.getElementById("processingModal").style.display = "flex";
+    bsProcessingModal.show();
     const dl = document.getElementById("download_file");
     if (dl) dl.className = "d-none";
     if (progressInterval) clearInterval(progressInterval);
@@ -381,7 +383,7 @@
     const pageSize = document.getElementById("inv-page-size").value || "50";
     if (!ceve) return;
 
-    fetch(`{% url 'home_app:inventarios_data' %}?ceves_code=${encodeURIComponent(ceve)}&page=${page}&page_size=${pageSize}&search=${encodeURIComponent(search)}`)
+    fetch(`{% url 'bimbo_app:inventarios_data' %}?ceves_code=${encodeURIComponent(ceve)}&page=${page}&page_size=${pageSize}&search=${encodeURIComponent(search)}`)
       .then(r => r.json())
       .then(data => {
         if (!data.success) {
@@ -440,3 +442,4 @@
   });
 </script>
 {% endblock script %}
+

@@ -37,6 +37,7 @@ from apps.permisos.models import ConfEmpresas
 import json
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_GET
 from django.contrib.auth.forms import AuthenticationForm
 
 from .utils import (
@@ -531,10 +532,11 @@ class BaseView(LoginRequiredMixin, TemplateView):
             logger.error(f"Error al invalidar cachés: {e}")
 
 
-class DatabaseListView(ListView):
+class DatabaseListView(LoginRequiredMixin, ListView):
     model = ConfEmpresas
     context_object_name = "databases"
     template_name = "includes/database_list.html"
+    login_url = reverse_lazy("users_app:user-login")
 
     def get_queryset(self):
         return self.request.user.conf_empresas.all().order_by("nmEmpresa")
@@ -988,3 +990,11 @@ def api_user_detail(request, pk):
         return JsonResponse(
             {"status": "error", "message": "Usuario no encontrado"}, status=404
         )
+
+
+@require_GET
+def session_check(request):
+    """Verifica si la sesion esta activa. Usado por el JS de inactividad."""
+    if request.user.is_authenticated:
+        return JsonResponse({"authenticated": True})
+    return JsonResponse({"authenticated": False}, status=401)

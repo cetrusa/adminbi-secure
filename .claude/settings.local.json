@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Read(//d/Python/DataZenithBi/adminbi/**)",
+      "Bash(wc:*)",
+      "Bash(python manage.py migrate:*)",
+      "Bash(curl:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker ps:*)",
+      "Bash(python:*)"
+    ]
+  }
+}

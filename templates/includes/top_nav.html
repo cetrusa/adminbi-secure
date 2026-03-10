@@ -1,75 +1,117 @@
 {% load static %}
 <header>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg gxon-topbar">
         <div class="container-fluid">
             <!-- Branding/Logo -->
-            <a class="navbar-brand" href="{% url 'home_app:panel_cubo' %}">
-                <img src="{% static 'images/Logo-Blanco.png' %}" alt="Logo" style="height: 30px;">
-            </a>
+            <div class="d-flex align-items-center">
+                <a class="navbar-brand d-flex align-items-center me-4" href="{% url 'home_app:panel_cubo' %}">
+                    <!-- Podemos cambiar por la versión de logo blanco o principal -->
+                    <img src="{% static 'images/Logo-Blanco.png' %}" alt="Logo" style="height: 35px;">
+                    <span class="ms-2 fw-bolder text-white d-none d-sm-inline">DataZenith</span>
+                </a>
+            </div>
 
             <!-- Toggler for Mobile -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown"
-                aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
+            <button class="navbar-toggler border-0 shadow-none text-white" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <i class="fas fa-bars fs-3"></i>
             </button>
 
             <!-- Navbar Links -->
             <div class="collapse navbar-collapse" id="navbarNavDropdown">
 
-                <!-- Menú para la barra superior -->
-                <ul class="navbar-nav ms-auto">
+                <!-- Menú Central -->
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
                     {% if perms.permisos.panel_cubo %}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'home_app:panel_cubo' %}"><i
-                                class="fas fa-chart-bar me-2"></i><span>Cubos de Ventas</span></a>
-                    </li>
-                    {% endif %}
-                    {% if perms.permisos.panel_interface %}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'home_app:panel_interface' %}"><i
-                                class="fas fa-calculator me-2"></i><span>Interface Contable</span></a>
-                    </li>
-                    {% endif %}
-                    {% if perms.permisos.panel_bi %}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'home_app:panel_bi' %}"><i
-                                class="fas fa-chart-line me-2"></i><span>Business Intelligence</span></a>
-                    </li>
-                    {% endif %}
-                    {% if perms.permisos.panel_actualizacion %}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'home_app:panel_actualizacion' %}"><i
-                                class="fas fa-sync-alt me-2"></i><span>Actualización de Información</span></a>
-                    </li>
-                    {% endif %}
-                    {% if perms.permisos.reportes_bimbo %}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'home_app:panel_bimbo' %}"><i
-                                class="fas fa-chart-line me-2"></i><span>Panel Bimbo</span></a>
-                    </li>
-                    {% endif %}
-                    {% if perms.permisos.admin %}
-                    <li class="nav-item">
-                        <a href="{% url 'admin:index' %}" class="nav-link text-white align-middle px-0">
-                            <i class="fas fa-sliders-h me-2"></i> <span
-                                class="ms-1 d-none d-sm-inline">Configuración</span>
+                    <li class="nav-item me-1">
+                        <a class="nav-link px-3 py-2 rounded-3 text-white d-flex align-items-center"
+                            href="{% url 'home_app:panel_cubo' %}">
+                            <i class="fas fa-chart-bar text-primary me-2"></i><span>Cubos de Ventas</span>
                         </a>
                     </li>
                     {% endif %}
+                    {% if perms.permisos.panel_interface %}
+                    <li class="nav-item me-1">
+                        <a class="nav-link px-3 py-2 rounded-3 text-white d-flex align-items-center"
+                            href="{% url 'home_app:panel_interface' %}">
+                            <i class="fas fa-calculator text-success me-2"></i><span>Interface Contable</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if perms.permisos.panel_bi %}
+                    <li class="nav-item me-1">
+                        <a class="nav-link px-3 py-2 rounded-3 text-white d-flex align-items-center"
+                            href="{% url 'home_app:panel_bi' %}">
+                            <i class="fas fa-chart-pie text-warning me-2"></i><span>BI</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if perms.permisos.panel_actualizacion %}
+                    <li class="nav-item me-1">
+                        <a class="nav-link px-3 py-2 rounded-3 text-white d-flex align-items-center"
+                            href="{% url 'home_app:panel_actualizacion' %}">
+                            <i class="fas fa-sync-alt text-info me-2"></i><span>Actualización</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if perms.permisos.reportes_bimbo %}
+                    <li class="nav-item me-1">
+                        <a class="nav-link px-3 py-2 rounded-3 text-white d-flex align-items-center"
+                            href="{% url 'bimbo_app:panel_bimbo' %}">
+                            <i class="fas fa-truck text-danger me-2"></i><span>Bimbo</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <!-- Acciones Derecha (Admin, Perfil, Logout) -->
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
                     {% if perms.monitor.panel_monitor %}
-                    <li class="nav-item">
-                    <a class="nav-link text-white" href="{% url 'monitor:dashboard' %}"><i class="fas fa-chart-line"></i><span> Monitoreo</span></a>
+                    <li class="nav-item me-2">
+                        <a class="nav-link text-white rounded-circle p-2 bg-light d-flex align-items-center justify-content-center"
+                            style="width: 40px; height: 40px;" href="{% url 'monitor:dashboard' %}" title="Monitoreo">
+                            <i class="fas fa-heartbeat text-danger"></i>
+                        </a>
                     </li>
                     {% endif %}
 
+                    {% if perms.permisos.admin %}
+                    <li class="nav-item ms-lg-2 me-2">
+                        <a href="{% url 'admin:index' %}"
+                            class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-flex align-items-center">
+                            <i class="fas fa-sliders-h me-2"></i> Configuración
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if user.is_authenticated %}
+                    <li
+                        class="nav-item ms-lg-3 d-flex align-items-center bg-light rounded-pill px-3 py-1 shadow-sm border border-secondary border-opacity-25">
+                        <img src="{% static 'images/user-profile.png' %}" alt="profile" class="rounded-circle me-2"
+                            width="28" height="28">
+                        <span class="text-white fw-semibold small me-3">{{ user.username }}</span>
+                        <a href="{% url 'users_app:user-logout' %}"
+                            class="text-danger border-start border-secondary border-opacity-25 ps-3 py-1 text-decoration-none small"
+                            title="Cerrar sesión">
+                            <i class="fas fa-sign-out-alt"></i> Salir
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
 
-                <!-- Logout Button -->
-                {% if user.is_authenticated %}
-                <a href="{% url 'users_app:user-logout' %}" class="logout-btn">Logout <i
-                        class="fas fa-sign-out-alt"></i></a>
-                {% endif %}
             </div>
         </div>
     </nav>
 </header>
+<style>
+    /* Ajustar hover en los nav-links centrales del gxon-topbar */
+    .gxon-topbar .nav-item .nav-link {
+        transition: all 0.3s ease;
+    }
+
+    .gxon-topbar .nav-item .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: #fff !important;
+    }
+</style>

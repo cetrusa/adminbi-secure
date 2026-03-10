@@ -20,6 +20,14 @@ set "USER_MSG=%*"
 if "%USER_MSG%"=="" set "USER_MSG=Actualizacion menor"
 set "DATESTR=%DATE% %TIME%"
 
+REM ==== NUEVO PASO DE SEGURIDAD AUTO-IGNORE ====
+echo [INFO] Ejecutando auditoria de seguridad pre-commit (auto_secure_gitignore.py)...
+%PY_CMD% scripts\auto_secure_gitignore.py
+if errorlevel 1 (
+  echo [ERROR] Ocurrio un error en el script de seguridad automatica. Abortando.
+  exit /b 1
+)
+
 REM Agregar todos los cambios
 git add -A
 

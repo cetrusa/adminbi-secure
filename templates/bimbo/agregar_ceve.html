@@ -1,0 +1,512 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Agregar CEVE al Maestro de Agencias{% endblock title %}
+{% block barra_lateral %}
+{% include 'bimbo/includes/sidebar.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<div class="container-fluid py-4 bg-light">
+
+    <!-- Cabecera -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-danger fw-bold"><i class="fas fa-building me-2"></i>Agregar CEVE al Maestro de
+                Agencias</h1>
+            <p class="text-muted small mb-0">Registra una empresa como agencia BIMBO activa y sincroniza en
+                <code>agencias_bimbo</code>.
+            </p>
+        </div>
+        <a href="{% url 'bimbo_app:panel_bimbo' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Volver al Panel
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Formulario -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0 fw-bold text-danger"><i class="fas fa-plus-circle me-2"></i>Datos del Nuevo CEVE
+                    </h6>
+                </div>
+                <div class="card-body">
+
+                    <!-- Paso 1: Seleccionar empresa -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold" for="selectEmpresa">
+                            <span class="badge bg-danger me-1">1</span> Empresa (conf_empresas)
+                        </label>
+                        <select class="form-select" id="selectEmpresa">
+                            <option value="">-- Seleccione una empresa --</option>
+                            {% for e in empresas %}
+                            <option value="{{ e.id }}" data-nombre="{{ e.nmEmpresa }}" data-db="{{ e.dbBi }}"
+                                data-ceve="{{ e.ceve|default:'' }}" data-es-bimbo="{{ e.es_bimbo|yesno:'true,false' }}"
+                                data-proveedores="{{ e.idProveedorBimbo|default:'' }}">
+                                {{ e.nmEmpresa }} — {{ e.name }}{% if e.es_bimbo %} ✓{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Empresas disponibles en <code>conf_empresas</code>. Las marcadas con ✓ ya
+                            son Bimbo.</div>
+                    </div>
+
+                    <!-- Info empresa seleccionada -->
+                    <div id="empresaInfoBox" class="alert alert-info d-none mb-4 small">
+                        <div class="d-flex flex-wrap gap-3">
+                            <div><strong>BD BI:</strong> <span id="infoDbBi">—</span></div>
+                            <div><strong>CEVE actual:</strong> <span id="infoCeve">—</span></div>
+                            <div><strong>Es Bimbo:</strong> <span id="infoEsBimbo">—</span></div>
+                            <div><strong>Proveedores actuales:</strong> <span id="infoProveedores">—</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Paso 2: CEVE -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold" for="inputCeve">
+                            <span class="badge bg-danger me-1">2</span> Código CEVE
+                        </label>
+                        <input type="number" class="form-control" id="inputCeve" placeholder="Ej: 34201" min="1">
+                        <div class="form-text">Código numérico asignado por BIMBO a la agencia (aparece en el sistema
+                            SIDIS).</div>
+                    </div>
+
+                    <!-- Paso 3: IDs Proveedor -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold" for="inputProveedores">
+                            <span class="badge bg-danger me-1">3</span> IDs de Proveedor BIMBO
+                        </label>
+                        <input type="text" class="form-control" id="inputProveedores" placeholder="Ej: 6, 40">
+                        <div class="form-text">
+                            IDs del proveedor BIMBO en el SIDIS de esta agencia, separados por coma.<br>
+                            <strong>¿Cómo obtenerlo?</strong> Ejecuta Discovery en el Panel BIMBO para esta agencia — el
+                            proceso detecta automáticamente los IDs.
+                        </div>
+                    </div>
+
+                    <!-- Botón -->
+                    <button class="btn btn-danger" id="btnGuardar">
+                        <i class="fas fa-save me-2"></i>Registrar CEVE
+                    </button>
+
+                    <!-- Feedback -->
+                    <div id="resultBox" class="alert mt-3 d-none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de guía -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-info-circle me-2 text-info"></i>Guía de llenado</h6>
+                </div>
+                <div class="card-body small">
+
+                    <h6 class="fw-bold text-danger mb-2"><i class="fas fa-building me-1"></i> Empresa (Paso 1)</h6>
+                    <p>Selecciona la empresa que corresponde al distribuidor. Debe existir previamente en
+                        <code>conf_empresas</code> con su <code>dbBi</code> configurado (nombre del esquema de la BD del
+                        agente, ej: <code>powerbi_sidimat_b</code>).
+                    </p>
+                    <hr>
+
+                    <h6 class="fw-bold text-danger mb-2"><i class="fas fa-hashtag me-1"></i> Código CEVE (Paso 2)</h6>
+                    <p>El código CEVE es el identificador comercial que BIMBO le asigna a cada distribuidor. Lo
+                        encuentras en:</p>
+                    <ul class="ps-3">
+                        <li>Portal de distribuidores BIMBO.</li>
+                        <li>Planillas de liquidación (encabezado).</li>
+                        <li>Sistema SIDIMAT del agente (pantalla de configuración).</li>
+                    </ul>
+                    <hr>
+
+                    <h6 class="fw-bold text-danger mb-2"><i class="fas fa-truck me-1"></i> IDs Proveedor BIMBO (Paso 3)
+                    </h6>
+                    <p>Es el <code>idProveedor</code> con que BIMBO aparece en la tabla <code>proveedores</code> del
+                        SIDIS de esta agencia. Puede haber varios (ej: distribución y cuota). Para encontrarlo:</p>
+                    <ol class="ps-3">
+                        <li>Usa el botón <strong>Discovery</strong> en el Panel BIMBO (detecta automáticamente).</li>
+                        <li>O consulta directamente:
+                            <code>SELECT idProveedor, nombreProveedor FROM {dbSidis}.proveedores WHERE nombreProveedor LIKE '%BIMBO%'</code>
+                        </li>
+                    </ol>
+                    <hr>
+
+                    <h6 class="fw-bold text-danger mb-2"><i class="fas fa-exclamation-triangle me-1"></i> Importante
+                    </h6>
+                    <ul class="ps-3">
+                        <li>Al guardar, se marcará <code>conf_empresas.es_bimbo = True</code>.</li>
+                        <li>Se creará o actualizará el registro en <code>agencias_bimbo</code>.</li>
+                        <li>Los proveedores se sincronizan en <code>proveedores_agencia_bimbo</code>.</li>
+                        <li>El ETL de datos (clientes, rutas, cuboventas) debe ejecutarse por separado.</li>
+                    </ul>
+
+                    <div class="alert alert-warning small mt-3 mb-0">
+                        <i class="fas fa-database me-1"></i>
+                        Después de registrar, asegúrate de ejecutar el <strong>ETL de datos</strong> para poblar
+                        <code>clientes</code>, <code>rutas</code> y <code>cuboventas</code> del agente.
+                        Sin esos datos, los reportes retornarán 0 registros.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de agencias ya registradas -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0 fw-bold text-danger"><i class="fas fa-list me-2"></i>Agencias BIMBO Registradas</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm small align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>CEVE</th>
+                            <th>Nombre</th>
+                            <th>BD BI (dbBi)</th>
+                            <th>Proveedores</th>
+                            <th class="text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ag in agencias_registradas %}
+                        <tr>
+                            <td><span class="badge bg-info">{{ ag.ceve }}</span></td>
+                            <td>{{ ag.nombre }}</td>
+                            <td><code>{{ ag.dbBi|default:"–" }}</code></td>
+                            <td><code>{{ ag.proveedores|default:"–" }}</code></td>
+                            <td class="text-center">
+                                {% if ag.estado == "ACTIVO" %}
+                                <span class="badge bg-success">ACTIVO</span>
+                                {% elif ag.estado == "PENDIENTE" %}
+                                <span class="badge bg-warning text-dark">PENDIENTE</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ ag.estado }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No hay agencias registradas aún.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- === DIAGNÓSTICO DE PRODUCTOS === -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="mb-0 fw-bold"><i class="fas fa-microscope me-2 text-warning"></i>Diagnóstico de Productos
+                </h6>
+                <small class="text-muted">Verifica qué productos del agente tienen match en <code>productos_bimbo</code>
+                    y cuáles son pendientes de revisión.</small>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 align-items-end mb-3">
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold small" for="diagEmpresa">Empresa a diagnosticar</label>
+                    <select class="form-select form-select-sm" id="diagEmpresa">
+                        <option value="">-- Seleccione una empresa --</option>
+                        {% for e in empresas %}
+                        <option value="{{ e.id }}">{{ e.nmEmpresa }} — {{ e.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small" for="diagDias">Días a analizar</label>
+                    <select class="form-select form-select-sm" id="diagDias">
+                        <option value="30">30 días</option>
+                        <option value="90" selected>90 días</option>
+                        <option value="180">180 días</option>
+                        <option value="365">365 días</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-warning btn-sm" id="btnDiagnosticar">
+                        <i class="fas fa-search me-1"></i>Ejecutar Diagnóstico
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resumen de cobertura -->
+            <div id="diagResumen" class="d-none mb-3">
+                <div class="row g-3 text-center">
+                    <div class="col-sm-3">
+                        <div class="card border-0 bg-light py-2">
+                            <div class="h4 fw-bold mb-0" id="diagTotal">0</div>
+                            <small class="text-muted">Total productos</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="card border-0 bg-success bg-opacity-10 py-2">
+                            <div class="h4 fw-bold mb-0 text-success" id="diagMatch">0</div>
+                            <small class="text-muted">Con match ✓</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="card border-0 bg-warning bg-opacity-10 py-2">
+                            <div class="h4 fw-bold mb-0 text-warning" id="diagPendiente">0</div>
+                            <small class="text-muted">Pendientes ⚠</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="card border-0 bg-info bg-opacity-10 py-2">
+                            <div class="h4 fw-bold mb-0 text-info" id="diagCobertura">0%</div>
+                            <small class="text-muted">Cobertura</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs MATCH / PENDIENTE -->
+            <div id="diagTabs" class="d-none">
+                <ul class="nav nav-tabs mb-3" id="diagTabNav">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-tab="match">
+                            <i class="fas fa-check-circle text-success me-1"></i>
+                            Con Match <span class="badge bg-success ms-1" id="badgeMatch">0</span>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-tab="pendiente">
+                            <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                            Pendientes <span class="badge bg-warning text-dark ms-1" id="badgePendiente">0</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tabla MATCH -->
+                <div id="tabMatch">
+                    <div class="table-responsive" style="max-height:350px;overflow-y:auto;">
+                        <table class="table table-sm table-hover small align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Código SIDIS</th>
+                                    <th>Nombre SIDIS</th>
+                                    <th>Código Bimbo</th>
+                                    <th>Nombre Bimbo</th>
+                                    <th>Estado</th>
+                                    <th class="text-end">Días venta</th>
+                                    <th>Última venta</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bodyMatch"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabla PENDIENTE -->
+                <div id="tabPendiente" class="d-none">
+                    <div class="alert alert-warning small py-2 mb-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Estos productos <strong>no tienen registro en <code>productos_bimbo</code></strong>.
+                        El desarrollador debe revisar cada uno y determinar si corresponde a un producto BIMBO (en cuyo
+                        caso lo agrega al catálogo con el código correcto) o si es de otro proveedor (se ignora).
+                    </div>
+                    <div class="table-responsive" style="max-height:350px;overflow-y:auto;">
+                        <table class="table table-sm table-hover small align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Código SIDIS</th>
+                                    <th>Nombre SIDIS</th>
+                                    <th class="text-end">Días venta</th>
+                                    <th class="text-end">Unidades</th>
+                                    <th>Última venta</th>
+                                    <th>Acción requerida</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bodyPendiente"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="diagError" class="alert alert-danger d-none small mt-2"></div>
+        </div>
+    </div>
+
+</div>
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script>
+    const csrfToken = '{{ csrf_token }}';
+
+    // Mostrar info de la empresa seleccionada
+    document.getElementById('selectEmpresa').addEventListener('change', function () {
+        const opt = this.options[this.selectedIndex];
+        const infoBox = document.getElementById('empresaInfoBox');
+        if (!this.value) {
+            infoBox.classList.add('d-none');
+            return;
+        }
+        document.getElementById('infoDbBi').textContent = opt.dataset.db || '–';
+        document.getElementById('infoCeve').textContent = opt.dataset.ceve || '(sin asignar)';
+        document.getElementById('infoEsBimbo').textContent = opt.dataset.esBimbo === 'true' ? '✓ Sí' : 'No';
+        document.getElementById('infoProveedores').textContent = opt.dataset.proveedores || '(ninguno)';
+        // Pre-llenar campos si ya tiene datos
+        if (opt.dataset.ceve) document.getElementById('inputCeve').value = opt.dataset.ceve;
+        if (opt.dataset.proveedores) document.getElementById('inputProveedores').value = opt.dataset.proveedores;
+        infoBox.classList.remove('d-none');
+    });
+
+    function showResult(msg, type) {
+        const box = document.getElementById('resultBox');
+        const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
+        box.className = 'alert alert-' + type + ' mt-3';
+        box.innerHTML = '<i class="fas fa-' + icon + ' me-2"></i>' + msg;
+        box.classList.remove('d-none');
+        if (type === 'success') {
+            setTimeout(() => location.reload(), 2500);
+        }
+    }
+
+    document.getElementById('btnGuardar').addEventListener('click', function () {
+        const empresaId = document.getElementById('selectEmpresa').value;
+        const ceve = document.getElementById('inputCeve').value.trim();
+        const proveedores = document.getElementById('inputProveedores').value.trim();
+
+        if (!empresaId) { showResult('Seleccione una empresa.', 'danger'); return; }
+        if (!ceve || isNaN(Number(ceve)) || Number(ceve) <= 0) {
+            showResult('Ingrese un código CEVE válido (número positivo).', 'danger');
+            return;
+        }
+
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Registrando...';
+
+        const fd = new FormData();
+        fd.append('empresa_id', empresaId);
+        fd.append('ceve', ceve);
+        fd.append('proveedores', proveedores);
+
+        fetch("{% url 'bimbo_app:agregar_ceve' %}", {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-CSRFToken': csrfToken }
+        })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save me-2"></i>Registrar CEVE';
+                if (data.success) {
+                    showResult(data.message, 'success');
+                } else {
+                    showResult(data.error || 'Error al registrar.', 'danger');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save me-2"></i>Registrar CEVE';
+                showResult('Error de conexión: ' + err, 'danger');
+            });
+    });
+
+    // ============ DIAGNÓSTICO DE PRODUCTOS ============
+
+    // Tab switching
+    document.getElementById('diagTabNav').addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-tab]');
+        if (!btn) return;
+        document.querySelectorAll('#diagTabNav .nav-link').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('tabMatch').classList.toggle('d-none', tab !== 'match');
+        document.getElementById('tabPendiente').classList.toggle('d-none', tab !== 'pendiente');
+    });
+
+    document.getElementById('btnDiagnosticar').addEventListener('click', function () {
+        const empresaId = document.getElementById('diagEmpresa').value;
+        const dias = document.getElementById('diagDias').value;
+
+        if (!empresaId) {
+            document.getElementById('diagError').textContent = 'Seleccione una empresa.';
+            document.getElementById('diagError').classList.remove('d-none');
+            return;
+        }
+        document.getElementById('diagError').classList.add('d-none');
+
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Analizando...';
+
+        const url = "{% url 'bimbo_app:agregar_ceve_diagnostico' %}?empresa_id=" + encodeURIComponent(empresaId) + '&dias=' + dias;
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search me-1"></i>Ejecutar Diagnóstico';
+
+                if (!data.success) {
+                    document.getElementById('diagError').textContent = data.error || 'Error al ejecutar diagnóstico.';
+                    document.getElementById('diagError').classList.remove('d-none');
+                    return;
+                }
+
+                // Resumen
+                const r = data.resumen;
+                document.getElementById('diagTotal').textContent = r.total;
+                document.getElementById('diagMatch').textContent = r.match;
+                document.getElementById('diagPendiente').textContent = r.pendiente;
+                document.getElementById('diagCobertura').textContent = r.cobertura_pct + '%';
+                document.getElementById('badgeMatch').textContent = r.match;
+                document.getElementById('badgePendiente').textContent = r.pendiente;
+                document.getElementById('diagResumen').classList.remove('d-none');
+                document.getElementById('diagTabs').classList.remove('d-none');
+
+                // Tabla MATCH
+                const bodyMatch = document.getElementById('bodyMatch');
+                bodyMatch.innerHTML = '';
+                if (data.match.length === 0) {
+                    bodyMatch.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Sin productos con match.</td></tr>';
+                } else {
+                    data.match.forEach(p => {
+                        bodyMatch.innerHTML +=
+                            '<tr>' +
+                            '<td><code>' + (p.codigo_sidis || '–') + '</code></td>' +
+                            '<td>' + (p.nombre_sidis || '–') + '</td>' +
+                            '<td><code class="text-success">' + (p.codigo_bimbo || '–') + '</code></td>' +
+                            '<td>' + (p.nombre_bimbo || '–') + '</td>' +
+                            '<td><span class="badge bg-' + (p.estado_bimbo === 'DISPONIBLE' || p.estado_bimbo === 'ACTIVO' ? 'success' : 'secondary') + '">' + (p.estado_bimbo || '–') + '</span></td>' +
+                            '<td class="text-end">' + p.dias_venta + '</td>' +
+                            '<td>' + (p.ultima_venta || '–') + '</td>' +
+                            '</tr>';
+                    });
+                }
+
+                // Tabla PENDIENTE
+                const bodyPendiente = document.getElementById('bodyPendiente');
+                bodyPendiente.innerHTML = '';
+                if (data.pendiente.length === 0) {
+                    bodyPendiente.innerHTML = '<tr><td colspan="6" class="text-center text-success py-3"><i class="fas fa-check-circle me-1"></i>¡Todos los productos tienen match! Cobertura 100%.</td></tr>';
+                } else {
+                    data.pendiente.forEach(p => {
+                        bodyPendiente.innerHTML +=
+                            '<tr>' +
+                            '<td><code class="text-warning">' + (p.codigo_sidis || '–') + '</code></td>' +
+                            '<td>' + (p.nombre_sidis || '–') + '</td>' +
+                            '<td class="text-end">' + p.dias_venta + '</td>' +
+                            '<td class="text-end">' + (p.unidades || 0).toLocaleString() + '</td>' +
+                            '<td>' + (p.ultima_venta || '–') + '</td>' +
+                            '<td><span class="badge bg-warning text-dark">Revisar manualmente</span></td>' +
+                            '</tr>';
+                    });
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search me-1"></i>Ejecutar Diagnóstico';
+                document.getElementById('diagError').textContent = 'Error de conexión: ' + err;
+                document.getElementById('diagError').classList.remove('d-none');
+            });
+    });
+</script>
+{% endblock script %}

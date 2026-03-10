@@ -4,33 +4,18 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Permission
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
+from django.db.models import Count
 import ast
 import json
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 
-from .models import User, RegistroAuditoria, UserProfile, UserPermission
+from .models import User, RegistroAuditoria, UserPermission
 from apps.permisos.models import ConfEmpresas
-
-
-class UserProfileInline(admin.StackedInline):
-    """Inline admin para UserProfile que permite editar perfiles desde el admin de User."""
-
-    model = UserProfile
-    can_delete = False
-    verbose_name_plural = _("Perfil de usuario")
 
 
 class UserAdminForm(forms.ModelForm):
     """Formulario personalizado para la administración de usuarios."""
-
-    conf_empresas = forms.ModelMultipleChoiceField(
-        queryset=ConfEmpresas.objects.all().order_by("nmEmpresa"),  # Ordenar por nombre
-        widget=forms.CheckboxSelectMultiple,
-        required=False,
-        label=_("Empresas"),
-        help_text=_("Seleccione las empresas a las que el usuario tendrá acceso."),
-    )
     select_all_empresas = forms.BooleanField(
         required=False,
         label=_("Seleccionar todas las empresas"),
@@ -118,7 +103,7 @@ class UserResource(resources.ModelResource):
             "is_staff",
             "date_joined",
             "get_empresas_nombres",
-        )
+            )
         export_order = (
             "id",
             "username",
@@ -130,7 +115,7 @@ class UserResource(resources.ModelResource):
             "is_staff",
             "date_joined",
             "get_empresas_nombres",
-        )
+            )
 
     def dehydrate_get_empresas_nombres(self, user):
         return user.get_empresas_nombres()
@@ -158,8 +143,6 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin):
 
     form = UserAdminForm
     resource_class = UserResource
-    inlines = [UserProfileInline]
-
     # Campos a mostrar en el listado
     list_display = (
         "username",
@@ -169,13 +152,13 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin):
         "genero",
         "is_active",
         "is_staff",
+        "es_bimbo",
         "get_empresas_count",
-        "get_empresas_nombres",
         "date_joined",
     )
 
     # Filtros en la barra lateral
-    list_filter = ("is_active", "is_staff", "is_superuser", "genero")
+    list_filter = ("is_active", "is_staff", "is_superuser", "genero", "es_bimbo")
 
     # Campos de búsqueda
     search_fields = ("username", "email", "nombres", "apellidos")
@@ -205,7 +188,7 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin):
         (
             _("Empresas"),
             {
-                "fields": ("select_all_empresas", "conf_empresas"),
+                "fields": ("select_all_empresas", "conf_empresas", "es_bimbo"),
                 "description": _(
                     "Seleccione las empresas a las que este usuario tendrá acceso"
                 ),
@@ -234,32 +217,53 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin):
         (
             _("Empresas"),
             {
-                "fields": ("select_all_empresas", "conf_empresas"),
+                "fields": ("select_all_empresas", "conf_empresas", "es_bimbo"),
             },
         ),
     )
 
     # Campos con selección múltiple
-    filter_horizontal = ("groups", "user_permissions", "conf_empresas")
+    filter_horizontal = ("groups", "user_permissions")
+    autocomplete_fields = ("conf_empresas",)
+    list_per_page = 25
+    show_full_result_count = False
+
+    def get_queryset(self, request):
+        queryset = (
+            super()
+            .get_queryset(request)
+            .annotate(empresas_count=Count("conf_empresas", distinct=True))
+        )
+        self._total_empresas = ConfEmpresas.objects.count()
+        return queryset
 
     def get_empresas_count(self, obj):
         """Método para mostrar el número de empresas asignadas al usuario."""
-        count = obj.conf_empresas.count()
-        total = ConfEmpresas.objects.count()
+        count = getattr(obj, "empresas_count", None)
+        if count is None:
+            count = obj.conf_empresas.count()
+
+        total = getattr(self, "_total_empresas", None)
+        if total is None:
+            total = ConfEmpresas.objects.count()
+            self._total_empresas = total
+
         return f"{count}/{total}" if count < total else _("Todas")
 
     get_empresas_count.short_description = _("Empresas")
 
     def get_empresas_nombres(self, obj):
         """Método para mostrar los nombres de las empresas asociadas."""
-        return ", ".join([empresa.nmEmpresa for empresa in obj.conf_empresas.all()])
+        empresas = getattr(obj, "_prefetched_objects_cache", {}).get("conf_empresas")
+        if empresas is None:
+            empresas = obj.conf_empresas.all()
+        return ", ".join(empresa.nmEmpresa for empresa in empresas)
 
     get_empresas_nombres.short_description = _("Nombres de Empresas")
 
     actions = [print_users]
 
     class Media:
-        js = ("admin/js/select_all.js",)
         css = {"all": ("admin/css/custom_admin.css",)}
 
 
@@ -329,8 +333,11 @@ class UserPermissionAdmin(admin.ModelAdmin):
     form = UserPermissionForm
     list_display = ("user", "empresa", "get_proveedores_count", "get_macrozonas_count")
     search_fields = ("user__username", "empresa__nmEmpresa")
-    list_filter = ("empresa", "user")
+    list_filter = ("empresa",)
     autocomplete_fields = ["user", "empresa"]
+    list_select_related = ("user", "empresa")
+    list_per_page = 25
+    show_full_result_count = False
 
     def get_proveedores_count(self, obj):
         """Muestra la cantidad de proveedores asignados."""
@@ -376,8 +383,12 @@ class RegistroAuditoriaAdmin(admin.ModelAdmin):
         "city",
         "transaccion",
     )
-    list_filter = ("fecha_hora", "usuario", "database_name", "city")
+    list_filter = ("database_name", "city")
     search_fields = ("usuario__username", "ip", "transaccion", "city")
+    list_select_related = ("usuario",)
+    ordering = ("-fecha_hora",)
+    list_per_page = 25
+    show_full_result_count = False
     readonly_fields = (
         "fecha_hora",
         "usuario",

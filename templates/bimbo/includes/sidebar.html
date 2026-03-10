@@ -1,0 +1,116 @@
+<!-- {% if perms.permisos.nav_bar %} -->
+{% load static %}
+
+<!-- Sidebar BIMBO - estilo GXON (sin col-bootstrap, usa .gxon-sidebar del padre) -->
+<div class="d-flex flex-column h-100">
+  <!-- Logo y Nombre -->
+  <a href="{% url 'bimbo_app:panel_bimbo' %}"
+    class="d-flex align-items-center gap-2 p-3 mb-1 text-white text-decoration-none border-bottom border-white border-opacity-10">
+    <img src="{% static 'images/Logo-Blanco.png' %}" alt="Logo" width="28" height="28"
+      class="rounded-circle flex-shrink-0">
+    <span class="fw-semibold small d-none d-sm-inline text-truncate" style="max-width:140px;">{{ user.get_full_name|default:user.username }}</span>
+  </a>
+
+  <!-- Navegación -->
+  <ul class="nav nav-pills flex-column gap-1 px-1 flex-grow-1 overflow-auto py-2">
+    {% if perms.permisos.reportes_bimbo %}
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'venta_cero' %}active{% endif %}"
+        href="{% url 'bimbo_app:venta_cero' %}">
+        <i class="fas fa-user-slash me-2"></i><span class="d-none d-sm-inline">Venta Cero</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'rutero' %}active{% endif %}"
+        href="{% url 'bimbo_app:rutero' %}">
+        <i class="fas fa-route me-2"></i><span class="d-none d-sm-inline">Rutero</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'inventarios' %}active{% endif %}"
+        href="{% url 'bimbo_app:inventarios' %}">
+        <i class="fas fa-warehouse me-2"></i><span class="d-none d-sm-inline">Inventarios</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'preventa' %}active{% endif %}"
+        href="{% url 'bimbo_app:preventa' %}">
+        <i class="fas fa-chart-area me-2"></i><span class="d-none d-sm-inline">Preventa</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'faltantes' %}active{% endif %}"
+        href="{% url 'bimbo_app:faltantes' %}">
+        <i class="fas fa-exclamation-circle me-2"></i><span class="d-none d-sm-inline">Faltantes</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'planos_bimbo' %}active{% endif %}"
+        href="{% url 'bimbo_app:planos_bimbo' %}">
+        <i class="fas fa-file-excel me-2"></i><span class="d-none d-sm-inline">Planos Bimbo</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'equivalencias_bimbo' %}active{% endif %}"
+        href="{% url 'bimbo_app:equivalencias_bimbo' %}">
+        <i class="fas fa-exchange-alt me-2"></i><span class="d-none d-sm-inline">Equivalencias</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'homologacion_bimbo' %}active{% endif %}"
+        href="{% url 'bimbo_app:homologacion_bimbo' %}">
+        <i class="fas fa-sync-alt me-2"></i><span class="d-none d-sm-inline">Homologacion</span>
+      </a>
+    </li>
+    {% endif %}
+
+    {% if user.is_superuser or perms.permisos.admin %}
+    <li class="nav-item mt-2">
+      <small class="text-uppercase text-muted px-2 fw-bold" style="font-size:0.7rem;letter-spacing:1px;">Admin</small>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'permisos_bimbo' %}active{% endif %}"
+        href="{% url 'bimbo_app:permisos_bimbo' %}">
+        <i class="fas fa-user-shield me-2"></i><span class="d-none d-sm-inline">Permisos</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.resolver_match.url_name == 'agregar_ceve' %}active{% endif %}"
+        href="{% url 'bimbo_app:agregar_ceve' %}">
+        <i class="fas fa-building me-2"></i><span class="d-none d-sm-inline">Agregar CEVE</span>
+      </a>
+    </li>
+    {% endif %}
+
+    {% if perms.permisos.informe_bi %}
+    <li class="nav-item mt-2">
+      <small class="text-uppercase text-muted px-2 fw-bold" style="font-size:0.7rem;letter-spacing:1px;">BI</small>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'bi_app:reporte_bi_publico' %}">
+        <i class="fas fa-chart-line me-2"></i><span class="d-none d-sm-inline">Dashboard BI</span>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+
+  <!-- Usuario -->
+  <div class="border-top border-white border-opacity-10 p-2">
+    <div class="dropdown">
+      <a href="#"
+        class="d-flex align-items-center gap-2 text-white text-decoration-none dropdown-toggle py-1 px-2 rounded"
+        id="dropdownBimboUser" data-bs-toggle="dropdown" aria-expanded="false">
+        <img src="{% static 'images/user-profile.png' %}" alt="profile" width="28" height="28"
+          class="rounded-circle flex-shrink-0">
+        <span class="d-none d-sm-inline small text-truncate" style="max-width:120px;">{{ user.username }}</span>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark shadow" aria-labelledby="dropdownBimboUser">
+        {% if user.is_authenticated %}
+        <li><a class="dropdown-item" href="{% url 'users_app:user-logout' %}"><i
+              class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</div>
+<!-- {% endif %} -->

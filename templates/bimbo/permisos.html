@@ -1,0 +1,343 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Permisos Agente BIMBO{% endblock title %}
+{% block barra_lateral %}
+{% include 'bimbo/includes/sidebar.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<div class="container-fluid py-4 bg-light">
+  {% if messages %}
+  <div class="alert alert-warning" role="alert">
+    {% for message in messages %}
+    <p class="mb-0">{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1 text-danger fw-bold"><i class="fas fa-user-shield me-2"></i>Permisos por Agente</h1>
+      <p class="text-muted small mb-0">Asignar y gestionar permisos de usuarios por agencia BIMBO.</p>
+    </div>
+  </div>
+
+  <!-- Formulario de asignacion -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+      <h6 class="mb-0 fw-bold text-danger"><i class="fas fa-plus-circle me-2"></i>Asignar Permiso</h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" for="assignUser">Usuario</label>
+          <select class="form-select form-select-sm" id="assignUser">
+            <option value="">-- Seleccione --</option>
+            {% for u in usuarios_catalog %}
+            <option value="{{ u.id }}">{{ u.username }} {% if u.nombres %}({{ u.nombres }} {{ u.apellidos }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" for="assignAgencia">Agencia</label>
+          <select class="form-select form-select-sm" id="assignAgencia">
+            <option value="">-- Seleccione --</option>
+            {% for ag in agencias_catalog %}
+            <option value="{{ ag.id }}">{{ ag.CEVE }} - {{ ag.Nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="assignEjecutar">
+            <label class="form-check-label fw-semibold" for="assignEjecutar">Puede Ejecutar</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="assignEditar">
+            <label class="form-check-label fw-semibold" for="assignEditar">Puede Editar</label>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-danger btn-sm" id="btnAsignar"><i class="fas fa-save me-1"></i>Asignar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+      <h6 class="mb-0 fw-bold text-danger">Filtros</h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" for="filterUser">Usuario</label>
+          <select class="form-select form-select-sm" id="filterUser">
+            <option value="">-- Todos --</option>
+            {% for u in usuarios_catalog %}
+            <option value="{{ u.id }}">{{ u.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" for="filterAgencia">Agencia</label>
+          <select class="form-select form-select-sm" id="filterAgencia">
+            <option value="">-- Todas --</option>
+            {% for ag in agencias_catalog %}
+            <option value="{{ ag.id }}">{{ ag.CEVE }} - {{ ag.Nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4 d-flex gap-2">
+          <button class="btn btn-danger btn-sm" id="btnBuscar"><i class="fas fa-search me-1"></i>Buscar</button>
+          <button class="btn btn-outline-secondary btn-sm" id="btnLimpiar">Limpiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-list me-2"></i>Permisos Asignados</h5>
+        <div class="d-flex align-items-center gap-2">
+          <label class="form-label mb-0 small fw-semibold" for="perm-page-size">Filas:</label>
+          <select id="perm-page-size" class="form-select form-select-sm" style="width:80px;">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
+          <small class="text-muted" id="perm-info"></small>
+        </div>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+        <table class="table table-hover table-sm small align-middle mb-0" id="perm-table">
+          <thead class="table-light sticky-top" style="z-index:1;">
+            <tr>
+              <th>Usuario</th>
+              <th>Nombre</th>
+              <th>CEVE</th>
+              <th>Agencia</th>
+              <th class="text-center">Ejecutar</th>
+              <th class="text-center">Editar</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="perm-body">
+            <tr><td colspan="7" class="text-center text-muted py-4">Cargando permisos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paginacion -->
+  <div class="d-flex justify-content-between align-items-center mb-3" id="perm-pagination" style="display:none;">
+    <button class="btn btn-outline-secondary btn-sm" id="perm-prev">Anterior</button>
+    <div class="small text-muted" id="perm-page-info">Pagina 1</div>
+    <button class="btn btn-outline-secondary btn-sm" id="perm-next">Siguiente</button>
+  </div>
+
+  <!-- Status -->
+  <div id="perm-result" class="alert d-none mt-2"></div>
+</div>
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script>
+const csrfToken = '{{ csrf_token }}';
+let permPage = 1;
+let permTotalPages = 1;
+
+function showAlert(msg, type) {
+  const el = document.getElementById("perm-result");
+  const icon = type === "success" ? "check-circle" : "times-circle";
+  el.className = "alert alert-" + type + " mt-2";
+  el.innerHTML = '<i class="fas fa-' + icon + ' me-2"></i>' + msg;
+  el.classList.remove("d-none");
+  if (type === "success") setTimeout(() => el.classList.add("d-none"), 3000);
+}
+
+function loadPermisos(page) {
+  const userId = document.getElementById("filterUser").value;
+  const agenciaId = document.getElementById("filterAgencia").value;
+  const pageSize = document.getElementById("perm-page-size").value;
+
+  let url = "{% url 'bimbo_app:permisos_bimbo_data' %}?page=" + page + "&page_size=" + pageSize;
+  if (userId) url += "&user_id=" + encodeURIComponent(userId);
+  if (agenciaId) url += "&agencia_id=" + encodeURIComponent(agenciaId);
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) { showAlert(data.error || "Error", "danger"); return; }
+
+      permPage = data.page || 1;
+      const total = data.total_records || 0;
+      const size = data.page_size || Number(pageSize);
+      permTotalPages = Math.max(1, Math.ceil(total / size));
+
+      renderTable(data.rows || []);
+
+      document.getElementById("perm-info").textContent = total + " registros";
+      document.getElementById("perm-pagination").style.display = "flex";
+      document.getElementById("perm-page-info").textContent = "Pagina " + permPage + " de " + permTotalPages;
+      document.getElementById("perm-prev").disabled = permPage <= 1;
+      document.getElementById("perm-next").disabled = permPage >= permTotalPages;
+    })
+    .catch(err => { console.error(err); showAlert("Error de conexion", "danger"); });
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById("perm-body");
+  tbody.innerHTML = "";
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Sin permisos asignados.</td></tr>';
+    return;
+  }
+
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+
+    const ejecutarChecked = r.puede_ejecutar ? "checked" : "";
+    const editarChecked = r.puede_editar ? "checked" : "";
+
+    tr.innerHTML =
+      '<td><code>' + r.username + '</code></td>' +
+      '<td>' + r.user_fullname + '</td>' +
+      '<td><span class="badge bg-info">' + r.agencia_ceve + '</span></td>' +
+      '<td>' + r.agencia_nombre + '</td>' +
+      '<td class="text-center">' +
+        '<div class="form-check form-switch d-flex justify-content-center mb-0">' +
+          '<input class="form-check-input toggle-perm" type="checkbox" ' + ejecutarChecked +
+          ' data-id="' + r.id + '" data-user="' + r.user_id + '" data-agencia="' + r.agencia_id + '" data-field="ejecutar">' +
+        '</div>' +
+      '</td>' +
+      '<td class="text-center">' +
+        '<div class="form-check form-switch d-flex justify-content-center mb-0">' +
+          '<input class="form-check-input toggle-perm" type="checkbox" ' + editarChecked +
+          ' data-id="' + r.id + '" data-user="' + r.user_id + '" data-agencia="' + r.agencia_id + '" data-field="editar">' +
+        '</div>' +
+      '</td>' +
+      '<td class="text-center">' +
+        '<button class="btn btn-outline-danger btn-sm delete-perm" data-id="' + r.id + '" title="Eliminar">' +
+          '<i class="fas fa-trash-alt"></i>' +
+        '</button>' +
+      '</td>';
+
+    tbody.appendChild(tr);
+  });
+
+  // Toggle handlers
+  document.querySelectorAll(".toggle-perm").forEach(chk => {
+    chk.addEventListener("change", function() {
+      const userId = this.dataset.user;
+      const agenciaId = this.dataset.agencia;
+      const field = this.dataset.field;
+
+      // Read current state of both toggles for this row
+      const row = this.closest("tr");
+      const toggles = row.querySelectorAll(".toggle-perm");
+      let ejecutar = "0", editar = "0";
+      toggles.forEach(t => {
+        if (t.dataset.field === "ejecutar") ejecutar = t.checked ? "1" : "0";
+        if (t.dataset.field === "editar") editar = t.checked ? "1" : "0";
+      });
+
+      const fd = new FormData();
+      fd.append("user_id", userId);
+      fd.append("agencia_id", agenciaId);
+      fd.append("puede_ejecutar", ejecutar);
+      fd.append("puede_editar", editar);
+
+      fetch("{% url 'bimbo_app:permisos_bimbo_save' %}", {
+        method: "POST", body: fd, headers: {"X-CSRFToken": csrfToken}
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) showAlert("Permiso actualizado.", "success");
+          else showAlert(data.error || "Error", "danger");
+        })
+        .catch(() => showAlert("Error de conexion", "danger"));
+    });
+  });
+
+  // Delete handlers
+  document.querySelectorAll(".delete-perm").forEach(btn => {
+    btn.addEventListener("click", function() {
+      if (!confirm("Eliminar este permiso?")) return;
+      const id = this.dataset.id;
+      const fd = new FormData();
+      fd.append("id", id);
+
+      fetch("{% url 'bimbo_app:permisos_bimbo_delete' %}", {
+        method: "POST", body: fd, headers: {"X-CSRFToken": csrfToken}
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) { showAlert("Permiso eliminado.", "success"); loadPermisos(permPage); }
+          else showAlert(data.error || "Error", "danger");
+        })
+        .catch(() => showAlert("Error de conexion", "danger"));
+    });
+  });
+}
+
+// Asignar nuevo permiso
+document.getElementById("btnAsignar").addEventListener("click", function() {
+  const userId = document.getElementById("assignUser").value;
+  const agenciaId = document.getElementById("assignAgencia").value;
+  const ejecutar = document.getElementById("assignEjecutar").checked ? "1" : "0";
+  const editar = document.getElementById("assignEditar").checked ? "1" : "0";
+
+  if (!userId || !agenciaId) {
+    showAlert("Seleccione usuario y agencia.", "danger");
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append("user_id", userId);
+  fd.append("agencia_id", agenciaId);
+  fd.append("puede_ejecutar", ejecutar);
+  fd.append("puede_editar", editar);
+
+  fetch("{% url 'bimbo_app:permisos_bimbo_save' %}", {
+    method: "POST", body: fd, headers: {"X-CSRFToken": csrfToken}
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showAlert(data.message, "success");
+        loadPermisos(1);
+        // Reset form
+        document.getElementById("assignUser").value = "";
+        document.getElementById("assignAgencia").value = "";
+        document.getElementById("assignEjecutar").checked = false;
+        document.getElementById("assignEditar").checked = false;
+      } else {
+        showAlert(data.error || "Error", "danger");
+      }
+    })
+    .catch(() => showAlert("Error de conexion", "danger"));
+});
+
+// Filter listeners
+document.getElementById("btnBuscar").addEventListener("click", () => loadPermisos(1));
+document.getElementById("btnLimpiar").addEventListener("click", () => {
+  document.getElementById("filterUser").value = "";
+  document.getElementById("filterAgencia").value = "";
+  loadPermisos(1);
+});
+document.getElementById("perm-prev").addEventListener("click", () => { if (permPage > 1) loadPermisos(permPage - 1); });
+document.getElementById("perm-next").addEventListener("click", () => { if (permPage < permTotalPages) loadPermisos(permPage + 1); });
+document.getElementById("perm-page-size").addEventListener("change", () => loadPermisos(1));
+
+// Auto-load
+loadPermisos(1);
+</script>
+{% endblock script %}

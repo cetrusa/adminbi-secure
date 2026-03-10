@@ -13,11 +13,6 @@ urlpatterns = [
         name="panel_cubo",
     ),
     path(
-        "panel_bimbo/",
-        views.HomePanelBimboPage.as_view(),
-        name="panel_bimbo",
-    ),
-    path(
         "panel_bi/",
         views.HomePanelBiPage.as_view(),
         name="panel_bi",
@@ -90,61 +85,6 @@ urlpatterns = [
         "reporteador/",
         views.ReporteadorPage.as_view(),
         name="reporteador",
-    ),
-    path(
-        "venta-cero/",
-        views.VentaCeroPage.as_view(),
-        name="venta_cero",
-    ),
-    path(
-        "venta-cero/lookups/proveedores/",
-        views.VentaCeroProveedorLookup.as_view(),
-        name="venta_cero_lookup_proveedores",
-    ),
-    path(
-        "venta-cero/lookups/categorias/",
-        views.VentaCeroCategoriaLookup.as_view(),
-        name="venta_cero_lookup_categorias",
-    ),
-    path(
-        "venta-cero/lookups/subcategorias/",
-        views.VentaCeroSubcategoriaLookup.as_view(),
-        name="venta_cero_lookup_subcategorias",
-    ),
-    path(
-        "venta-cero/lookups/productos/",
-        views.VentaCeroProductoLookup.as_view(),
-        name="venta_cero_lookup_productos",
-    ),
-    path(
-        "rutero/",
-        views.RuteroPage.as_view(),
-        name="rutero",
-    ),
-    path(
-        "inventarios/",
-        views.InventariosPage.as_view(),
-        name="inventarios",
-    ),
-    path(
-        "inventarios/data/",
-        views.InventariosDataAjaxView.as_view(),
-        name="inventarios_data",
-    ),
-    path(
-        "preventa/",
-        views.PreventaPage.as_view(),
-        name="preventa",
-    ),
-    path(
-        "faltantes/",
-        views.FaltantesPage.as_view(),
-        name="faltantes",
-    ),
-    path(
-        "planos-bimbo/",
-        views.PlanosBimboPage.as_view(),
-        name="planos_bimbo",
     ),
     path(
         "clean_media/",

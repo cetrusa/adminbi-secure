@@ -25,6 +25,7 @@ class PreventaReport:
 
     DEFAULT_CHUNK_SIZE = 20000
     PROCEDURE_NAME = "sp_reporte_preventa_diaria"
+    PROCEDURE_SCHEMA = "powerbi_bimbo"
 
     def __init__(
         self,
@@ -81,7 +82,10 @@ class PreventaReport:
 
     def _build_call(self) -> TextClause:
         # El SP recibe p_ceve, p_fecha_ini, p_fecha_fin
-        call_sql = f"CALL {self.PROCEDURE_NAME}(:p_ceve, :p_fecha_ini, :p_fecha_fin)"
+        call_sql = (
+            f"CALL {self.PROCEDURE_SCHEMA}.{self.PROCEDURE_NAME}("
+            ":p_ceve, :p_fecha_ini, :p_fecha_fin)"
+        )
         try:
             logger.info("[preventa][sql] %s", call_sql)
             print(f"[preventa][sql] {call_sql}", flush=True)
@@ -152,20 +156,27 @@ class PreventaReport:
             else:
                 efectividad_pct = ((total_programados - total_pendientes) / total_programados) * 100
         
-        # Tiempo promedio (asumiendo que tiempo_prom está en algún formato manejable o segundos)
+        # Tiempo promedio por visita
         tiempo_promedio_str = "00:00"
         if 'tiempo_prom' in df.columns:
             try:
-                # Si es numérico (segundos)
-                if pd.api.types.is_numeric_dtype(df['tiempo_prom']):
-                    avg_seconds = df['tiempo_prom'].mean()
-                    mins, secs = divmod(int(avg_seconds), 60)
-                    tiempo_promedio_str = f"{mins:02d}:{secs:02d}"
+                col = df['tiempo_prom']
+                if pd.api.types.is_numeric_dtype(col):
+                    # Viene en segundos
+                    avg_seconds = pd.to_numeric(col, errors='coerce').dropna().mean()
+                    if pd.notna(avg_seconds):
+                        mins, secs = divmod(int(avg_seconds), 60)
+                        tiempo_promedio_str = f"{mins:02d}:{secs:02d}"
                 else:
-                    # Si ya viene como string o timedelta
-                    tiempo_promedio_str = str(df['tiempo_prom'].iloc[0])[:5] 
-            except:
-                pass
+                    # Viene como timedelta o string tipo "0 days HH:MM:SS"
+                    td_series = pd.to_timedelta(col.astype(str), errors='coerce').dropna()
+                    if not td_series.empty:
+                        avg_td = td_series.mean()
+                        total_secs = int(avg_td.total_seconds())
+                        mins, secs = divmod(total_secs, 60)
+                        tiempo_promedio_str = f"{mins:02d}:{secs:02d}"
+            except Exception as _tp_exc:
+                logger.warning("No se pudo calcular tiempo_promedio: %s", _tp_exc)
 
         # Matriz por Zona (zona_nm)
         # Queremos Zona (ID - Nombre), Clientes Programados, Atendidos, Cobertura, Pedidos (Ruta, Extra), Valor Total, Promedio, Cambio, Horas

@@ -1,71 +1,62 @@
-<!-- {% if perms.permisos.nav_bar %} -->
 {% load static %}
+<!-- Barra lateral estilo GXON -->
+<div class="h-100 d-flex flex-column rounded-3" style="min-height: calc(100vh - 80px);">
+  <div class="d-flex flex-column align-items-center align-items-sm-start px-2 pt-2 text-white flex-grow-1">
 
+    <!-- User Profile Minimal -->
+    <div class="d-flex align-items-center mb-4 mt-3 px-3 w-100">
+      <div class="symbol symbol-40px me-3">
+        <img src="{% static 'images/user-profile.png' %}" alt="profile" class="rounded-circle" width="45" height="45">
+      </div>
+      <div class="d-none d-sm-flex flex-column">
+        <span class="fw-bold fs-6 text-white">{{ user.username }}</span>
+        <span class="text-muted fs-7 small">{{ user.get_full_name|default:"Usuario" }}</span>
+      </div>
+    </div>
 
-<!-- Barra lateral -->
-<div class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 bg-dark">
-  <div class="d-flex flex-column align-items-center align-items-sm-start px-3 pt-2 text-white min-vh-100">
-    <!-- Logo y Nombre de Usuario -->
-    <a href="{% url 'home_app:panel_cubo' %}"
-      class="d-flex align-items-center pb-3 mb-md-0 me-md-auto text-white text-decoration-none">
-      <img src="{% static 'images/Logo-Blanco.png' %}" alt="Logo" width="30" height="30" class="rounded-circle">
-      <span class="fs-5 ms-2 d-none d-sm-inline">{{ user.get_full_name }}</span>
-    </a>
+    <h6 class="text-uppercase text-muted fw-bold fs-7 px-3 mb-2 w-100 d-none d-sm-block" style="letter-spacing: 1px;">
+      Procesos BI</h6>
+
     <!-- Enlaces de Navegación -->
-    <ul class="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start">
+    <ul class="nav nav-pills flex-column w-100 mb-auto">
       {% if perms.permisos.actualizar_base %}
       <li class="nav-item">
-        <a href="{% url 'home_app:actualizacion'%}" class="nav-link text-white align-middle px-0">
-          <i class="fas fa-sync-alt me-2"></i><span class="ms-1 d-none d-sm-inline">Actualización BD</span>
+        <a class="nav-link {% if request.resolver_match.url_name == 'actualizacion' %}active{% endif %}"
+          href="{% url 'home_app:actualizacion'%}">
+          <i class="fas fa-sync-alt"></i> <span class="ms-2 d-none d-sm-inline">Actualización BD</span>
         </a>
       </li>
       {% endif %}
 
       {% if perms.permisos.actualizar_bi %}
       <li class="nav-item">
-        <a href="{% url 'bi_app:actualizacion_bi'%}" class="nav-link text-white align-middle px-0">
-          <i class="fas fa-chart-bar me-2"></i><span class="ms-1 d-none d-sm-inline">Actualización BI</span>
+        <a class="nav-link {% if request.resolver_match.url_name == 'actualizacion_bi' %}active{% endif %}"
+          href="{% url 'bi_app:actualizacion_bi'%}">
+          <i class="fas fa-chart-line"></i> <span class="ms-2 d-none d-sm-inline">Actualización BI</span>
         </a>
       </li>
       {% endif %}
 
+      <h6 class="text-uppercase text-muted fw-bold fs-7 px-3 mt-4 mb-2 w-100 d-none d-sm-block"
+        style="letter-spacing: 1px;">Cargues Manuales</h6>
+
       {% if perms.permisos.cargue_infoventas %}
       <li class="nav-item">
-        <a href="{% url 'cargues_app:cargue_infoventas' %}" class="nav-link text-white align-middle px-0">
-          <i class="fas fa-file-upload me-2"></i><span class="ms-1 d-none d-sm-inline">Cargue InfoVentas</span>
+        <a class="nav-link {% if request.resolver_match.url_name == 'cargue_infoventas' %}active{% endif %}"
+          href="{% url 'cargues_app:cargue_infoventas' %}">
+          <i class="fas fa-file-upload"></i> <span class="ms-2 d-none d-sm-inline">Info Ventas</span>
         </a>
       </li>
       {% endif %}
 
       {% if perms.permisos.cargue_maestras or perms.permisos.cargue_infoproducto %}
       <li class="nav-item">
-        <a href="{% url 'cargues_app:cargue_archivos_maestros' %}" class="nav-link text-white align-middle px-0">
-          <i class="fas fa-database me-2"></i><span class="ms-1 d-none d-sm-inline">Archivos Maestros</span>
+        <a class="nav-link {% if request.resolver_match.url_name == 'cargue_archivos_maestros' %}active{% endif %}"
+          href="{% url 'cargues_app:cargue_archivos_maestros' %}">
+          <i class="fas fa-database"></i> <span class="ms-2 d-none d-sm-inline">Archivos Maestros</span>
         </a>
       </li>
       {% endif %}
-
-      <!-- Agrega más elementos de menú aquí según sea necesario -->
     </ul>
-
-    <hr>
-
-    <!-- Área de Usuario y Dropdown -->
-    <div class="dropdown pb-4">
-      <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1"
-        data-bs-toggle="dropdown" aria-expanded="false">
-        <img src="{% static 'images/user-profile.png' %}" alt="profile" width="30" height="30" class="rounded-circle">
-        <span class="d-none d-sm-inline mx-1">{{ user.username }}</span>
-      </a>
-      <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
-        <!-- Agrega elementos al dropdown según sea necesario -->
-        {% if user.is_authenticated %}
-        <li><a class="dropdown-item" href="{% url 'users_app:user-logout' %}">Sign out</a></li>
-        {% endif %}
-      </ul>
-    </div>
   </div>
 </div>
-
-
-<!-- {% endif %} -->

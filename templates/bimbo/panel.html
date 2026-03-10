@@ -1,0 +1,706 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Panel Bimbo{% endblock title %}
+{% block head %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+{% endblock head %}
+{% block barra_lateral %}
+{% include 'bimbo/includes/sidebar.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<div class="container-fluid py-4 bg-light">
+  {% if messages %}
+  <div class="alert alert-warning" role="alert">
+    {% for message in messages %}
+    <p class="mb-0">{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1 text-danger fw-bold">Panel BIMBO</h1>
+      <p class="text-muted small mb-0">Estado de agencias, equivalencias y snapshots.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-danger btn-sm" id="btnDiscoveryTodas" title="Discovery todas las agencias">
+        <i class="fas fa-search me-1"></i> Discovery Todas
+      </button>
+      <button class="btn btn-outline-primary btn-sm" id="btnDiscovery" title="Discovery agencia seleccionada">
+        <i class="fas fa-search-plus me-1"></i> Discovery
+      </button>
+      <button class="btn btn-danger btn-sm" id="btnSnapshot" title="Snapshot agencia seleccionada">
+        <i class="fas fa-camera me-1"></i> Snapshot
+      </button>
+      <button class="btn btn-primary btn-sm" id="btnHomologacion" title="Auto-homologar pendientes">
+        <i class="fas fa-sync-alt me-1"></i> Homologar
+      </button>
+    </div>
+  </div>
+
+  {% if kpis %}
+  <div class="row mb-4 g-3">
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Agencias</div>
+              <div class="h3 mb-0 fw-bold text-danger">{{ kpis.activas }} <small class="h6 text-muted">/ {{
+                  kpis.total_agencias }}</small></div>
+              <small class="text-muted">
+                <i class="fas fa-check-circle text-success"></i> {{ kpis.activas }} activas
+                {% if kpis.pendientes_estado > 0 %}
+                | <i class="fas fa-clock text-warning"></i> {{ kpis.pendientes_estado }} pendientes
+                {% endif %}
+              </small>
+            </div>
+            <div class="fs-1 text-danger opacity-25">
+              <i class="fas fa-building"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Cobertura Global</div>
+              <div class="h3 mb-0 fw-bold text-success">{{ kpis.cobertura_pct }}%</div>
+              <small class="text-muted">
+                <i class="fas fa-robot text-success"></i> {{ kpis.auto_exacto }} auto
+                | <i class="fas fa-user text-primary"></i> {{ kpis.manual }} manual
+              </small>
+              <div class="progress mt-2" style="height: 6px;">
+                <div class="progress-bar bg-success" style="width: {{ kpis.cobertura_pct }}%"></div>
+              </div>
+            </div>
+            <div class="fs-1 text-success opacity-25">
+              <i class="fas fa-chart-pie"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Pendientes Homologar</div>
+              <div class="h3 mb-0 fw-bold text-warning">{{ kpis.pendientes }}</div>
+              <small class="text-muted">
+                {% if kpis.pendientes > 0 %}
+                <i class="fas fa-exclamation-triangle"></i> Requieren atención
+                {% else %}
+                <i class="fas fa-check"></i> Todo al día
+                {% endif %}
+              </small>
+            </div>
+            <div class="fs-1 text-warning opacity-25">
+              <i class="fas fa-tasks"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Total Equivalencias</div>
+              <div class="h3 mb-0 fw-bold text-info">{{ kpis.total }}</div>
+              <small class="text-muted">
+                <i class="fas fa-link"></i> {{ kpis.total|add:0|add:kpis.descartados|floatformat:0 }} productos
+                {% if kpis.descartados > 0 %}
+                | <i class="fas fa-times-circle text-muted"></i> {{ kpis.descartados }} descartados
+                {% endif %}
+              </small>
+            </div>
+            <div class="fs-1 text-info opacity-25">
+              <i class="fas fa-database"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs de Preventa -->
+  {% if kpis.preventa_fecha %}
+  <div class="row mb-4 g-3">
+    <div class="col-12">
+      <div class="alert alert-info border-0 shadow-sm mb-0">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-shopping-cart fs-4 me-3"></i>
+          <div>
+            <h6 class="mb-0 fw-bold">Datos de Preventa</h6>
+            <small>Última información disponible: {{ kpis.preventa_fecha }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row mb-4 g-3">
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Valor Total Ventas</div>
+              <div class="h4 mb-0 fw-bold text-success">${{ kpis.preventa_valor_total|floatformat:0 }}</div>
+              <small class="text-muted">
+                <i class="fas fa-calendar"></i> {{ kpis.preventa_fecha }}
+              </small>
+            </div>
+            <div class="fs-1 text-success opacity-25">
+              <i class="fas fa-dollar-sign"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Clientes Atendidos</div>
+              <div class="h4 mb-0 fw-bold text-primary">{{ kpis.preventa_clientes }}</div>
+              <small class="text-muted">
+                <i class="fas fa-users"></i> con compra del total {{
+                kpis.preventa_atendidos|default:kpis.preventa_clientes }}
+              </small>
+            </div>
+            <div class="fs-1 text-primary opacity-25">
+              <i class="fas fa-user-check"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Efectividad Visitas</div>
+              <div class="h4 mb-0 fw-bold text-warning">{{ kpis.preventa_efectividad }}%</div>
+              <small class="text-muted">
+                <i class="fas fa-bullseye"></i> promedio de efectividad
+              </small>
+              <div class="progress mt-2" style="height: 6px;">
+                <div class="progress-bar bg-warning" style="width: {{ kpis.preventa_efectividad }}%"></div>
+              </div>
+            </div>
+            <div class="fs-1 text-warning opacity-25">
+              <i class="fas fa-chart-line"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Clientes Programados</div>
+              <div class="h4 mb-0 fw-bold text-info">{{ kpis.preventa_programados }}</div>
+              <small class="text-muted">
+                <i class="fas fa-route"></i> en ruta
+              </small>
+            </div>
+            <div class="fs-1 text-info opacity-25">
+              <i class="fas fa-map-marked-alt"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Gráficos -->
+  <div class="row mb-4 g-3">
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+          <h6 class="mb-0 fw-bold text-danger"><i class="fas fa-chart-bar me-2"></i>Cobertura por Agencia (Top 10)</h6>
+        </div>
+        <div class="card-body">
+          <canvas id="chartCobertura" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+          <h6 class="mb-0 fw-bold text-danger"><i class="fas fa-chart-pie me-2"></i>Distribución de Equivalencias</h6>
+        </div>
+        <div class="card-body">
+          <canvas id="chartDistribucion" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+    {% if kpis.preventa_fecha and chart_data.preventa_fechas %}
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+          <h6 class="mb-0 fw-bold text-danger"><i class="fas fa-chart-line me-2"></i>Tendencia Preventa (7 días)</h6>
+        </div>
+        <div class="card-body">
+          <canvas id="chartPreventa" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-building me-2"></i>Agencias BIMBO</h5>
+        <small class="text-muted"><i class="fas fa-info-circle"></i> Filtrado y búsqueda habilitados</small>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table id="tableBimbo" class="table table-hover table-sm small align-middle mb-0" style="width:100%">
+          <thead class="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Estado</th>
+              <th>db_powerbi</th>
+              <th>Proveedores</th>
+              <th>FVP</th>
+              <th>CEVE</th>
+              <th class="text-end">Total</th>
+              <th class="text-end">Auto</th>
+              <th class="text-end">Manual</th>
+              <th class="text-end">Pend.</th>
+              <th class="text-end">Desc.</th>
+              <th class="text-end">Cobertura</th>
+              <th>Ultimo Snapshot</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ag in agencias %}
+            <tr>
+              <td>{{ ag.id }}</td>
+              <td class="fw-semibold">{{ ag.Nombre }}</td>
+              <td>
+                {% if ag.estado == 'ACTIVO' %}
+                <span class="badge bg-success">ACTIVO</span>
+                {% elif ag.estado == 'PENDIENTE' %}
+                <span class="badge bg-warning text-dark">PENDIENTE</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ ag.estado }}</span>
+                {% endif %}
+              </td>
+              <td><code class="small">{{ ag.db_powerbi|default:"-" }}</code></td>
+              <td>
+                {% if ag.proveedores_csv %}
+                {% if ag.num_proveedores > 1 %}
+                <span class="badge bg-info text-dark" title="{{ ag.proveedores_csv }}">{{ ag.num_proveedores }}
+                  provs</span>
+                <small class="text-muted ms-1">{{ ag.proveedores_csv }}</small>
+                {% else %}
+                {{ ag.proveedores_csv }}
+                {% endif %}
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td>{{ ag.id_proveedor_fvp|default:"-" }}</td>
+              <td>{{ ag.CEVE|default:"-" }}</td>
+              <td class="text-end">{{ ag.total }}</td>
+              <td class="text-end text-success">{{ ag.auto_exacto }}</td>
+              <td class="text-end text-primary">{{ ag.manual }}</td>
+              <td class="text-end {% if ag.pendientes > 0 %}text-warning fw-bold{% endif %}">{{ ag.pendientes }}</td>
+              <td class="text-end text-muted">{{ ag.descartados }}</td>
+              <td class="text-end" data-order="{{ ag.cobertura_pct }}">
+                {% if ag.cobertura_pct >= 80 %}
+                <span class="badge bg-success">{{ ag.cobertura_pct }}%</span>
+                {% elif ag.cobertura_pct >= 50 %}
+                <span class="badge bg-warning text-dark">{{ ag.cobertura_pct }}%</span>
+                {% elif ag.total > 0 %}
+                <span class="badge bg-danger">{{ ag.cobertura_pct }}%</span>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td class="small text-muted">{{ ag.fecha_ultimo_snapshot|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="action-result" class="alert d-none mt-3"></div>
+</div>
+
+<div id="processingModal" class="modal fade" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-0 shadow">
+      <div class="modal-body text-center py-4">
+        <h5 id="progress-stage" class="mb-3"><i class="fas fa-cog fa-spin me-2 text-danger"></i>Procesando...</h5>
+        <div class="progress mb-2" style="height: 10px; background-color: rgba(255,255,255,0.2);">
+          <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger"
+            style="width: 0%;">0%</div>
+        </div>
+        <div id="detailedStatus" class="small text-white-50 mb-2"></div>
+        <div id="time-info" class="small text-white-50">Tiempo: 0s</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script>
+  // Chart.js dark mode defaults
+  Chart.defaults.color = '#a1a5b7';
+  Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+  Chart.defaults.plugins.legend.labels.color = '#a1a5b7';
+  Chart.defaults.scale = Chart.defaults.scale || {};
+
+  const csrfToken = '{{ csrf_token }}';
+  const progressBar = document.getElementById("progressBar");
+  const progressStage = document.getElementById("progress-stage");
+  const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
+  let progressInterval = null;
+  let startTime = 0;
+
+  // Inicializar DataTable
+  $(document).ready(function () {
+    $('#tableBimbo').DataTable({
+      language: {
+        url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+        emptyTable: 'No hay agencias registradas. Seleccione una empresa primero.'
+      },
+      pageLength: 25,
+      order: [[12, 'desc']], // Ordenar por cobertura descendente
+      columnDefs: [
+        { targets: [7, 8, 9, 10, 11, 12], className: 'text-end' }
+      ]
+    });
+
+    // Inicializar gráficos
+    initCharts();
+  });
+
+  function initCharts() {
+    {% if chart_data and chart_data.agencias_nombres %}
+    // Gráfico de Cobertura por Agencia
+    const ctxCobertura = document.getElementById('chartCobertura');
+    if (ctxCobertura) {
+      new Chart(ctxCobertura, {
+        type: 'bar',
+        data: {
+          labels: {{ chart_data.agencias_nombres | safe }},
+    datasets: [{
+      label: 'Cobertura (%)',
+      data: {{ chart_data.agencias_cobertura | safe }},
+  backgroundColor: function(context) {
+    const value = context.parsed.y;
+    if (value >= 80) return 'rgba(25, 135, 84, 0.8)';
+    if (value >= 50) return 'rgba(255, 193, 7, 0.8)';
+    return 'rgba(220, 53, 69, 0.8)';
+  },
+  borderColor: function(context) {
+    const value = context.parsed.y;
+    if (value >= 80) return 'rgba(25, 135, 84, 1)';
+    if (value >= 50) return 'rgba(255, 193, 7, 1)';
+    return 'rgba(220, 53, 69, 1)';
+  },
+  borderWidth: 1
+        }]
+      },
+  options: {
+    responsive: true,
+      maintainAspectRatio: false,
+        plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return 'Cobertura: ' + context.parsed.y.toFixed(1) + '%';
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+          max: 100,
+            ticks: {
+          callback: function(value) { return value + '%'; }
+        }
+      }
+    }
+  }
+    });
+  }
+
+  // Gráfico de Distribución de Equivalencias
+  const ctxDistribucion = document.getElementById('chartDistribucion');
+  if (ctxDistribucion) {
+    new Chart(ctxDistribucion, {
+      type: 'doughnut',
+      data: {
+        labels: ['Auto Exacto', 'Manual', 'Pendientes', 'Descartados'],
+        datasets: [{
+          data: [
+            {{ kpis.auto_exacto|default:0 }},
+            {{ kpis.manual|default:0 }},
+            {{ kpis.pendientes|default:0 }},
+            {{ kpis.descartados|default:0 }}
+          ],
+  backgroundColor: [
+    'rgba(25, 135, 84, 0.8)',
+    'rgba(13, 110, 253, 0.8)',
+    'rgba(255, 193, 7, 0.8)',
+    'rgba(108, 117, 125, 0.8)'
+  ],
+    borderColor: [
+      'rgba(25, 135, 84, 1)',
+      'rgba(13, 110, 253, 1)',
+      'rgba(255, 193, 7, 1)',
+      'rgba(108, 117, 125, 1)'
+    ],
+      borderWidth: 2
+        }]
+      },
+  options: {
+    responsive: true,
+      maintainAspectRatio: false,
+        plugins: {
+      legend: { position: 'bottom' },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const pct = ((context.parsed / total) * 100).toFixed(1);
+            return context.label + ': ' + context.parsed + ' (' + pct + '%)';
+          }
+        }
+      }
+    }
+  }
+    });
+  }
+  {% endif %}
+
+  {% if chart_data.preventa_fechas %}
+  // Gráfico de Tendencia de Preventa (últimos 7 días)
+  const ctxPreventa = document.getElementById('chartPreventa');
+  if (ctxPreventa) {
+    const fechas = {{ chart_data.preventa_fechas| safe
+  }};
+  const valores = {{ chart_data.preventa_valores| safe }};
+  const clientes = {{ chart_data.preventa_clientes| safe }};
+  const efectividad = {{ chart_data.preventa_efectividad| safe }};
+
+  new Chart(ctxPreventa, {
+    type: 'line',
+    data: {
+      labels: fechas.map(f => {
+        const d = new Date(f);
+        return d.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+      }),
+      datasets: [
+        {
+          label: 'Valor Total ($)',
+          data: valores,
+          borderColor: 'rgba(25, 135, 84, 1)',
+          backgroundColor: 'rgba(25, 135, 84, 0.1)',
+          yAxisID: 'y',
+          tension: 0.4,
+          fill: true
+        },
+        {
+          label: 'Clientes',
+          data: clientes,
+          borderColor: 'rgba(13, 110, 253, 1)',
+          backgroundColor: 'rgba(13, 110, 253, 0.1)',
+          yAxisID: 'y1',
+          tension: 0.4
+        },
+        {
+          label: 'Efectividad (%)',
+          data: efectividad,
+          borderColor: 'rgba(255, 193, 7, 1)',
+          backgroundColor: 'rgba(255, 193, 7, 0.1)',
+          yAxisID: 'y2',
+          tension: 0.4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 12, font: { size: 10 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: function (context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                if (label.includes('Valor')) {
+                  label += '$' + context.parsed.y.toLocaleString('es-ES', { maximumFractionDigits: 0 });
+                } else if (label.includes('%')) {
+                  label += context.parsed.y.toFixed(1) + '%';
+                } else {
+                  label += context.parsed.y;
+                }
+              }
+              return label;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: { display: true, text: 'Valor ($)', font: { size: 10 } },
+          ticks: {
+            callback: function (value) {
+              return '$' + (value / 1000).toFixed(0) + 'K';
+            },
+            font: { size: 9 }
+          }
+        },
+        y1: {
+          type: 'linear',
+          display: false,
+          position: 'right',
+          grid: { drawOnChartArea: false }
+        },
+        y2: {
+          type: 'linear',
+          display: false,
+          position: 'right',
+          min: 0,
+          max: 100,
+          grid: { drawOnChartArea: false }
+        },
+        x: {
+          ticks: { font: { size: 9 } }
+        }
+      }
+    }
+  });
+  }
+  {% endif %}
+}
+
+  function updateProgressBar(value, stageText) {
+    const v = Math.max(0, Math.min(100, Number(value) || 0));
+    progressBar.style.width = v + "%";
+    progressBar.textContent = v.toFixed(0) + "%";
+    if (stageText) progressStage.innerHTML = '<i class="fas fa-cog fa-spin me-2 text-danger"></i>' + stageText;
+  }
+
+  function showStatus(msg, type) {
+    const el = document.getElementById("action-result");
+    el.className = "alert alert-" + type + " mt-3";
+    el.innerHTML = msg;
+    el.classList.remove("d-none");
+  }
+
+  function checkTaskStatus(jobId, actionLabel) {
+    const fd = new FormData();
+    fd.append("task_id", jobId);
+    fetch("{% url 'home_app:check_task_status' %}", { method: "POST", body: fd, headers: { "X-CSRFToken": csrfToken } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.state === "COMPLETED" || data.status === "completed") {
+          updateProgressBar(100, "Completado");
+          clearInterval(progressInterval);
+          setTimeout(() => {
+            bsProcessingModal.hide();
+            const r = data.result || {};
+            if (r.success) {
+              showStatus('<i class="fas fa-check-circle me-2"></i>' + actionLabel + ': ' + (r.message || 'OK'), "success");
+            } else {
+              showStatus('<i class="fas fa-exclamation-triangle me-2"></i>' + actionLabel + ': ' + (r.message || r.error_message || 'Error'), "warning");
+            }
+            setTimeout(() => location.reload(), 2000);
+          }, 500);
+        } else if (data.state === "FAILED" || data.status === "failed") {
+          clearInterval(progressInterval);
+          bsProcessingModal.hide();
+          showStatus('<i class="fas fa-times-circle me-2"></i>' + actionLabel + ' : error.', "danger");
+        } else {
+          const meta = data.meta || {};
+          updateProgressBar(meta.progress || data.progress || 10, meta.stage || "Procesando...");
+          setTimeout(() => checkTaskStatus(jobId, actionLabel), 2000);
+        }
+      })
+      .catch(() => setTimeout(() => checkTaskStatus(jobId, actionLabel), 5000));
+  }
+
+  function launchAction(action, label) {
+    startTime = Date.now();
+    updateProgressBar(0, label + "...");
+    bsProcessingModal.show();
+    document.getElementById("action-result").classList.add("d-none");
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(() => {
+      if (startTime > 0) {
+        const s = Math.floor((Date.now() - startTime) / 1000);
+        document.getElementById("time-info").textContent = "Tiempo: " + (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s";
+      }
+    }, 1000);
+
+    const fd = new FormData();
+    fd.append("action", action);
+    fetch("{% url 'bimbo_app:panel_bimbo' %}", { method: "POST", body: fd, headers: { "X-CSRFToken": csrfToken } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.job_id) {
+          checkTaskStatus(data.job_id, label);
+        } else {
+          clearInterval(progressInterval);
+          bsProcessingModal.hide();
+          showStatus('<i class="fas fa-exclamation-triangle me-2"></i>' + (data.error_message || "Error al iniciar"), "danger");
+        }
+      })
+      .catch(() => {
+        clearInterval(progressInterval);
+        bsProcessingModal.hide();
+        showStatus('<i class="fas fa-times-circle me-2"></i>Error de conexion', "danger");
+      });
+  }
+
+  document.getElementById("btnDiscoveryTodas").addEventListener("click", () => launchAction("discovery_todas", "Discovery Todas"));
+  document.getElementById("btnDiscovery").addEventListener("click", () => launchAction("discovery", "Discovery"));
+  document.getElementById("btnSnapshot").addEventListener("click", () => launchAction("snapshot", "Snapshot"));
+  document.getElementById("btnHomologacion").addEventListener("click", () => launchAction("homologacion", "Homologacion"));
+</script>
+{% endblock script %}

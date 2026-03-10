@@ -156,9 +156,6 @@ def grabar_auditoria(request: HttpRequest, detalle: Dict[str, Any]) -> None:
 
     except Exception as e:
         # Loguea el error pero nunca interrumpe el flujo principal
-        import logging
-
-        logger = logging.getLogger(__name__)
         logger.error(f"Error al grabar auditoría: {str(e)}")
         # No relanzar la excepción
 
@@ -198,9 +195,6 @@ def registrar_auditoria(view_func: Callable) -> Callable:
                 grabar_auditoria(request, detalle)
             except Exception as err:
                 # Nunca interrumpir el flujo por error de auditoría
-                import logging
-
-                logger = logging.getLogger(__name__)
                 logger.error(f"Error en auditoría (except): {err}")
             # Re-lanzamos la excepción para que sea manejada por el middleware de Django
             raise
@@ -218,11 +212,9 @@ def registrar_auditoria(view_func: Callable) -> Callable:
             grabar_auditoria(request, detalle)
         except Exception as err:
             # Nunca interrumpir el flujo por error de auditoría
-            import logging
-
-            logger = logging.getLogger(__name__)
             logger.error(f"Error en auditoría (normal): {err}")
 
         return response
 
     return wrapper
+

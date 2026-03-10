@@ -49,8 +49,12 @@ Esto evita cargar jQuery múltiples veces en diferentes templates
             
             if (status === 'timeout') {
                 message = "La operación tardó demasiado tiempo.";
-            } else if (xhr.status === 403) {
-                message = "No tiene permisos para realizar esta acción.";
+            } else if (xhr.status === 401 || xhr.status === 403) {
+                if (window.DataZenithSession && window.DataZenithSession.showExpired) {
+                    window.DataZenithSession.showExpired();
+                    return null;
+                }
+                message = "Su sesion ha expirado. Por favor inicie sesion nuevamente.";
             } else if (xhr.status === 500) {
                 message = "Error interno del servidor.";
             } else if (xhr.status === 404) {

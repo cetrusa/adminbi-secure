@@ -1,29 +1,127 @@
 <script type="text/javascript">
-$(function() {
+  (function initGlobalDateRangePicker() {
+    function safeInit() {
+      if (typeof window.$ === "undefined" || typeof window.moment === "undefined") {
+        return;
+      }
 
-    var start = moment().startOf('month');
-    var end = moment().endOf('month');
-    function cb(start, end) {
-    // $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
-    $('#reportrange span').html('El Rango de Fecha Selecionado es:');
-    $('#IdtReporteIni').val(start.format('YYYY-MM-DD'));
-    $('#IdtReporteFin').val(end.format('YYYY-MM-DD'));
+      var $range = $("#reportrange");
+      if (!$range.length || typeof $range.daterangepicker !== "function") {
+        return;
+      }
+
+      var $ini = $("#IdtReporteIni");
+      var $fin = $("#IdtReporteFin");
+
+      function parseDate(value, fallback) {
+        var m = window.moment(value, "YYYY-MM-DD", true);
+        return m.isValid() ? m : fallback.clone();
+      }
+
+      function syncInputs(start, end) {
+        if ($ini.length) {
+          $ini.val(start.format("YYYY-MM-DD"));
+        }
+        if ($fin.length) {
+          $fin.val(end.format("YYYY-MM-DD"));
+        }
+      }
+
+      function renderLabel(start, end) {
+        var label = start.format("YYYY-MM-DD") + " - " + end.format("YYYY-MM-DD");
+        var $labelSpan = $range.find("span span").first();
+        if (!$labelSpan.length) {
+          $labelSpan = $range.find("span").first();
+        }
+        if ($labelSpan.length) {
+          $labelSpan.text(label);
+        }
+      }
+
+      function onRangeChange(start, end) {
+        syncInputs(start, end);
+        renderLabel(start, end);
+      }
+
+      var defaultStart = window.moment().startOf("month");
+      var defaultEnd = window.moment().endOf("month");
+      var start = parseDate($ini.val(), defaultStart);
+      var end = parseDate($fin.val(), defaultEnd);
+      if (start.isAfter(end)) {
+        start = end.clone();
+      }
+
+      if (!$range.data("daterangepicker")) {
+        $range.daterangepicker(
+          {
+            startDate: start,
+            endDate: end,
+            autoUpdateInput: false,
+            ranges: {
+              Hoy: [window.moment(), window.moment()],
+              Ayer: [window.moment().subtract(1, "days"), window.moment().subtract(1, "days")],
+              "Ultimos 7 Dias": [window.moment().subtract(6, "days"), window.moment()],
+              "Ultimos 30 Dias": [window.moment().subtract(29, "days"), window.moment()],
+              "Este Mes": [window.moment().startOf("month"), window.moment().endOf("month")],
+              "Mes Anterior": [
+                window.moment().subtract(1, "month").startOf("month"),
+                window.moment().subtract(1, "month").endOf("month"),
+              ],
+            },
+            locale: {
+              format: "YYYY-MM-DD",
+              applyLabel: "Aplicar",
+              cancelLabel: "Cancelar",
+              customRangeLabel: "Personalizado",
+            },
+          },
+          onRangeChange
+        );
+      }
+
+      onRangeChange(start, end);
+
+      $ini.off(".dzr").on("change.dzr", function () {
+        var picker = $range.data("daterangepicker");
+        if (!picker) {
+          return;
+        }
+        var newStart = parseDate($ini.val(), picker.startDate);
+        var newEnd = parseDate($fin.val(), picker.endDate);
+        if (newStart.isAfter(newEnd)) {
+          newEnd = newStart.clone();
+          if ($fin.length) {
+            $fin.val(newEnd.format("YYYY-MM-DD"));
+          }
+        }
+        picker.setStartDate(newStart);
+        picker.setEndDate(newEnd);
+        onRangeChange(newStart, newEnd);
+      });
+
+      $fin.off(".dzr").on("change.dzr", function () {
+        var picker = $range.data("daterangepicker");
+        if (!picker) {
+          return;
+        }
+        var newStart = parseDate($ini.val(), picker.startDate);
+        var newEnd = parseDate($fin.val(), picker.endDate);
+        if (newEnd.isBefore(newStart)) {
+          newStart = newEnd.clone();
+          if ($ini.length) {
+            $ini.val(newStart.format("YYYY-MM-DD"));
+          }
+        }
+        picker.setStartDate(newStart);
+        picker.setEndDate(newEnd);
+        onRangeChange(newStart, newEnd);
+      });
     }
 
-    $('#reportrange').daterangepicker({
-        startDate: start,
-        endDate: end,
-        ranges: {
-           'Hoy': [moment(), moment()],
-           'Ayer': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-           'Últimos 7 Días': [moment().subtract(6, 'days'), moment()],
-           'Últimos 30 Días': [moment().subtract(29, 'days'), moment()],
-           'Este Mes': [moment().startOf('month'), moment().endOf('month')],
-           'Mes Anterior': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
-        }
-    }, cb);
-
-    cb(start, end);
-
-});
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", safeInit);
+    } else {
+      safeInit();
+    }
+  })();
 </script>

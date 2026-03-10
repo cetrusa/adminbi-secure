@@ -5,7 +5,7 @@
 Informe de Preventa
 {% endblock title %}
 {% block barra_lateral %}
-{% include 'includes/left_sidebar_bimbo.html' %}
+{% include 'bimbo/includes/sidebar.html' %}
 {% endblock barra_lateral %}
 {% block window %}
 {% include 'includes/datepicker_range.html' %}
@@ -69,9 +69,16 @@ Informe de Preventa
                     </div>
                 </div>
 
-                <!-- Campos ocultos sincronizados con el datepicker -->
-                <input type="hidden" name="IdtReporteIni" id="IdtReporteIni">
-                <input type="hidden" name="IdtReporteFin" id="IdtReporteFin">
+                <div class="row g-3 mt-1">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Fecha Inicial</label>
+                        <input type="date" class="form-control form-control-sm" name="IdtReporteIni" id="IdtReporteIni">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Fecha Final</label>
+                        <input type="date" class="form-control form-control-sm" name="IdtReporteFin" id="IdtReporteFin">
+                    </div>
+                </div>
                 <input type="hidden" name="batch_size" value="20000">
             </form>
         </div>
@@ -231,8 +238,8 @@ Informe de Preventa
 </div>
 
 <!-- Modal de Procesamiento -->
-<div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
-    aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.6);">
+<div class="modal fade" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content bg-dark text-white border-0 shadow">
             <div class="modal-body text-center py-4">
@@ -254,53 +261,15 @@ Informe de Preventa
 {% endblock window %}
 
 {% block script %}
-<!-- Moment.js y DateRangePicker -->
-<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-
+{{ block.super }}
 <script>
-    // --- Inicialización de Date Range Picker ---
-    $(function() {
-        var start = moment().subtract(1, 'days');
-        var end = moment();
-
-        function cb(start, end) {
-            $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
-            $('#IdtReporteIni').val(start.format('YYYY-MM-DD'));
-            $('#IdtReporteFin').val(end.format('YYYY-MM-DD'));
-        }
-
-        $('#reportrange').daterangepicker({
-            startDate: start,
-            endDate: end,
-            ranges: {
-               'Hoy': [moment(), moment()],
-               'Ayer': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-               'Últimos 7 Días': [moment().subtract(6, 'days'), moment()],
-               'Este Mes': [moment().startOf('month'), moment().endOf('month')],
-               'Mes Pasado': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
-            },
-            locale: {
-                format: 'YYYY-MM-DD',
-                applyLabel: 'Aplicar',
-                cancelLabel: 'Cancelar',
-                customRangeLabel: 'Personalizado',
-                daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'],
-                monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-                firstDay: 1
-            }
-        }, cb);
-
-        cb(start, end);
-    });
-
     // --- Lógica del Dashboard ---
     var csrf_token = "{{ csrf_token }}";
     var startTime = 0;
     var progressInterval = null;
     var progressBar = document.getElementById("progressBar");
-    
+    const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
+
     document.getElementById("submitBtnPreventa").addEventListener("click", function(event) {
         event.preventDefault();
         
@@ -369,7 +338,12 @@ Informe de Preventa
         updateProgressBar(progress, stage);
 
         if (status === "finished" || status === "completed" || (status === "success" && response.result)) {
-            renderDashboard(response.result);
+            var result = response.result || {};
+            if (result.success === false) {
+                stopMonitoring("Error: " + (result.error_message || result.error || "Proceso fallido"));
+                return;
+            }
+            renderDashboard(result);
             stopMonitoring(null);
         } else if (status === "failed") {
             stopMonitoring("Error: " + (response.result ? response.result.error : "Falla interna"));
@@ -379,7 +353,14 @@ Informe de Preventa
     }
 
     function renderDashboard(result) {
-        if (!result || !result.dashboard) return;
+        if (!result || !result.dashboard) {
+            var statusBox = document.getElementById("pv-status");
+            if (statusBox) {
+                statusBox.className = "alert alert-warning d-flex align-items-center mb-3";
+                statusBox.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i><div>No se encontraron datos para el rango seleccionado.</div>';
+            }
+            return;
+        }
         var data = result.dashboard;
         var kpis = data.kpis;
         var matrix = data.matrix;
@@ -521,7 +502,7 @@ Informe de Preventa
 
     function startMonitoringUI() {
         document.getElementById("submitBtnPreventa").disabled = true;
-        document.getElementById("processingModal").style.display = "flex";
+        bsProcessingModal.show();
         startTime = new Date().getTime();
         if (progressInterval) clearInterval(progressInterval);
         progressInterval = setInterval(updateTime, 1000);
@@ -529,7 +510,7 @@ Informe de Preventa
 
     function stopMonitoring(errorMsg) {
         if (progressInterval) clearInterval(progressInterval);
-        document.getElementById("processingModal").style.display = "none";
+        bsProcessingModal.hide();
         document.getElementById("submitBtnPreventa").disabled = false;
         if (errorMsg) alert(errorMsg);
     }
@@ -546,3 +527,4 @@ Informe de Preventa
     }
 </script>
 {% endblock script %}
+

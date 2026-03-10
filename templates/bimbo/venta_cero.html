@@ -3,7 +3,7 @@
 
 {% block title %}Informe Venta Cero{% endblock title %}
 {% block barra_lateral %}
-{% include 'includes/left_sidebar_bimbo.html' %}
+{% include 'bimbo/includes/sidebar.html' %}
 {% endblock barra_lateral %}
 {% block window %}
 {% include 'includes/datepicker_range.html' %}
@@ -71,11 +71,11 @@
           </div>
           <div class="col-md-3">
             <label class="form-label fw-semibold">Fecha Inicial</label>
-            <input type="date" class="form-control form-control-sm" name="IdtReporteIni" id="IdtReporteIni" readonly>
+            <input type="date" class="form-control form-control-sm" name="IdtReporteIni" id="IdtReporteIni">
           </div>
           <div class="col-md-3">
             <label class="form-label fw-semibold">Fecha Final</label>
-            <input type="date" class="form-control form-control-sm" name="IdtReporteFin" id="IdtReporteFin" readonly>
+            <input type="date" class="form-control form-control-sm" name="IdtReporteFin" id="IdtReporteFin">
           </div>
           <input type="hidden" name="procedure_name" id="procedure_name" value="venta_cero">
 
@@ -184,7 +184,7 @@
     </div>
   </div>
 
-  <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.6);">
+  <div class="modal fade" id="processingModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content bg-dark text-white border-0 shadow">
         <div class="modal-body text-center py-4">
@@ -203,6 +203,7 @@
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 <script>
   const csrfToken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
   const progressBar = document.getElementById("progressBar");
@@ -214,7 +215,7 @@
   const ceveSelect = document.getElementById("ceves_code_select");
   let progressInterval = null;
   let startTime = 0;
-  document.getElementById("processingModal").style.display = "none";
+  const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
   document.getElementById("download_file").className = "d-none";
 
   function setSelectOptions(selectEl, options, placeholder = "Seleccione una opción") {
@@ -269,7 +270,7 @@
 
     let url = "";
     if (type === "proveedor") {
-      url = "{% url 'home_app:venta_cero_lookup_proveedores' %}?database_select=" + encodeURIComponent(database);
+      url = "{% url 'bimbo_app:venta_cero_lookup_proveedores' %}?database_select=" + encodeURIComponent(database);
       setSelectLoading(filterValueSelect, "Cargando proveedores...");
       fetchLookup(url, (resp) => {
         const options = resp.results || [];
@@ -283,7 +284,7 @@
         setSelectOptions(filterValueSelect, [], "Error cargando proveedores");
       });
     } else if (type === "categoria") {
-      url = "{% url 'home_app:venta_cero_lookup_categorias' %}?database_select=" + encodeURIComponent(database);
+      url = "{% url 'bimbo_app:venta_cero_lookup_categorias' %}?database_select=" + encodeURIComponent(database);
       setSelectLoading(filterValueSelect, "Cargando categorías...");
       fetchLookup(url, (resp) => {
         const options = resp.results || [];
@@ -294,7 +295,7 @@
         setSelectOptions(filterValueSelect, [], "Error cargando categorías");
       });
     } else if (type === "subcategoria") {
-      url = "{% url 'home_app:venta_cero_lookup_subcategorias' %}?database_select=" + encodeURIComponent(database);
+      url = "{% url 'bimbo_app:venta_cero_lookup_subcategorias' %}?database_select=" + encodeURIComponent(database);
       setSelectLoading(filterValueSelect, "Cargando subcategorías...");
       fetchLookup(url, (resp) => {
         const options = resp.results || [];
@@ -305,7 +306,7 @@
         setSelectOptions(filterValueSelect, [], "Error cargando subcategorías");
       });
     } else if (type === "producto") {
-      url = "{% url 'home_app:venta_cero_lookup_productos' %}?database_select=" + encodeURIComponent(database);
+      url = "{% url 'bimbo_app:venta_cero_lookup_productos' %}?database_select=" + encodeURIComponent(database);
       setSelectLoading(filterValueSelect, "Cargando productos...");
       fetchLookup(url, (resp) => {
         const options = resp.results || [];
@@ -322,7 +323,7 @@
 
   function resetUI() {
     updateProgressBar(0, "Listo para iniciar...");
-    document.getElementById("processingModal").style.display = "none";
+    bsProcessingModal.hide();
     document.getElementById("detailedStatus").innerText = "";
     document.getElementById("time-info").textContent = "Tiempo transcurrido: 0 seg";
     document.getElementById("submitBtnVentaCero").setAttribute("data-submitted", "false");
@@ -470,8 +471,21 @@
     const taskStatus = response.status ? response.status.toLowerCase() : "unknown";
     if (["completed", "finished", "success"].includes(taskStatus)) {
       updateProgressBar(100, "Proceso completado");
-      document.getElementById("download_file").className = "d-flex";
       const result = response.result || {};
+      if (result && result.success === false) {
+        const err = result.error_message || result.error || "Proceso fallido";
+        updateProgressBar(100, "Proceso fallido");
+        stopMonitoring(err, true, 800);
+        return;
+      }
+      // Actualizar href del enlace de descarga con el nuevo file_name
+      if (result.file_name) {
+        const downloadLink = document.getElementById("download_link");
+        if (downloadLink) {
+          downloadLink.href = "{% url 'home_app:download_file' %}?file_name=" + encodeURIComponent(result.file_name);
+        }
+      }
+      document.getElementById("download_file").className = "d-flex";
       const meta = result.metadata || {};
       renderPreview(meta.preview_headers, meta.preview_sample);
       updateSummary(meta, document.getElementById("IdtReporteIni").value, document.getElementById("IdtReporteFin").value, meta.procedure || "");
@@ -491,7 +505,7 @@
     if (progressInterval) clearInterval(progressInterval);
     progressInterval = null;
     const finalize = () => {
-      document.getElementById("processingModal").style.display = "none";
+      bsProcessingModal.hide();
       if (showAlert && message) alert(message);
       resetUI();
       window.sessionStorage.removeItem("venta_cero_task_id");
@@ -536,13 +550,13 @@
     const fechaFin = document.getElementById("IdtReporteFin").value;
     const procedure = "venta_cero";
     const filterType = document.querySelector('input[name="filter_type"]:checked');
-    const filterValue = (filterType && filterType.value === "proveedor") ? "BIMBO DE COLOMBIA S.A" : filterValueSelect.value;
+    const filterValue = (filterType && filterType.value === "proveedor") ? "BIMBO" : filterValueSelect.value;
     const batchSize = document.getElementById("batch_size").value;
 
     this.setAttribute("data-submitted", "true");
     startTime = Date.now();
     updateProgressBar(0, "Iniciando generación...");
-    document.getElementById("processingModal").style.display = "flex";
+    bsProcessingModal.show();
     if (progressInterval) clearInterval(progressInterval);
     progressInterval = setInterval(updateElapsedTime, 1000);
 
@@ -607,7 +621,7 @@
     if (existingTask) {
       if (confirm("Hay una tarea de Venta Cero en curso. ¿Desea seguir monitoreándola?")) {
         document.getElementById("submitBtnVentaCero").setAttribute("data-submitted", "true");
-        document.getElementById("processingModal").style.display = "flex";
+        bsProcessingModal.show();
         startTime = Date.now();
         if (progressInterval) clearInterval(progressInterval);
         progressInterval = setInterval(updateElapsedTime, 1000);
@@ -620,3 +634,4 @@
   });
 </script>
 {% endblock script %}
+

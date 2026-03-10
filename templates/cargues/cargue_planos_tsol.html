@@ -8,20 +8,25 @@ Cargue de Archivos Planos
 {% include 'includes/left_sidebar_actualizacion.html' %}
 {% endblock barra_lateral %}
 {% block window %}
-<!-- Contenido de la página -->
-<br>
-<br>
-<!-- Mensajes de alerta -->
-{% if messages %}
-<div class="alert alert-warning" role="alert">
-  {% for message in messages %}
-    <p>{{ message }}</p>
-  {% endfor %}
-</div>
-{% endif %}
-<div class="card" style="width: 25rem;">
-    <div class="card-header text-center">
-        <h2>Cargue de Archivos Planos</h2>
+
+<div class="container-fluid px-0">
+  <div class="mb-4">
+    <h3 class="fw-bold mb-1">
+      <i class="fas fa-file-alt text-info me-2"></i> Cargue de Archivos Planos
+    </h3>
+    <p class="text-muted small mb-0">Suba archivos planos (.txt) para procesamiento.</p>
+  </div>
+  {% if messages %}
+  <div class="alert alert-warning" role="alert">
+    {% for message in messages %}
+      <p>{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="card report-form-card" style="max-width: 500px;">
+    <div class="card-header d-flex align-items-center">
+      <i class="fas fa-file-alt text-info me-2"></i>
+      <h6 class="fw-bold mb-0">Configuración</h6>
     </div>
     <div class="card-body">
         <form action="{% url form_url %}" method="post" id="CarguePlanoFiles" enctype="multipart/form-data">
@@ -37,7 +42,7 @@ Cargue de Archivos Planos
     </div>
 </div>
 <!-- Este es el Modal -->
-<div class="modal" id="processingModal">
+<div class="modal fade" id="processingModal">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -50,11 +55,14 @@ Cargue de Archivos Planos
     </div>
 </div>
 <!-- final del modal -->
+</div>
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 <script>
     var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+    const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
 
     document.getElementById('plano_files').addEventListener('change', function () {
         var submitBtn = document.getElementById('submitBtn');
@@ -103,7 +111,7 @@ Cargue de Archivos Planos
         if (status === 200) {
             if (typeof response === "object" && "status" in response) {
                 // Ocultar el modal de procesamiento si está presente
-                document.getElementById("processingModal").style.display = "none";
+                bsProcessingModal.hide();
 
                 if (response.status === "finished") {
                     // La tarea ha terminado, manejar según el resultado de la tarea

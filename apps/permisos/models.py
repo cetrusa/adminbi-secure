@@ -257,6 +257,24 @@ class ConfEmpresas(models.Model):
         verbose_name=_("URL Pública PowerBI"),
         help_text=_("URL para acceder al reporte público en PowerBI"),
     )
+    es_bimbo = models.BooleanField(
+        default=False,
+        verbose_name=_("Es Bimbo"),
+        help_text=_("Indica si la empresa opera con BIMBO"),
+    )
+    ceve = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Código CEVE"),
+        help_text=_("Código CEVE asignado si es agencia BIMBO"),
+    )
+    idProveedorBimbo = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        verbose_name=_("IDs Proveedor Bimbo"),
+        help_text=_("IDs proveedor BIMBO separados por coma (ej: 6,40). Fuente real: proveedores_agencia_bimbo"),
+    )
     estado = models.IntegerField(
         null=True,
         blank=True,

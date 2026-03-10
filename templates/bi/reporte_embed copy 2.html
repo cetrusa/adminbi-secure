@@ -138,5 +138,6 @@
 
 {# Eliminar cualquier bloque script personalizado que intente sincronizar la DB en esta página #}
 {% block script %}
+{{ block.super }}
 {# Dejar vacío o añadir scripts específicos de esta página que NO interfieran con database_selector.html #}
 {% endblock script %}

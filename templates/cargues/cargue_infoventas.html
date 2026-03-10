@@ -11,9 +11,14 @@ Cargue Información Ventas
 
 {% block window %}
 {% include 'includes/datepicker_range.html' %}
-<br>
-<br>
-<div class="container">
+
+<div class="container-fluid px-0">
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1">
+            <i class="fas fa-file-upload text-success me-2"></i> Cargue Masivo de Ventas
+        </h3>
+        <p class="text-muted small mb-0">Cargue masivo de información de ventas desde archivo Excel.</p>
+    </div>
     {% if messages %}
     <div class="alert alert-warning" role="alert">
         {% for message in messages %}
@@ -21,9 +26,10 @@ Cargue Información Ventas
         {% endfor %}
     </div>
     {% endif %}
-    <div class="card" style="width: 25rem;">
-        <div class="card-header text-center">
-            <h2>Cargue Masivo de Ventas</h2>
+    <div class="card report-form-card" style="max-width: 500px;">
+        <div class="card-header d-flex align-items-center">
+            <i class="fas fa-file-upload text-success me-2"></i>
+            <h6 class="fw-bold mb-0">Configuración</h6>
         </div>
         <div class="card-body">
             <form action="{% url 'cargues_app:cargue_infoventas' %}" method="post" enctype="multipart/form-data"
@@ -31,7 +37,7 @@ Cargue Información Ventas
                 {% csrf_token %}
                 <label for="date_input">Fecha:</label>
                 <div id="reportrange"
-                    style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+                    style="cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
                     <i class="fa fa-calendar"></i>&nbsp;
                     <span></span> <i class="fa fa-caret-down"></i>
                 </div>
@@ -63,8 +69,8 @@ Cargue Información Ventas
             </form>
         </div>
 
-        <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
-            aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal fade" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+            aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content bg-dark text-white">
                     <div class="modal-header">
@@ -99,8 +105,9 @@ Cargue Información Ventas
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 <script>
-    document.getElementById("processingModal").style.display = "none";
+    const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
     var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
     var startTime = 0;
     var progressInterval = null;
@@ -148,7 +155,7 @@ Cargue Información Ventas
         submitBtn.setAttribute("data-submitted", "true");
         startTime = new Date().getTime();
         updateProgressBar(0, "Iniciando cargue...");
-        document.getElementById("processingModal").style.display = "flex";
+        bsProcessingModal.show();
         if (progressInterval) clearInterval(progressInterval);
         progressInterval = setInterval(updateElapsedTime, 1000);
         var form = document.getElementById("cargue-form");
@@ -396,7 +403,7 @@ Cargue Información Ventas
         }
         progressBar.className = finalBarClass;
         const finalize = () => {
-            document.getElementById("processingModal").style.display = "none";
+            bsProcessingModal.hide();
             if (showAlert && alertMessage) {
                 alert(alertMessage);
                 if (alertMessage.toLowerCase().includes("exitosamente") || alertMessage.toLowerCase().includes("completado")) {
@@ -417,7 +424,7 @@ Cargue Información Ventas
         if (cargueTaskId) {
             if (confirm("Detectamos un cargue pendiente. ¿Desea continuar monitoreando su progreso?")) {
                 document.getElementById("submitBtnCargueVentas").setAttribute("data-submitted", "true");
-                document.getElementById("processingModal").style.display = "flex";
+                bsProcessingModal.show();
                 updateProgressBar(5, "Reanudando monitoreo...");
                 startTime = new Date().getTime();
                 if (progressInterval) clearInterval(progressInterval);

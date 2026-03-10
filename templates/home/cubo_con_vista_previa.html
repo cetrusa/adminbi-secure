@@ -9,11 +9,14 @@ Cubo de Ventas
 {% endblock barra_lateral %}
 {% block window %}
 {% include 'includes/datepicker_range.html' %}
-<!-- contenido de la pagina -->
-<br>
-<br>
-<div class="container">
-  <!-- Mensajes de alerta -->
+
+<div class="container-fluid px-0">
+  <div class="mb-4">
+    <h3 class="fw-bold mb-1">
+      <i class="fas fa-cube text-primary me-2"></i> Cubo de Ventas
+    </h3>
+    <p class="text-muted small mb-0">Genere y visualice el cubo de ventas con vista previa de datos.</p>
+  </div>
   {% if messages %}
   <div class="alert alert-warning" role="alert">
     {% for message in messages %}
@@ -22,16 +25,17 @@ Cubo de Ventas
   </div>
   {% endif %}
 
-  <div id="cardContainer" class="card" style="width: 25rem;">
-    <div class="card-header text-center">
-      <h2>Cubo de Ventas</h2>
+  <div id="cardContainer" class="card report-form-card" style="max-width: 500px;">
+    <div class="card-header d-flex align-items-center">
+      <i class="fas fa-cube text-primary me-2"></i>
+      <h6 class="fw-bold mb-0">Configuración</h6>
     </div>
     <div class="card-body">
       <form action="{% url form_url %}" method="post" id="FormCubo">
         {% csrf_token %}
         <label for="date_input">Fecha:</label>
         <div id="reportrange"
-          style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+          style="cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
           <i class="fa fa-calendar"></i>&nbsp;
           <span></span> <i class="fa fa-caret-down"></i>
         </div>
@@ -57,7 +61,7 @@ Cubo de Ventas
   </div>
 
   <!-- Este es el Modal -->
-  <div class="modal" id="processingModal">
+  <div class="modal fade" id="processingModal">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -72,7 +76,7 @@ Cubo de Ventas
   <!-- final del modal -->
 </div>
 {% include 'includes/download_file.html' %}
-<div class="container mt-4">
+<div class="mt-4">
   <div id="dataContainer" style="display: none;">
     <table id="dataTable" class="table table-bordered table-hover table-responsive">
       <thead class="thead-dark">
@@ -86,13 +90,14 @@ Cubo de Ventas
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 <script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.3/js/dataTables.bootstrap5.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/dataTables.bootstrap5.min.css">
 
 <script>
-  document.getElementById("processingModal").style.display = "none";
-  document.getElementById("download_file").style.display = 'none';
+  const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
+  document.getElementById("download_file").className = 'd-none';
   var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
   document.getElementById("submitBtn").addEventListener("click", function (event) {
     event.preventDefault();
@@ -103,7 +108,7 @@ Cubo de Ventas
     }
 
     this.setAttribute("data-submitted", "true");
-    document.getElementById("processingModal").style.display = "flex";
+    bsProcessingModal.show();
 
     // Realiza la solicitud AJAX al servidor
     var xhr = new XMLHttpRequest();
@@ -169,15 +174,15 @@ Cubo de Ventas
       if (typeof response === "object" && "status" in response) {
         if (response.status === "finished") {
           // La tarea se ha completado, podemos mostrar el resultado al usuario
-          document.getElementById("processingModal").style.display = "none";
+          bsProcessingModal.hide();
           document.getElementById("cardContainer").style.display = "none";
           document.getElementById("dataContainer").style.display = "block";
           populateDataTable(response.result.data); // Asegúrate de que `response.result.data` contiene los datos
-          document.getElementById("download_file").style.display = 'flex';
+          document.getElementById("download_file").className = 'd-flex';
           alert("Proceso terminado");
         } else if (response.status === "failed") {
           // La tarea falló
-          document.getElementById("processingModal").style.display = "none";
+          bsProcessingModal.hide();
           alert("Hubo un error en el proceso: " + response.result);
         } else if (response.status === "queued" || response.status === "deferred" || response.status === "started") {
           // La tarea aún se está ejecutando, verifica el estado de nuevo después de un tiempo

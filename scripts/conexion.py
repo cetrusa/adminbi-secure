@@ -181,15 +181,6 @@ class Conexion:
                     pool_reset_on_return="commit",
                 )
 
-                try:
-                    engine = engine.execution_options(stream_results=True)
-                except Exception as exc:
-                    logging.debug(
-                        "No se pudieron aplicar execution_options al engine de %s: %s",
-                        connection_label,
-                        exc,
-                    )
-
                 Conexion._store_engine(cache_key, engine, connection_label)
                 return engine
             except Exception as exc:

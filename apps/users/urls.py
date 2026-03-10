@@ -19,6 +19,7 @@ urlpatterns = [
         views.LoginUser.as_view(),
         name="user-login",
     ),
+    path("session-check/", views.session_check, name="session-check"),
     # Redirección automática a login (reemplaza la vista home que estaba comentada)
     path(
         "", lambda request: redirect("users_app:user-login"), name="redirect-to-login"

@@ -1,5 +1,6 @@
 from .base import *
 import sys
+import os
 
 
 ALLOWED_HOSTS = [
@@ -28,7 +29,7 @@ if RENDER_EXTERNAL_HOSTNAME:
 # ssl._create_default_https_context = ssl._create_unverified_context
 
 
-DEBUG = True
+DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes")
 SESSION_COOKIE_SECURE = False
 
 CSRF_COOKIE_SECURE = True
@@ -64,6 +65,7 @@ DB_PASS = get_secret("DB_PASS")
 DB_HOST = get_secret("DB_HOST")
 DB_PORT = get_secret("DB_PORT")
 DB_NAME = get_secret("DB_NAME")
+DB_CONN_MAX_AGE = int(os.getenv("DJANGO_DB_CONN_MAX_AGE", "120"))
 
 if DB_ENGINE and DB_NAME and DB_USERNAME:
     DATABASES = {
@@ -74,6 +76,16 @@ if DB_ENGINE and DB_NAME and DB_USERNAME:
             "PASSWORD": DB_PASS,
             "HOST": DB_HOST,
             "PORT": DB_PORT,
+            "CONN_MAX_AGE": DB_CONN_MAX_AGE,
+        },
+        "bimbo": {
+            "ENGINE": "django.db.backends." + DB_ENGINE,
+            "NAME": "powerbi_bimbo",
+            "USER": DB_USERNAME,
+            "PASSWORD": DB_PASS,
+            "HOST": DB_HOST,
+            "PORT": DB_PORT,
+            "CONN_MAX_AGE": DB_CONN_MAX_AGE,
         },
     }
 else:
@@ -83,6 +95,8 @@ else:
             "NAME": "db.sqlite3",
         }
     }
+
+DATABASE_ROUTERS = ["apps.bimbo.db_router.BimboRouter"]
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
@@ -90,6 +104,7 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR.child("static")]
 STATIC_ROOT = BASE_DIR.child("staticfiles")
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+WHITENOISE_MANIFEST_STRICT = False
 # STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
@@ -115,13 +130,17 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
+        "console": {
+            "level": "ERROR",
+            "class": "logging.StreamHandler",
+        },
         "mail_admins": {
             "level": "ERROR",
             "class": "django.utils.log.AdminEmailHandler",
             "include_html": True,
         }
     },
-    "root": {"handlers": ["mail_admins"], "level": "ERROR"},
+    "root": {"handlers": ["console", "mail_admins"], "level": "ERROR"},
 }
 
 
@@ -131,7 +150,6 @@ LOGGING = {
 # CELERY_TASK_TIME_LIMIT = 7200
 # CELERY_TASK_EAGER_PROPAGATES = True
 
-import os
 RQ_DEFAULT_TIMEOUT = int(os.getenv("RQ_DEFAULT_TIMEOUT", 28800))  # 8h por defecto
 RQ_RESULT_TTL = int(os.getenv("RQ_RESULT_TTL", 86400))  # 24h
 RQ_FAILURE_TTL = int(os.getenv("RQ_FAILURE_TTL", 86400))  # 24h

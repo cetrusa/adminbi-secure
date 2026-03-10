@@ -4,7 +4,7 @@
 {% block title %}Reporte de Faltantes{% endblock %}
 
 {% block barra_lateral %}
-{% include 'includes/left_sidebar_bimbo.html' %}
+{% include 'bimbo/includes/sidebar.html' %}
 {% endblock barra_lateral %}
 
 {% block window %}
@@ -90,8 +90,16 @@
             </select>
           </div>
         </div>
-        <input type="hidden" id="IdtReporteIni" name="IdtReporteIni">
-        <input type="hidden" id="IdtReporteFin" name="IdtReporteFin">
+        <div class="row g-3 mt-1">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Fecha Inicial</label>
+            <input type="date" class="form-control form-control-sm" id="IdtReporteIni" name="IdtReporteIni">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Fecha Final</label>
+            <input type="date" class="form-control form-control-sm" id="IdtReporteFin" name="IdtReporteFin">
+          </div>
+        </div>
       </form>
     </div>
   </div>
@@ -177,7 +185,7 @@
   </div>
 </div>
 
-<div class="modal" id="processingModal" tabindex="-1" role="dialog" style="display:none; background-color: rgba(0,0,0,0.6); z-index: 1100;">
+<div class="modal fade" id="processingModal" tabindex="-1" role="dialog">
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content bg-dark text-white border-0 shadow">
       <div class="modal-body text-center py-4">
@@ -194,34 +202,8 @@
 {% endblock %}
 
 {% block script %}
+{{ block.super }}
 <script>
-  $(function() {
-    const start = moment().subtract(1, 'days');
-    const end = moment();
-    const cb = (s, e) => {
-      $('#reportrange span').html(s.format('MMMM D, YYYY') + ' - ' + e.format('MMMM D, YYYY'));
-      $('#IdtReporteIni').val(s.format('YYYY-MM-DD'));
-      $('#IdtReporteFin').val(e.format('YYYY-MM-DD'));
-    };
-    $('#reportrange').daterangepicker({
-      startDate: start,
-      endDate: end,
-      locale: {
-        format: 'YYYY-MM-DD',
-        applyLabel: 'Aplicar',
-        cancelLabel: 'Cancelar',
-        customRangeLabel: 'Personalizado'
-      },
-      ranges: {
-        'Hoy': [moment(), moment()],
-        'Ayer': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-        'Últimos 7 Días': [moment().subtract(6, 'days'), moment()],
-        'Este Mes': [moment().startOf('month'), moment().endOf('month')]
-      }
-    }, cb);
-    cb(start, end);
-  });
-
   const csrfToken = "{{ csrf_token }}";
   const ceveSelect = document.getElementById('ceves_code_select');
   const filterValueSelect = document.getElementById('filter_value_select');
@@ -235,7 +217,8 @@
   const summaryTotal = document.getElementById('summary-total');
   const dashboardResults = document.getElementById('dashboardResults');
   const emptyState = document.getElementById('emptyState');
-  const processingModal = document.getElementById('processingModal');
+  const processingModalEl = document.getElementById('processingModal');
+  const bsProcessingModal = processingModalEl ? new bootstrap.Modal(processingModalEl) : null;
   const btnSubmit = document.getElementById('submitBtnFaltantes');
   const btnClear = document.getElementById('btnClearFilters');
   const databaseSelectEl = document.getElementById('database_select');
@@ -301,16 +284,16 @@
     let url = '';
     let placeholder = 'Seleccione una opción';
     if (filterType === 'proveedor') {
-      url = "{% url 'home_app:venta_cero_lookup_proveedores' %}?database_select=" + encodeURIComponent(database);
+      url = "{% url 'bimbo_app:venta_cero_lookup_proveedores' %}?database_select=" + encodeURIComponent(database);
       placeholder = 'Seleccione proveedor';
     } else if (filterType === 'categoria') {
-      url = "{% url 'home_app:venta_cero_lookup_categorias' %}?database_select=" + encodeURIComponent(database);
+      url = "{% url 'bimbo_app:venta_cero_lookup_categorias' %}?database_select=" + encodeURIComponent(database);
       placeholder = 'Seleccione categoría';
     } else if (filterType === 'subcategoria') {
-      url = "{% url 'home_app:venta_cero_lookup_subcategorias' %}?database_select=" + encodeURIComponent(database);
+      url = "{% url 'bimbo_app:venta_cero_lookup_subcategorias' %}?database_select=" + encodeURIComponent(database);
       placeholder = 'Seleccione marca';
     } else if (filterType === 'producto') {
-      url = "{% url 'home_app:venta_cero_lookup_productos' %}?database_select=" + encodeURIComponent(database);
+      url = "{% url 'bimbo_app:venta_cero_lookup_productos' %}?database_select=" + encodeURIComponent(database);
       placeholder = 'Seleccione producto';
     }
     if (!url) {
@@ -356,7 +339,7 @@
   };
 
   const startMonitoringUI = () => {
-    if (processingModal) processingModal.style.display = 'flex';
+    if (bsProcessingModal) bsProcessingModal.show();
     if (btnSubmit) btnSubmit.disabled = true;
     startTime = new Date().getTime();
     updateProgressBar(10, 'Solicitando ejecución...');
@@ -369,7 +352,7 @@
   };
 
   const stopMonitoring = (message, level = 'danger') => {
-    if (processingModal) processingModal.style.display = 'none';
+    if (bsProcessingModal) bsProcessingModal.hide();
     if (btnSubmit) btnSubmit.disabled = false;
     if (progressInterval) clearInterval(progressInterval);
     if (message) {
@@ -467,6 +450,11 @@
         updateStatus(stage, 'info');
         const status = (data.status || '').toLowerCase();
         if (['finished', 'success', 'completed'].includes(status) && data.result) {
+          if (data.result.success === false) {
+            stopMonitoring('Fallo: ' + (data.result.error_message || data.result.error || 'Proceso fallido.'), 'danger');
+            sessionStorage.removeItem('faltantes_task_id');
+            return;
+          }
           renderDashboard(data.result);
           stopMonitoring();
           sessionStorage.removeItem('faltantes_task_id');
@@ -505,7 +493,7 @@
       filterValue: filterValue || 'BIMBO'
     };
     startMonitoringUI();
-    fetch("{% url 'home_app:faltantes' %}", {
+    fetch("{% url 'bimbo_app:faltantes' %}", {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken },
       body: new URLSearchParams({
@@ -543,3 +531,4 @@
   });
 </script>
 {% endblock %}
+

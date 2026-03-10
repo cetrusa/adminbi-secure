@@ -65,6 +65,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=False,
         help_text=_("Indica si la autenticación de dos factores está habilitada"),
     )
+    es_bimbo = models.BooleanField(
+        _("Usuario BIMBO"),
+        default=False,
+        help_text=_("Indica si el usuario tiene acceso al módulo BIMBO"),
+    )
     last_login_ip = models.GenericIPAddressField(
         _("Última IP de inicio de sesión"), blank=True, null=True
     )
@@ -141,3 +146,10 @@ class RegistroAuditoria(models.Model):
         db_table = "registro_auditoria"
         verbose_name = "Registro de Auditoria"
         verbose_name_plural = "Registro de Auditorias"
+        indexes = [
+            models.Index(fields=["fecha_hora"], name="ra_fecha_hora_idx"),
+            models.Index(fields=["database_name"], name="ra_database_name_idx"),
+            models.Index(fields=["city"], name="ra_city_idx"),
+            models.Index(fields=["database_name", "fecha_hora"], name="ra_db_fecha_idx"),
+            models.Index(fields=["city", "fecha_hora"], name="ra_city_fecha_idx"),
+        ]

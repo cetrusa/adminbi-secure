@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}
-Inicio
-{% endblock title %}
+{% block title %}Inicio{% endblock title %}
 
 {% block content %}
 <style>
@@ -13,41 +11,62 @@ Inicio
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.4);
+        /* Darker, blue-tinted overlay for modern feel */
+        background: linear-gradient(180deg, rgba(21, 21, 33, 0.7) 0%, rgba(21, 21, 33, 0.95) 100%);
         z-index: 1;
     }
+
+    .logo-container {
+        width: 120px;
+        height: 120px;
+        background-color: var(--bs-card-bg);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        transition: transform 0.3s ease;
+    }
+
+    .logo-container:hover {
+        transform: translateY(-5px);
+    }
 </style>
-<div class="container-fluid position-relative background-container"
-    style="height: 100vh; background-image: url('{% static 'images/background-image.png' %}'); background-size: cover;">
-    <div class="d-flex flex-column align-items-center h-100" style="position: relative; z-index: 2;">
-        <div class="row">
-            <div class="col">
-                <div class="card mx-auto bg-transparent border-0" style="width: 150px; height: 150px;">
-                    <img src="{% static 'images/Logo-DataZenith.png' %}" class="card-img-top img-fluid rounded-circle"
-                        style="width: 150px; height: 150px; background-color: #f0f0f0;" alt="Logo-Bi">
-                </div>
+
+<div class="container-fluid position-relative background-container overflow-hidden"
+    style="height: 100vh; background-image: url('{% static 'images/background-image.png' %}'); background-size: cover; background-position: center;">
+
+    <!-- Top Login Button -->
+    <a href="{% url 'users_app:user-login' %}"
+        class="btn btn-primary rounded-pill px-4 py-2 fw-semibold shadow-sm position-absolute"
+        style="top: 25px; right: 30px; z-index: 2; transition: all 0.3s;">
+        <i class="fas fa-sign-in-alt me-2"></i> Ir a Login
+    </a>
+
+    <!-- Central Content -->
+    <div class="d-flex flex-column align-items-center justify-content-center h-100"
+        style="position: relative; z-index: 2; margin-top: -5vh;">
+
+        <!-- Logos -->
+        <div class="d-flex justify-content-center gap-4 mb-5">
+            <div class="card rounded-circle logo-container d-flex align-items-center justify-content-center p-2">
+                <img src="{% static 'images/Logo-DataZenith.png' %}" class="img-fluid rounded-circle"
+                    alt="Logo-DataZenith">
+            </div>
+            <div class="card rounded-circle logo-container d-flex align-items-center justify-content-center p-2">
+                <img src="{% static 'images/Logo-Cerebro-Bi.png' %}" class="img-fluid rounded-circle" alt="Cerebro-Bi">
+            </div>
+            <div class="card rounded-circle logo-container d-flex align-items-center justify-content-center p-2">
+                <img src="{% static 'images/Logo-Bi.png' %}" class="img-fluid rounded-circle" alt="Logo-Bi">
             </div>
         </div>
-        <div class="row">
-            <div class="col-6">
-                <div class="card mx-auto bg-transparent border-0" style="width: 150px; height: 150px;">
-                    <img src="{% static 'images/Logo-Cerebro-Bi.png' %}" class="card-img-top img-fluid rounded-circle"
-                        style="width: 150px; height: 150px; background-color: #f0f0f0;" alt="Logo-DataZenith">
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="card mx-auto bg-transparent border-0" style="width: 150px; height: 150px;">
-                    <img src="{% static 'images/Logo-Bi.png' %}" class="card-img-top img-fluid rounded-circle"
-                        style="width: 150px; height: 150px; background-color: #f0f0f0;" alt="Logo-Sidis">
-                </div>
-            </div>
+
+        <!-- Typography -->
+        <div class="text-center mt-3">
+            <h1 class="text-white fw-bolder mb-2"
+                style="font-size: 5rem; letter-spacing: -1px; text-shadow: 0 4px 15px rgba(0,0,0,0.3);">DataZenith</h1>
+            <h3 class="text-primary fw-semibold" style="font-size: 2.2rem; letter-spacing: 2px;">BI Solutions</h3>
+            <p class="text-muted mt-4 fs-5" style="max-width: 600px; margin: 0 auto;">Plataforma integral de
+                inteligencia de negocios, integración de datos contables y analítica de ventas.</p>
         </div>
+
     </div>
-    <div class="position-absolute" style="top: 80%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
-        <h1 class="text-center text-white" style="font-size: 5rem;">DataZenith</h1>
-        <h3 class="text-center text-white" style="font-size: 3rem;">BI Solutions</h3>
-    </div>
-    <a href="{% url 'users_app:user-login' %}" class="btn btn-primary position-absolute"
-        style="top: 15px; right: 15px; z-index: 2;">Ir a Login</a>
 </div>
 {% endblock content %}

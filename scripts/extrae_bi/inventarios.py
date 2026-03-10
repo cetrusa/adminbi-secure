@@ -26,6 +26,7 @@ class InventariosReport:
     DEFAULT_CHUNK_SIZE = 20000
     PREVIEW_SIZE = 200
     PROCEDURE_NAME = "sp_reporte_inventarios_dinamico"
+    PROCEDURE_SCHEMA = "powerbi_bimbo"
 
     def __init__(
         self,
@@ -80,7 +81,7 @@ class InventariosReport:
         )
 
     def _build_call(self) -> TextClause:
-        call_sql = f"CALL {self.PROCEDURE_NAME}(:p_ceve)"
+        call_sql = f"CALL {self.PROCEDURE_SCHEMA}.{self.PROCEDURE_NAME}(:p_ceve)"
         try:
             logger.info("[inventarios][sql] %s", call_sql)
             print(f"[inventarios][sql] {call_sql}", flush=True)

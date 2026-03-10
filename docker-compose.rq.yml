@@ -1,10 +1,11 @@
-version: '3.3'
-
 services:
   web:
     build: .
-    command: gunicorn --bind 0.0.0.0:4085 --timeout 28800 adminbi.wsgi:application
+    image: adminbi:latest
+    restart: unless-stopped
+    command: sh -c "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:4085 --timeout 28800 adminbi.wsgi:application"
     volumes:
+      - .:/code
       - ./staticfiles:/code/staticfiles
       - ./media:/code/media
     ports:
@@ -34,6 +35,8 @@ services:
 
   rqworker1:
     build: .
+    image: adminbi:latest
+    restart: unless-stopped
     command: python manage.py rqworker default
     volumes:
       - .:/code
@@ -57,6 +60,8 @@ services:
 
   rqworker2:
     build: .
+    image: adminbi:latest
+    restart: unless-stopped
     command: python manage.py rqworker default
     volumes:
       - .:/code
@@ -80,6 +85,8 @@ services:
 
   rqscheduler:
     build: .
+    image: adminbi:latest
+    restart: unless-stopped
     command: python manage.py rqscheduler
     volumes:
       - .:/code
@@ -103,6 +110,7 @@ services:
 
   redis:
     image: redis:alpine3.16
+    restart: unless-stopped
     ports:
       - "6380:6379"
     command: ["redis-server", "--save", "", "--appendonly", "no", "--stop-writes-on-bgsave-error", "no"]

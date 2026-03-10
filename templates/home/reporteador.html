@@ -9,11 +9,14 @@ Informe Cubo de Ventas
 {% endblock barra_lateral %}
 {% block window %}
 {% include 'includes/datepicker_range.html' %}
-<!-- contenido de la pagina -->
-<br>
-<br>
-<div class="container">
-    <!-- Mensajes de alerta -->
+
+<div class="container-fluid px-0">
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1">
+            <i class="fas fa-file-invoice text-warning me-2"></i> Reporteador
+        </h3>
+        <p class="text-muted small mb-0">Genere informes personalizados del cubo de ventas.</p>
+    </div>
     {% if messages %}
     <div class="alert alert-warning" role="alert">
         {% for message in messages %}
@@ -22,9 +25,10 @@ Informe Cubo de Ventas
     </div>
     {% endif %}
 
-    <div class="card" style="width: 25rem;">
-        <div class="card-header text-center">
-            <h2>Informe Cubo de Ventas</h2>
+    <div class="card report-form-card" style="max-width: 500px;">
+        <div class="card-header d-flex align-items-center">
+            <i class="fas fa-file-invoice text-warning me-2"></i>
+            <h6 class="fw-bold mb-0">Configuración</h6>
         </div>
         <div class="card-body">
             <form action="{% url form_url %}" method="post" id="FormCubo">
@@ -33,7 +37,7 @@ Informe Cubo de Ventas
                 {% include 'includes/reporte_selector.html' %}
                 <label for="date_input">Fecha:</label>
                 <div id="reportrange"
-                    style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+                    style="cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
                     <i class="fa fa-calendar"></i>&nbsp;
                     <span></span> <i class="fa fa-caret-down"></i>
                 </div>
@@ -77,8 +81,8 @@ Informe Cubo de Ventas
     </div>
     {% include 'includes/reporteador_resultados.html' with resultado=resultado %}
     <!-- Este es el Modal -->
-    <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
-        aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal fade" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content bg-dark text-white"> {# Fondo oscuro para mejor contraste con barra azul #}
                 <div class="modal-header">
@@ -108,9 +112,10 @@ Informe Cubo de Ventas
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 
 <script>
-    document.getElementById("processingModal").style.display = "none";
+    const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
     document.getElementById("download_file").className = 'd-none';
     var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
     var startTime = 0; // Para calcular tiempo transcurrido
@@ -144,7 +149,7 @@ Informe Cubo de Ventas
         this.setAttribute("data-submitted", "true");
         startTime = new Date().getTime(); // Iniciar contador de tiempo
         updateProgressBar(0, "Iniciando generación..."); // Resetear barra
-        document.getElementById("processingModal").style.display = "flex";
+        bsProcessingModal.show();
         if (progressInterval) clearInterval(progressInterval); // Limpiar intervalo anterior
         progressInterval = setInterval(updateElapsedTime, 1000); // Iniciar intervalo de tiempo
 
@@ -438,7 +443,7 @@ Informe Cubo de Ventas
         progressBar.className = finalBarClass; // Aplicar color final
 
         const finalize = () => {
-            document.getElementById("processingModal").style.display = "none";
+            bsProcessingModal.hide();
             if (showAlert && alertMessage) alert(alertMessage);
             document.getElementById("submitBtnCubo").setAttribute("data-submitted", "false"); // Usa ID correcto
             window.sessionStorage.removeItem("cubo_task_id"); // <-- Limpia cubo_task_id
@@ -521,7 +526,7 @@ Informe Cubo de Ventas
             if (confirm("Detectamos una generación de Cubo pendiente. ¿Desea continuar monitoreando su progreso?")) {
                 console.log("Usuario confirmó continuar monitoreo (cubo).");
                 document.getElementById("submitBtnCubo").setAttribute("data-submitted", "true"); // Bloquear botón
-                document.getElementById("processingModal").style.display = "flex"; // Mostrar modal
+                bsProcessingModal.show(); // Mostrar modal
                 // Intentar recuperar último estado conocido (si lo guardaste) o mostrar estado intermedio
                 // var lastProgress = parseInt(window.sessionStorage.getItem("cubo_last_progress") || "5");
                 // var lastStage = window.sessionStorage.getItem("cubo_last_stage") || "Reanudando monitoreo...";

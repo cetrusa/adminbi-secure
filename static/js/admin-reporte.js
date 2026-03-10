@@ -1,0 +1,2 @@
+﻿// Reporte admin JS placeholder
+

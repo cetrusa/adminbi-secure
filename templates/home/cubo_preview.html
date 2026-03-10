@@ -18,6 +18,7 @@ Vista Previa del Cubo de Ventas
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 <script>
   function renderTable(headers, rows) {
     const tableContainer = document.getElementById('table-container');
@@ -56,9 +57,10 @@ Vista Previa del Cubo de Ventas
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    const headers = {{ headers|safe }};
-    const rows = {{ rows|safe }};
-    renderTable(headers, rows);
+    const headers = {{ headers| safe
+  }};
+  const rows = {{ rows| safe }};
+  renderTable(headers, rows);
   });
 </script>
 {% endblock script %}

@@ -5,14 +5,12 @@
 Planos Bimbo
 {% endblock title %}
 {% block barra_lateral %}
-{% include 'includes/left_sidebar_bimbo.html' %}
+{% include 'bimbo/includes/sidebar.html' %}
 {% endblock barra_lateral %}
 {% block window %}
 {% include 'includes/datepicker_range.html' %}
-<!-- contenido de la pagina -->
-<br>
-<br>
-<div class="container">
+
+<div class="container-fluid px-0">
   <!-- Mensajes de alerta -->
   {% if messages %}
   <div class="alert alert-warning" role="alert">
@@ -33,7 +31,7 @@ Planos Bimbo
                 
                 <div class="form-group mb-4">
                     <label class="form-label fw-bold">Rango de Fechas:</label>
-                    <div id="reportrange" class="form-control border-0 shadow-sm" style="background: #f8f9fa; cursor: pointer; padding: 10px; width: 100%">
+                    <div id="reportrange" class="form-control border-0 shadow-sm" style="cursor: pointer; padding: 10px; width: 100%">
                         <i class="fa fa-calendar text-danger"></i>&nbsp;
                         <span></span> <i class="fa fa-caret-down float-end mt-1"></i>
                     </div>
@@ -43,7 +41,7 @@ Planos Bimbo
 
                 <div class="form-group mb-4">
                     <label for="batch_size" class="form-label fw-bold">Optimización de Procesamiento:</label>
-                    <select class="form-select border-0 shadow-sm" id="batch_size" name="batch_size" style="background-color: #f8f9fa;">
+                    <select class="form-select border-0 shadow-sm" id="batch_size" name="batch_size">
                         <option value="10000">10,000 (Recursos Limitados)</option>
                         <option value="20000">20,000</option>
                         <option value="50000" selected>50,000 (Estándar)</option>
@@ -65,8 +63,8 @@ Planos Bimbo
     </div>
 
     <!-- Modal de Procesamiento -->
-    <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
-        aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal fade" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content bg-dark text-white border-0 shadow-lg">
                 <div class="modal-header border-bottom-0">
@@ -93,8 +91,9 @@ Planos Bimbo
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 <script>
-  document.getElementById("processingModal").style.display = "none";
+  const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
   document.getElementById("download_file").className = 'd-none';
   var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
   var startTime = 0;
@@ -121,7 +120,7 @@ Planos Bimbo
     this.setAttribute("data-submitted", "true");
     startTime = new Date().getTime();
     updateProgressBar(0, "Iniciando generación...");
-    document.getElementById("processingModal").style.display = "flex";
+    bsProcessingModal.show();
     if (progressInterval) clearInterval(progressInterval);
     progressInterval = setInterval(updateElapsedTime, 1000);
     var xhr = new XMLHttpRequest();
@@ -331,7 +330,7 @@ Planos Bimbo
     }
     progressBar.className = finalBarClass;
     const finalize = () => {
-      document.getElementById("processingModal").style.display = "none";
+      bsProcessingModal.hide();
       if (showAlert && alertMessage) alert(alertMessage);
       document.getElementById("submitBtnInterface").setAttribute("data-submitted", "false");
       window.sessionStorage.removeItem("interface_task_id");
@@ -394,7 +393,7 @@ Planos Bimbo
       if (confirm("Detectamos una generación de Interface pendiente. ¿Desea continuar monitoreando su progreso?")) {
         console.log("Usuario confirmó continuar monitoreo (interface).");
         document.getElementById("submitBtnInterface").setAttribute("data-submitted", "true");
-        document.getElementById("processingModal").style.display = "flex";
+        bsProcessingModal.show();
         updateProgressBar(5, "Reanudando monitoreo...");
         startTime = new Date().getTime();
         if (progressInterval) clearInterval(progressInterval);

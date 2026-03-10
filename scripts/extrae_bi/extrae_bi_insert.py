@@ -2,8 +2,9 @@ import logging
 from typing import Optional, Callable, Any
 import pandas as pd
 from sqlalchemy import text
-from sqlalchemy.exc import OperationalError, SQLAlchemyError
+from sqlalchemy.exc import OperationalError, SQLAlchemyError, IntegrityError, DBAPIError
 import time
+import gc
 import ast
 import numpy as np
 import datetime
@@ -86,6 +87,32 @@ class ExtraeBiExtractor:
         self.txSql = None
         self.txSqlExtrae = None
         self._table_columns_cache = {}
+        self._primary_keys_cache = {}
+
+    def _resolve_chunk_size(self, fallback: int, minimum: int, maximum: int) -> int:
+        raw_value = self.batch_size if self.batch_size is not None else fallback
+        try:
+            resolved = int(raw_value)
+        except (TypeError, ValueError):
+            logging.warning(
+                f"batch_size inválido ({raw_value}). Se usará valor por defecto: {fallback}."
+            )
+            return fallback
+
+        clamped = max(minimum, min(resolved, maximum))
+        if clamped != resolved:
+            logging.warning(
+                f"batch_size fuera de rango ({resolved}). Ajustado a {clamped}."
+            )
+        return clamped
+
+    def _resolve_read_chunk_size(self) -> int:
+        # Lectura agresiva: chunks grandes reducen round-trips a la BD origen.
+        return self._resolve_chunk_size(fallback=50000, minimum=1000, maximum=200000)
+
+    def _resolve_insert_chunk_size(self) -> int:
+        # PyMySQL reescribe executemany a multi-row INSERT; chunks mas grandes = menos round-trips.
+        return self._resolve_chunk_size(fallback=15000, minimum=1000, maximum=50000)
 
     def _get_table_columns(self, table_name: str) -> dict:
         """Obtiene metadata de columnas desde information_schema.columns (cacheado).
@@ -218,6 +245,8 @@ class ExtraeBiExtractor:
                     valid_columns.remove(col)
 
         normalized_records: list[dict] = []
+        null_normalized_counts: dict[str, int] = {}
+        timedelta_converted: set[str] = set()
         for rec in records:
             out: dict[str, Any] = {}
             for col in valid_columns:
@@ -226,18 +255,25 @@ class ExtraeBiExtractor:
 
                 if isinstance(v, (pd.Timedelta, np.timedelta64, datetime.timedelta)):
                     v = self._timedelta_to_time_str(v)
-                    logging.warning(f"[WARN] Conversión Timedelta->TIME aplicada: {col}")
+                    timedelta_converted.add(col)
 
                 if v is None and not meta["is_nullable"]:
                     default_v = self._default_for_type(meta.get("data_type", ""))
                     v = default_v
-                    logging.warning(
-                        f"[WARN] Valor NULL normalizado por NOT NULL: {col} -> {default_v}"
-                    )
+                    null_normalized_counts[col] = null_normalized_counts.get(col, 0) + 1
 
                 out[col] = v
 
             normalized_records.append(out)
+
+        # Resumen de conversiones (una línea por columna en vez de por registro)
+        for col in timedelta_converted:
+            logging.warning(f"[WARN] Conversión Timedelta->TIME aplicada: {col}")
+        for col, count in null_normalized_counts.items():
+            default_v = self._default_for_type(table_cols[col].get("data_type", ""))
+            logging.warning(
+                f"[WARN] Valor NULL normalizado por NOT NULL: {col} -> '{default_v}' ({count} registros)"
+            )
 
         return normalized_records, valid_columns
 
@@ -249,8 +285,8 @@ class ExtraeBiExtractor:
             safe = f"_{safe}"
         return safe or "_col"
 
-    def _build_bindings(self, data_list: list[dict], columnas: list[str]) -> tuple[list[dict], str]:
-        """Crea diccionarios con claves saneadas y placeholder string para SQLAlchemy text()."""
+    def _build_bind_map(self, columnas: list[str]) -> tuple[dict[str, str], str]:
+        """Crea mapping columna→clave_segura y placeholder string (sin necesidad de datos)."""
         bind_map: dict[str, str] = {}
         used: set[str] = set()
         for col in columnas:
@@ -262,13 +298,203 @@ class ExtraeBiExtractor:
                 suffix += 1
             bind_map[col] = candidate
             used.add(candidate)
+        placeholders = ", ".join(f":{bind_map[col]}" for col in columnas)
+        return bind_map, placeholders
 
+    def _build_bindings(self, data_list: list[dict], columnas: list[str]) -> tuple[list[dict], str]:
+        """Crea diccionarios con claves saneadas y placeholder string para SQLAlchemy text()."""
+        bind_map, placeholders = self._build_bind_map(columnas)
         data_bound = [
             {bind_map[k]: v for k, v in rec.items() if k in bind_map}
             for rec in data_list
         ]
-        placeholders = ", ".join(f":{bind_map[col]}" for col in columnas)
         return data_bound, placeholders
+
+    def _precompute_insert_context(self, table_name: str, sample_columns: list[str]) -> Optional[dict]:
+        """Pre-computa metadatos, columnas validas, bind_map y query INSERT una sola vez por tabla.
+
+        Se llama UNA vez antes del loop de chunks para evitar re-calcular en cada chunk.
+
+        Args:
+            table_name: nombre de la tabla destino.
+            sample_columns: columnas del DataFrame (del primer chunk o de la query).
+
+        Returns:
+            dict con: valid_columns, table_cols, bind_map, insert_query_odku, insert_query_ignore
+            o None si no hay columnas validas.
+        """
+        table_cols = self._get_table_columns(table_name)
+        if not table_cols:
+            valid_columns = list(sample_columns)
+        else:
+            valid_columns = [c for c in sample_columns if c in table_cols]
+            for c in sample_columns:
+                if c not in table_cols:
+                    logging.warning(f"[WARN] Columna omitida del INSERT: {c} (NO EXISTE EN TABLA)")
+
+        if not valid_columns:
+            logging.error(f"No quedaron columnas válidas para insertar en {table_name}.")
+            return None
+
+        bind_map, placeholders = self._build_bind_map(valid_columns)
+        columnas_str = ", ".join(self._quote_ident(c) for c in valid_columns)
+
+        # Query para ON DUPLICATE KEY UPDATE
+        update_columns = ", ".join(
+            f"{self._quote_ident(col)}=VALUES({self._quote_ident(col)})" for col in valid_columns
+        )
+        insert_query_odku = (
+            f"INSERT INTO {table_name} ({columnas_str})\n"
+            f"VALUES ({placeholders})\n"
+            f"ON DUPLICATE KEY UPDATE {update_columns};"
+        )
+
+        # Query para INSERT IGNORE
+        insert_query_ignore = (
+            f"INSERT IGNORE INTO {table_name} ({columnas_str})\n"
+            f"VALUES ({placeholders});"
+        )
+
+        return {
+            "valid_columns": valid_columns,
+            "table_cols": table_cols,
+            "bind_map": bind_map,
+            "insert_query_odku": insert_query_odku,
+            "insert_query_ignore": insert_query_ignore,
+        }
+
+    def _normalize_dataframe_for_insert(
+        self, df: pd.DataFrame, valid_columns: list[str], table_cols: dict
+    ) -> pd.DataFrame:
+        """Normaliza el DataFrame completo para INSERT usando operaciones vectorizadas.
+
+        Reemplaza la normalizacion fila-por-fila de _normalize_records_chunk.
+        Operaciones:
+        - Filtra solo valid_columns
+        - Convierte columnas Timedelta a string TIME
+        - Rellena NULL con defaults en columnas NOT NULL
+        - Reemplaza NaN y strings vacios con None (para columnas nullable)
+        """
+        result = df[valid_columns].copy()
+
+        if not table_cols:
+            # Sin metadata: solo convertir Timedeltas
+            for col in valid_columns:
+                if hasattr(result[col], 'dt') and result[col].dtype == 'timedelta64[ns]':
+                    result[col] = result[col].apply(self._timedelta_to_time_str)
+            return result
+
+        timedelta_cols = []
+        not_null_fills = {}  # col -> default_value
+
+        for col in valid_columns:
+            meta = table_cols.get(col, {})
+            # Detectar columnas timedelta
+            if hasattr(result[col], 'dt') and result[col].dtype == 'timedelta64[ns]':
+                timedelta_cols.append(col)
+            elif result[col].dtype == object:
+                # Verificar si hay valores timedelta mixtos en columnas object
+                sample = result[col].dropna().head(5)
+                if len(sample) > 0 and any(
+                    isinstance(v, (pd.Timedelta, np.timedelta64, datetime.timedelta))
+                    for v in sample
+                ):
+                    timedelta_cols.append(col)
+
+            # Preparar defaults para NOT NULL
+            if not meta.get("is_nullable", True):
+                not_null_fills[col] = self._default_for_type(meta.get("data_type", ""))
+
+        # Convertir timedeltas vectorizadamente
+        for col in timedelta_cols:
+            result[col] = result[col].apply(
+                lambda v: self._timedelta_to_time_str(v)
+                if isinstance(v, (pd.Timedelta, np.timedelta64, datetime.timedelta))
+                else v
+            )
+            logging.info(f"[OPT] Conversión Timedelta->TIME aplicada vectorizadamente: {col}")
+
+        # Reemplazar NaN/empty con None (para columnas nullable)
+        result = result.where(pd.notnull(result), None)
+        result = result.replace({"": None})
+
+        # Rellenar defaults para columnas NOT NULL
+        for col, default_val in not_null_fills.items():
+            null_count = result[col].isna().sum()
+            if null_count > 0:
+                result[col] = result[col].fillna(default_val)
+                # fillna no cubre None explícitos en columnas object; usar where
+                result[col] = result[col].where(result[col].notna(), default_val)
+                logging.warning(
+                    f"[WARN] NULL normalizado por NOT NULL: {col} -> '{default_val}' ({null_count} registros)"
+                )
+
+        return result
+
+    def _determine_valid_columns(self, table_name: str, df: pd.DataFrame) -> tuple[list[str], dict]:
+        """Determina columnas válidas para INSERT usando operaciones de DataFrame (sin to_dict masivo).
+
+        Retorna (valid_columns, table_cols_metadata).
+        """
+        table_cols = self._get_table_columns(table_name)
+        if not table_cols:
+            return list(df.columns), {}
+
+        valid_columns = [c for c in df.columns if c in table_cols]
+        for c in df.columns:
+            if c not in table_cols:
+                logging.warning(f"[WARN] Columna omitida del INSERT: {c} (NO EXISTE EN TABLA)")
+
+        # NOT NULL columns que son enteramente NULL → se omiten del INSERT.
+        to_drop: list[str] = []
+        for col in list(valid_columns):
+            meta = table_cols[col]
+            if meta.get("is_nullable", True):
+                continue
+            if df[col].isna().all():
+                to_drop.append(col)
+
+        if to_drop:
+            for col in to_drop:
+                logging.warning(
+                    f"[WARN] Columna omitida del INSERT: {col} (NULL / NOT NULL)"
+                )
+                if col in valid_columns:
+                    valid_columns.remove(col)
+
+        return valid_columns, table_cols
+
+    def _normalize_records_chunk(
+        self, records: list[dict], valid_columns: list[str], table_cols: dict
+    ) -> list[dict]:
+        """Normaliza valores de un chunk de records (Timedelta→str, NULL→default en NOT NULL)."""
+        if not table_cols:
+            # Sin metadata: solo convertir Timedeltas.
+            normalized = []
+            for rec in records:
+                out = {}
+                for k in valid_columns:
+                    v = rec.get(k)
+                    if isinstance(v, (pd.Timedelta, np.timedelta64, datetime.timedelta)):
+                        out[k] = self._timedelta_to_time_str(v)
+                    else:
+                        out[k] = v
+                normalized.append(out)
+            return normalized
+
+        normalized: list[dict] = []
+        for rec in records:
+            out: dict[str, Any] = {}
+            for col in valid_columns:
+                meta = table_cols[col]
+                v = rec.get(col)
+                if isinstance(v, (pd.Timedelta, np.timedelta64, datetime.timedelta)):
+                    v = self._timedelta_to_time_str(v)
+                if v is None and not meta["is_nullable"]:
+                    v = self._default_for_type(meta.get("data_type", ""))
+                out[col] = v
+            normalized.append(out)
+        return normalized
 
     @staticmethod
     def _strip_sql_comments(sql: str) -> str:
@@ -494,6 +720,27 @@ class ExtraeBiExtractor:
         )
         return rewritten
 
+    @staticmethod
+    def _optimize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+        """Downcast tipos numéricos para reducir uso de memoria (30-60% reducción)."""
+        for col in df.select_dtypes(include=["int64"]).columns:
+            df[col] = pd.to_numeric(df[col], downcast="integer")
+        for col in df.select_dtypes(include=["float64"]).columns:
+            df[col] = pd.to_numeric(df[col], downcast="float")
+        return df
+
+    @staticmethod
+    def _log_memory(label: str = ""):
+        """Log del uso actual de memoria RAM del proceso."""
+        try:
+            import psutil
+            import os
+            process = psutil.Process(os.getpid())
+            mem_mb = process.memory_info().rss / (1024 ** 2)
+            logging.info(f"[MEM] {label} RAM usada: {mem_mb:.1f} MB")
+        except ImportError:
+            pass
+
     def run(self):
         """Método principal para ejecutar el proceso completo."""
         return self.extractor()
@@ -595,17 +842,59 @@ class ExtraeBiExtractor:
             logging.info("Finalizado el procedimiento de ejecución SQL.")
 
     def procedimiento_a_sql(self):
+        read_chunk_size = self._resolve_read_chunk_size()
+        insert_chunk_size = self._resolve_insert_chunk_size()
+        primary_keys = self.obtener_claves_primarias()
+
         for intento in range(3):
             try:
+                step_start = time.perf_counter()
                 rows_deleted = self.consulta_sql_bi()
                 if rows_deleted == 0:
                     logging.warning(
                         "No se borraron filas en consulta_sql_bi, pero se continuará con la inserción de datos."
                     )
                 if self.txSqlExtrae:
-                    resultado_out = self.consulta_sql_out_extrae()
-                    if resultado_out is not None and not resultado_out.empty:
-                        self.insertar_sql(resultado_out=resultado_out)
+                    # Contexto pre-computado: se inicializa con el primer chunk (lazy)
+                    insert_context = [None]  # mutable para captura en closure
+                    gc_counter = [0]
+
+                    def process_chunk(chunk_df: pd.DataFrame, chunk_num: int, total_read: int):
+                        # Lazy init del contexto con las columnas del primer chunk
+                        if insert_context[0] is None:
+                            ctx = self._precompute_insert_context(
+                                str(self.txTabla), list(chunk_df.columns)
+                            )
+                            insert_context[0] = ctx
+                            if ctx:
+                                logging.info(
+                                    f"[OPT] Contexto INSERT pre-computado para {self.txTabla}: "
+                                    f"{len(ctx['valid_columns'])} columnas válidas."
+                                )
+
+                        self.insertar_sql(
+                            resultado_out=chunk_df,
+                            primary_keys=primary_keys,
+                            chunk_size=insert_chunk_size,
+                            insert_context=insert_context[0],
+                        )
+                        # gc.collect solo cada 10 chunks para reducir overhead
+                        gc_counter[0] += 1
+                        if gc_counter[0] % 10 == 0:
+                            gc.collect()
+                        logging.info(
+                            f"Chunk {chunk_num} procesado para {self.txTabla}. Total leído acumulado: {total_read:,}."
+                        )
+
+                    extraction_result = self.consulta_sql_out_extrae(
+                        chunksize=read_chunk_size,
+                        chunk_callback=process_chunk,
+                    )
+                    if extraction_result and extraction_result.get("total_rows", 0) > 0:
+                        elapsed = time.perf_counter() - step_start
+                        logging.info(
+                            f"Proceso completado para {self.txTabla}: {extraction_result.get('total_rows', 0):,} filas en {elapsed:.2f}s."
+                        )
                     else:
                         logging.warning(
                             "No se obtuvieron resultados en consulta_sql_out_extrae, inserción cancelada."
@@ -622,11 +911,30 @@ class ExtraeBiExtractor:
                 logging.error(
                     f"Error en procedimiento_a_sql (Intento {intento + 1}/3): {e}"
                 )
+                # Solo reintentar errores transitorios de conexión/locking.
+                err_txt = str(e).lower()
+                retryable = isinstance(e, OperationalError)
+                if isinstance(e, DBAPIError):
+                    retryable = retryable or (
+                        "deadlock" in err_txt
+                        or "lock wait timeout" in err_txt
+                        or "server has gone away" in err_txt
+                        or "lost connection" in err_txt
+                    )
+                if isinstance(e, IntegrityError):
+                    retryable = False
+
+                if not retryable:
+                    logging.error(
+                        "Error no recuperable en procedimiento_a_sql. Se cancela sin reintentos."
+                    )
+                    raise
+
                 if intento >= 2:
                     logging.error(
                         "Se agotaron los intentos. No se pudo ejecutar el procedimiento."
                     )
-                    break
+                    raise
                 logging.info(f"Reintentando procedimiento (Intento {intento + 1}/3)...")
                 time.sleep(5)
 
@@ -677,7 +985,11 @@ class ExtraeBiExtractor:
                 time.sleep(5)
         return 0
 
-    def consulta_sql_out_extrae(self, chunksize: int = 10000) -> Optional[pd.DataFrame]:
+    def consulta_sql_out_extrae(
+        self,
+        chunksize: int = 10000,
+        chunk_callback: Optional[Callable[[pd.DataFrame, int, int], None]] = None,
+    ) -> Optional[Any]:
         """
         Ejecuta consulta SQL en la base de datos de salida con lectura en chunks.
         
@@ -701,27 +1013,60 @@ class ExtraeBiExtractor:
                     isolation_level=isolation_level
                 ) as connection:
                     sqlout = text(self.txSqlExtrae)
-                    
+
                     # Leer datos en chunks para evitar timeouts
-                    chunks = []
+                    chunks = [] if chunk_callback is None else None
                     total_rows = 0
-                    
+                    total_chunks = 0
+                    read_start = time.perf_counter()
+
                     logging.info(f"Iniciando lectura de datos en chunks de {chunksize:,} registros...")
-                    
+
+                    stream_connection = connection.execution_options(
+                        stream_results=True,
+                        max_row_buffer=10000,
+                    )
                     for chunk_num, chunk in enumerate(pd.read_sql_query(
                         sql=sqlout,
-                        con=connection,
+                        con=stream_connection,
                         params={"fi": self.IdtReporteIni, "ff": self.IdtReporteFin},
                         chunksize=chunksize
                     ), start=1):
                         chunk_rows = len(chunk)
+                        total_chunks = chunk_num
                         total_rows += chunk_rows
-                        chunks.append(chunk)
                         logging.info(f"Chunk {chunk_num}: {chunk_rows:,} registros leídos (Total acumulado: {total_rows:,})")
-                    
+                        if chunk_callback is not None:
+                            chunk_callback(chunk, chunk_num, total_rows)
+                            del chunk
+                        else:
+                            chunks.append(chunk)
+
+                    elapsed = max(time.perf_counter() - read_start, 0.001)
+                    rows_per_second = total_rows / elapsed
+
+                    if chunk_callback is not None:
+                        if total_rows > 0:
+                            logging.info(
+                                f"Consulta ejecutada con éxito en {isolation_level}. Total: {total_rows:,} registros en {elapsed:.2f}s ({rows_per_second:,.1f} filas/s)."
+                            )
+                            return {
+                                "total_rows": total_rows,
+                                "total_chunks": total_chunks,
+                                "elapsed_seconds": elapsed,
+                            }
+                        logging.warning("No se obtuvieron datos de la consulta.")
+                        return {
+                            "total_rows": 0,
+                            "total_chunks": 0,
+                            "elapsed_seconds": elapsed,
+                        }
+
                     if chunks:
                         resultado = pd.concat(chunks, ignore_index=True)
-                        logging.info(f"Consulta ejecutada con éxito en {isolation_level}. Total: {total_rows:,} registros.")
+                        logging.info(
+                            f"Consulta ejecutada con éxito en {isolation_level}. Total: {total_rows:,} registros en {elapsed:.2f}s ({rows_per_second:,.1f} filas/s)."
+                        )
                         return resultado
                     else:
                         logging.warning("No se obtuvieron datos de la consulta.")
@@ -741,84 +1086,123 @@ class ExtraeBiExtractor:
                 )
                 time.sleep(1)
 
-    def insertar_sql(self, resultado_out: pd.DataFrame):
+    def insertar_sql(
+        self,
+        resultado_out: pd.DataFrame,
+        primary_keys: Optional[list[str]] = None,
+        chunk_size: Optional[int] = None,
+        insert_context: Optional[dict] = None,
+    ):
+        insert_start = time.perf_counter()
         if resultado_out.empty:
             logging.warning(
                 "Intento de insertar un DataFrame vacío. Inserción cancelada."
             )
             return
-        
+
         # Obtener claves primarias antes de procesar
-        primary_keys = self.obtener_claves_primarias()
-        
+        if primary_keys is None:
+            primary_keys = self.obtener_claves_primarias()
+
         # Filtrar registros con claves primarias NULL
         if primary_keys:
             registros_antes_filtro = len(resultado_out)
             for pk_col in primary_keys:
                 if pk_col in resultado_out.columns:
-                    # Filtrar registros donde la clave primaria es NULL
                     registros_null = resultado_out[pk_col].isna().sum()
                     if registros_null > 0:
                         logging.warning(
-                            f"Se encontraron {registros_null:,} registros con '{pk_col}' NULL. Estos registros serán excluidos."
+                            f"Se encontraron {registros_null:,} registros con '{pk_col}' NULL. Serán excluidos."
                         )
                         resultado_out = resultado_out[resultado_out[pk_col].notna()]
-            
+
             registros_despues_filtro = len(resultado_out)
             if registros_antes_filtro > registros_despues_filtro:
                 logging.warning(
-                    f"Se excluyeron {registros_antes_filtro - registros_despues_filtro:,} registros con claves primarias NULL."
+                    f"Se excluyeron {registros_antes_filtro - registros_despues_filtro:,} registros con PK NULL."
                 )
-            
+
             if resultado_out.empty:
                 logging.error(
                     "Después de filtrar claves primarias NULL, no quedan registros para insertar."
                 )
                 return
-        
-        # Procesamiento de columnas numéricas específicas
-        numeric_columns = ["latitud_cl", "longitud_cl"]
-        for col in numeric_columns:
+
+        # Procesamiento de columnas numéricas específicas (latitud/longitud)
+        for col in ("latitud_cl", "longitud_cl"):
             if col in resultado_out.columns:
                 resultado_out[col] = pd.to_numeric(resultado_out[col], errors="coerce")
-        
+
+        # macrozona_id: asegurar que es numérico
         if "macrozona_id" in resultado_out.columns:
-            resultado_out["macrozona_id"] = resultado_out["macrozona_id"].fillna(0)
-            resultado_out["macrozona_id"] = resultado_out["macrozona_id"].replace(
-                {"": 0}
+            resultado_out["macrozona_id"] = (
+                resultado_out["macrozona_id"].replace({"": 0}).fillna(0)
             )
-        
+
+        # macro: solo convertir a numérico si la columna destino lo requiere
         if "macro" in resultado_out.columns:
-            resultado_out["macro"] = pd.to_numeric(
-                resultado_out["macro"], errors="coerce"
+            table_cols_meta = (
+                insert_context["table_cols"] if insert_context else self._get_table_columns(str(self.txTabla))
             )
-            resultado_out["macro"] = resultado_out["macro"].fillna(0)
-            resultado_out["macro"] = resultado_out["macro"].replace({"": 0})
-        
-        resultado_out = resultado_out.replace({np.nan: None, "": None})
-        
-        # Eliminar duplicados
-        if len(resultado_out) > 0:
+            macro_dtype = table_cols_meta.get("macro", {}).get("data_type", "")
+            _NUMERIC_TYPES = frozenset({
+                "int", "integer", "bigint", "smallint", "tinyint", "mediumint",
+                "decimal", "numeric", "float", "double", "real",
+            })
+            if macro_dtype in _NUMERIC_TYPES:
+                resultado_out["macro"] = (
+                    pd.to_numeric(resultado_out["macro"], errors="coerce").fillna(0)
+                )
+
+        # Usar contexto pre-computado o calcularlo
+        if insert_context:
+            valid_columns = insert_context["valid_columns"]
+            table_cols = insert_context["table_cols"]
+        else:
+            table_name = str(self.txTabla)
+            ctx = self._precompute_insert_context(table_name, list(resultado_out.columns))
+            if not ctx:
+                logging.error(f"No hay columnas válidas para insertar en {self.txTabla}.")
+                return
+            valid_columns = ctx["valid_columns"]
+            table_cols = ctx["table_cols"]
+            insert_context = ctx
+
+        # Normalización vectorizada del DataFrame (reemplaza normalizacion dict-por-dict)
+        resultado_out = self._normalize_dataframe_for_insert(resultado_out, valid_columns, table_cols)
+
+        # drop_duplicates solo para tablas SIN PK (ON DUPLICATE KEY maneja duplicados en BD)
+        if not primary_keys and len(resultado_out) > 0:
             registros_originales = len(resultado_out)
             resultado_out = resultado_out.drop_duplicates()
             registros_sin_duplicados = len(resultado_out)
             if registros_sin_duplicados < registros_originales:
                 logging.info(
-                    f"Se eliminaron {registros_originales - registros_sin_duplicados:,} duplicados del dataframe antes de insertar"
+                    f"Se eliminaron {registros_originales - registros_sin_duplicados:,} duplicados antes de insertar"
                 )
-        CHUNK_THRESHOLD = 5000
-        CHUNK_SIZE = 5000
-        primary_keys = self.obtener_claves_primarias()
+
+        effective_chunk_size = chunk_size or self._resolve_insert_chunk_size()
         if primary_keys:
-            self.insertar_con_on_duplicate_key(
-                resultado_out, CHUNK_THRESHOLD, CHUNK_SIZE
-            )
+            query = insert_context["insert_query_odku"]
         else:
-            self.insertar_con_ignore(resultado_out, CHUNK_THRESHOLD, CHUNK_SIZE)
-        # ✅ NOTA: El logging de éxito se mueve a dentro de insertar_con_on_duplicate_key/insertar_con_ignore
-        # para evitar mensajes engañosos cuando la inserción fue cancelada por falta de columnas válidas.
+            query = insert_context["insert_query_ignore"]
+
+        method_name = "ON DUPLICATE KEY" if primary_keys else "INSERT IGNORE"
+        self._stream_insert_chunks(
+            resultado_out, query, valid_columns, table_cols,
+            insert_context["bind_map"], effective_chunk_size, method_name,
+        )
+        elapsed = time.perf_counter() - insert_start
+        logging.info(
+            f"Insertar_sql finalizado para {self.txTabla}: {len(resultado_out):,} filas en {elapsed:.2f}s."
+        )
 
     def obtener_claves_primarias(self):
+        cache_key = (str(self.config.get("dbBi")), str(self.txTabla))
+        cached = self._primary_keys_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         query = text(
             f"""
             SELECT COLUMN_NAME
@@ -831,121 +1215,115 @@ class ExtraeBiExtractor:
         try:
             with self.engine_mysql_bi.connect() as connection:
                 resultado = connection.execute(query)
-                return [row[0] for row in resultado.fetchall()]
+                primary_keys = [row[0] for row in resultado.fetchall()]
+                self._primary_keys_cache[cache_key] = primary_keys
+                return primary_keys
         except Exception as e:
             logging.error(f"Error obteniendo claves primarias de {self.txTabla}: {e}")
             return []
 
     def insertar_con_on_duplicate_key(self, df, chunk_threshold, chunk_size):
-        data_list_raw = df.to_dict(orient="records")
-        total_rows = len(data_list_raw)
-        logging.info(
-            f"Se preparan {total_rows} registros para insertar con ON DUPLICATE KEY en {self.txTabla}."
-        )
-        if not data_list_raw:
+        """Inserta con ON DUPLICATE KEY UPDATE. Mantiene compatibilidad con llamadas externas."""
+        total_rows = len(df)
+        if total_rows == 0:
             logging.warning(f"No hay registros para insertar en {self.txTabla}")
             return
-
-        data_list, columnas = self._normalize_and_filter_records_for_table(
-            str(self.txTabla), data_list_raw
-        )
-        if not columnas:
-            logging.error(
-                f"No quedaron columnas válidas para insertar en {self.txTabla}. Inserción cancelada."
-            )
+        table_name = str(self.txTabla)
+        ctx = self._precompute_insert_context(table_name, list(df.columns))
+        if not ctx:
             return
-
-        data_bound, placeholders = self._build_bindings(data_list, columnas)
-        columnas_str = ", ".join(self._quote_ident(c) for c in columnas)
-        update_columns = ", ".join(
-            [f"{self._quote_ident(col)}=VALUES({self._quote_ident(col)})" for col in columnas]
+        df = self._normalize_dataframe_for_insert(df, ctx["valid_columns"], ctx["table_cols"])
+        self._stream_insert_chunks(
+            df, ctx["insert_query_odku"], ctx["valid_columns"], ctx["table_cols"],
+            ctx["bind_map"], chunk_size, "ON DUPLICATE KEY",
         )
-        insert_query = (
-            f"INSERT INTO {self.txTabla} ({columnas_str})\n"
-            f"VALUES ({placeholders})\n"
-            f"ON DUPLICATE KEY UPDATE {update_columns};"
-        )
-        
-        self._execute_batch_insert(insert_query, data_bound, total_rows, chunk_size, "ON DUPLICATE KEY")
-        logging.info(f"✓ Se insertaron {total_rows:,} registros en {self.txTabla} con ON DUPLICATE KEY.")
+        logging.info(f"Se insertaron {total_rows:,} registros en {table_name} con ON DUPLICATE KEY.")
 
     def insertar_con_ignore(self, df, chunk_threshold, chunk_size):
-        data_list_raw = df.to_dict(orient="records")
-        total_rows = len(data_list_raw)
-        logging.info(
-            f"Se preparan {total_rows} registros para insertar con INSERT IGNORE en {self.txTabla}."
-        )
-        if not data_list_raw:
+        """Inserta con INSERT IGNORE. Mantiene compatibilidad con llamadas externas."""
+        total_rows = len(df)
+        if total_rows == 0:
             logging.warning(f"No hay registros para insertar en {self.txTabla}")
             return
-
-        data_list, columnas = self._normalize_and_filter_records_for_table(
-            str(self.txTabla), data_list_raw
-        )
-        if not columnas:
-            logging.error(
-                f"No quedaron columnas válidas para insertar en {self.txTabla}. Inserción cancelada."
-            )
+        table_name = str(self.txTabla)
+        ctx = self._precompute_insert_context(table_name, list(df.columns))
+        if not ctx:
             return
-
-        data_bound, placeholders = self._build_bindings(data_list, columnas)
-        columnas_str = ", ".join(self._quote_ident(c) for c in columnas)
-        insert_query = (
-            f"INSERT IGNORE INTO {self.txTabla} ({columnas_str})\n"
-            f"VALUES ({placeholders});"
+        df = self._normalize_dataframe_for_insert(df, ctx["valid_columns"], ctx["table_cols"])
+        self._stream_insert_chunks(
+            df, ctx["insert_query_ignore"], ctx["valid_columns"], ctx["table_cols"],
+            ctx["bind_map"], chunk_size, "INSERT IGNORE",
         )
-        
-        self._execute_batch_insert(insert_query, data_bound, total_rows, chunk_size, "INSERT IGNORE")
-        logging.info(f"✓ Se insertaron {total_rows:,} registros en {self.txTabla} con INSERT IGNORE.")
+        logging.info(f"Se insertaron {total_rows:,} registros en {table_name} con INSERT IGNORE.")
 
-    def _execute_batch_insert(self, query: str, data: list[dict], total_rows: int, chunk_size: int, method_name: str):
-        """Helper para ejecutar inserciones por lotes con manejo robusto de conexiones y reintentos."""
+    def _stream_insert_chunks(
+        self,
+        df: pd.DataFrame,
+        query: str,
+        valid_columns: list[str],
+        _table_cols: dict,
+        bind_map: dict[str, str],
+        chunk_size: int,
+        method_name: str,
+    ):
+        """Inserta DataFrame ya normalizado por chunks via executemany.
+
+        El DataFrame ya viene normalizado por _normalize_dataframe_for_insert,
+        solo necesita: to_dict → bind_map → execute.
+        _table_cols se mantiene por compatibilidad de firma.
+        """
+        total_rows = len(df)
         max_retries = 3
-        
-        # Iterar por chunks
+        batch_start = time.perf_counter()
+
+        # Renombrar columnas del DF a bind keys de una vez (evita transformacion dict-por-dict)
+        df_for_insert = df.rename(columns=bind_map)
+        bind_keys = [bind_map[c] for c in valid_columns]
+
         for start_idx in range(0, total_rows, chunk_size):
             end_idx = min(start_idx + chunk_size, total_rows)
-            chunk = data[start_idx:end_idx]
-            
-            # Intentar insertar el chunk actual con reintentos
+
+            # to_dict solo del sub-chunk, con columnas ya renombradas
+            bound = df_for_insert.iloc[start_idx:end_idx][bind_keys].to_dict(orient="records")
+
+            # Insertar con reintentos
             chunk_success = False
             for attempt in range(max_retries):
                 try:
-                    # IMPORTANTE: Abrir transacción NUEVA para cada chunk. 
-                    # Esto evita transacciones gigantes que bloquean la DB o mueren por timeout.
                     with self.engine_mysql_bi.begin() as connection:
-                        connection.execute(text(query), chunk)
-                    
+                        connection.execute(text(query), bound)
                     logging.debug(
-                        f"[{method_name}] Chunk {start_idx}-{end_idx} insertado correctamente."
+                        f"[{method_name}] Chunk {start_idx}-{end_idx} insertado."
                     )
                     chunk_success = True
-                    break # Éxito, salir del loop de reintentos
-                
+                    break
                 except OperationalError as e:
                     logging.warning(
-                        f"Error de conexión en chunk {start_idx}-{end_idx} (Intento {attempt + 1}/{max_retries}): {e}"
+                        f"Error conexión chunk {start_idx}-{end_idx} (Intento {attempt + 1}/{max_retries}): {e}"
                     )
-                    # Forzar limpieza de conexión muerta
                     try:
-                        con.clear_connection_cache() 
-                    except:
+                        con.clear_connection_cache()
+                    except Exception:
                         pass
-                    time.sleep(2 * (attempt + 1)) # Backoff
-                
+                    time.sleep(2 * (attempt + 1))
                 except SQLAlchemyError as e:
-                    logging.error(f"Error SQL crítico en chunk {start_idx}-{end_idx}: {e}")
-                    # Errores de SQL (sintaxis, integridad fatales) no suelen arreglarse con retry
-                    # Pero si es deadlock, maybe. Asumimos retry conservador.
+                    logging.error(f"Error SQL chunk {start_idx}-{end_idx}: {e}")
                     if "Deadlock" in str(e) or "Lock wait timeout" in str(e):
                         time.sleep(5)
                         continue
-                    raise e
-            
+                    raise
+
             if not chunk_success:
-                error_msg = f"Fallo definitivo al insertar chunk {start_idx}-{end_idx} tras {max_retries} intentos."
+                error_msg = f"Fallo definitivo chunk {start_idx}-{end_idx} tras {max_retries} intentos."
                 logging.error(error_msg)
                 raise Exception(error_msg)
+
+            del bound
+
+        elapsed = max(time.perf_counter() - batch_start, 0.001)
+        logging.info(
+            f"[{method_name}] Inserción completada en {elapsed:.2f}s ({total_rows / elapsed:,.1f} filas/s)."
+        )
 
 
 # Si se desea ejecutar como script independiente

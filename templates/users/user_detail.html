@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle Usuario{% endblock title %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Detalle de Usuario</h3>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'users_app:user-list' %}">Volver</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">ID</dt>
+        <dd class="col-sm-9">{{ user_detail.id }}</dd>
+
+        <dt class="col-sm-3">Usuario</dt>
+        <dd class="col-sm-9">{{ user_detail.username }}</dd>
+
+        <dt class="col-sm-3">Nombres</dt>
+        <dd class="col-sm-9">{{ user_detail.nombres|default:"-" }}</dd>
+
+        <dt class="col-sm-3">Apellidos</dt>
+        <dd class="col-sm-9">{{ user_detail.apellidos|default:"-" }}</dd>
+
+        <dt class="col-sm-3">Email</dt>
+        <dd class="col-sm-9">{{ user_detail.email|default:"-" }}</dd>
+
+        <dt class="col-sm-3">Activo</dt>
+        <dd class="col-sm-9">{{ user_detail.is_active|yesno:"Si,No" }}</dd>
+
+        <dt class="col-sm-3">Staff</dt>
+        <dd class="col-sm-9">{{ user_detail.is_staff|yesno:"Si,No" }}</dd>
+
+        <dt class="col-sm-3">Fecha registro</dt>
+        <dd class="col-sm-9">{{ user_detail.date_joined }}</dd>
+      </dl>
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <a class="btn btn-sm btn-warning" href="{% url 'users_app:user-edit' user_detail.pk %}">Editar</a>
+      <a class="btn btn-sm btn-danger" href="{% url 'users_app:user-delete' user_detail.pk %}">Eliminar</a>
+    </div>
+  </div>
+</div>
+{% endblock content %}

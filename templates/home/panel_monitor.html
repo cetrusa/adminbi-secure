@@ -1,70 +1,200 @@
 {% extends 'black.html' %}
 {% load static %}
 {% block title %}Panel de Monitoreo{% endblock title %}
+
 {% block barra_lateral %}
-{% comment %} {% include 'includes/left_sidebar_cubo.html' %} {# Puedes crear left_sidebar_monitor.html si quieres menú propio #} {% endcomment %}
+{% comment %} {% include 'includes/left_sidebar_cubo.html' %} {% endcomment %}
 {% endblock barra_lateral %}
+
 {% block window %}
-<h2 class="mb-4">Panel de Monitoreo</h2>
-<div class="row">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bolder m-0">Panel de Monitoreo</h2>
+    <div class="badge bg-primary-subtle fs-6 rounded-pill px-3 py-2">
+        <i class="fas fa-circle text-primary me-2 fs-7" style="animation: pulse 2s infinite;"></i> En Vivo
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Trabajos en cola (RQ) -->
     <div class="col-md-4">
-        <div class="card mb-3">
-            <div class="card-header bg-primary text-white">Trabajos en cola (RQ)</div>
+        <div class="card h-100">
             <div class="card-body">
-                <strong>Trabajos pendientes:</strong> {{ rq_jobs|length }}<br>
-                <strong>Trabajos fallidos:</strong> {{ rq_failed }}
+                <div class="d-flex align-items-center mb-3">
+                    <div class="symbol symbol-50px rounded-circle bg-primary-subtle p-3 me-3 text-primary d-flex align-items-center justify-content-center"
+                        style="width: 50px; height: 50px;">
+                        <i class="fas fa-server fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0">{{ rq_jobs|length }}</h4>
+                        <p class="text-muted fw-semibold mb-0">Trabajos en cola</p>
+                    </div>
+                </div>
+                <div class="d-flex flex-column text-muted small pb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Pendientes:</span>
+                        <span class="badge bg-warning-subtle text-warning">{{ rq_jobs|length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Fallidos:</span>
+                        <span class="badge bg-danger-subtle text-danger">{{ rq_failed }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Workers Activos -->
     <div class="col-md-4">
-        <div class="card mb-3">
-            <div class="card-header bg-success text-white">Workers activos</div>
+        <div class="card h-100">
             <div class="card-body">
-                <ul>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="symbol symbol-50px rounded-circle bg-success-subtle p-3 me-3 text-success d-flex align-items-center justify-content-center"
+                        style="width: 50px; height: 50px;">
+                        <i class="fas fa-network-wired fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0">{{ rq_workers|length }}</h4>
+                        <p class="text-muted fw-semibold mb-0">Workers Activos</p>
+                    </div>
+                </div>
+                <div class="d-flex flex-column text-muted small pb-2" style="max-height: 50px; overflow-y: auto;">
                     {% for worker in rq_workers %}
-                    <li>{{ worker }}</li>
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="fas fa-check-circle text-success me-2" style="font-size: 0.6rem;"></i>
+                        <span class="text-truncate">{{ worker }}</span>
+                    </div>
                     {% empty %}
-                    <li>No hay workers activos</li>
+                    <div class="text-muted fst-italic">No hay workers activos</div>
                     {% endfor %}
-                </ul>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Usuarios -->
     <div class="col-md-4">
-        <div class="card mb-3">
-            <div class="card-header bg-info text-white">Usuarios</div>
+        <div class="card h-100">
             <div class="card-body">
-                <strong>Totales:</strong> {{ usuarios_totales }}<br>
-                <strong>Activos:</strong> {{ usuarios_activos }}<br>
-                <strong>Staff:</strong> {{ usuarios_staff }}<br>
-                <strong>Superusuarios:</strong> {{ usuarios_superuser }}
+                <div class="d-flex align-items-center mb-3">
+                    <div class="symbol symbol-50px rounded-circle bg-info-subtle p-3 me-3 text-info d-flex align-items-center justify-content-center"
+                        style="width: 50px; height: 50px;">
+                        <i class="fas fa-users fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0">{{ usuarios_totales }}</h4>
+                        <p class="text-muted fw-semibold mb-0">Usuarios Totales</p>
+                    </div>
+                </div>
+                <div class="d-flex flex-column text-muted small pb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Activos:</span>
+                        <span class="badge bg-success-subtle text-success">{{ usuarios_activos }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Staff:</span>
+                        <span class="badge bg-primary-subtle text-primary">{{ usuarios_staff }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Superusuarios:</span>
+                        <span class="badge bg-warning-subtle text-warning">{{ usuarios_superuser }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
-<div class="row">
-    <div class="col-md-6">
-        <div class="card mb-3">
-            <div class="card-header bg-warning text-dark">Últimos accesos</div>
-            <div class="card-body">
-                <ul>
-                    {% for acceso in ultimos_accesos %}
-                    <li>{{ acceso.fecha_hora|date:"Y-m-d H:i:s" }} - {{ acceso.usuario.get_full_name }} - {{ acceso.ip }} - {{ acceso.city }}</li>
-                    {% empty %}
-                    <li>No hay registros recientes</li>
-                    {% endfor %}
-                </ul>
+
+<div class="row g-4">
+    <!-- Últimos accesos -->
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header border-0 pt-4">
+                <h5 class="card-title text-white fw-bold mb-0">Últimos Accesos</h5>
+            </div>
+            <div class="card-body pt-2 pb-4">
+                <!-- Tabla estilo moderno -->
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle gs-0 gy-3 text-white mb-0">
+                        <thead>
+                            <tr
+                                class="text-muted fw-semibold border-bottom border-secondary border-opacity-10 text-uppercase small">
+                                <th class="ps-3">Usuario</th>
+                                <th>Fecha y Hora</th>
+                                <th>IP</th>
+                                <th class="text-end pe-3">Ciudad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for acceso in ultimos_accesos %}
+                            <tr class="border-bottom border-secondary border-opacity-10">
+                                <td class="ps-3 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center text-dark fw-bold me-3"
+                                            style="width: 35px; height: 35px;">
+                                            {{
+                                            acceso.usuario.get_full_name|default:acceso.usuario.username|slice:":1"|upper
+                                            }}
+                                        </div>
+                                        <span class="fw-semibold">{{
+                                            acceso.usuario.get_full_name|default:acceso.usuario.username }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-muted fw-semibold d-block fs-7">{{ acceso.fecha_hora|date:"Y-m-d"
+                                        }}</span>
+                                    <span class="text-muted fw-semibold d-block fs-8">{{ acceso.fecha_hora|time:"H:i:s"
+                                        }}</span>
+                                </td>
+                                <td><span class="badge bg-secondary-subtle text-muted">{{ acceso.ip }}</span></td>
+                                <td class="text-end pe-3 text-muted">{{ acceso.city|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted fst-italic py-4">No hay registros
+                                    recientes</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card mb-3">
-            <div class="card-header bg-secondary text-white">Métricas adicionales</div>
-            <div class="card-body">
-                <!-- Aquí puedes agregar más métricas -->
-                <em>Personaliza este panel según tus necesidades.</em>
+
+    <!-- Métricas adicionales -->
+    <div class="col-md-4">
+        <div class="card h-100 bg-primary bg-opacity-10 border border-primary border-opacity-10"
+            style="background-image: url('{% static 'images/patterns/pattern-1.svg' %}'); background-size: cover;">
+            <div class="card-body d-flex flex-column justify-content-center text-center p-4">
+                <div class="mx-auto bg-primary rounded-circle d-flex align-items-center justify-content-center mb-4"
+                    style="width: 70px; height: 70px;">
+                    <i class="fas fa-chart-pie text-white fs-2"></i>
+                </div>
+                <h5 class="text-white fw-bold mb-2">Métricas Adicionales</h5>
+                <p class="text-primary text-opacity-75 small mb-0">Este espacio está reservado para futuros indicadores
+                    de rendimiento y analítica avanzada.</p>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* Pulse Animation for Live badge */
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+
+        50% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+    }
+</style>
 {% endblock window %}

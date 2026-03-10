@@ -1,0 +1,2825 @@
+/* =========================================================================
+   GXON Theme Customization - Bootstrap 5 Dark Mode Overlay
+   ========================================================================= */
+
+/* Habilitar modo oscuro por defecto en el root de Bootstrap */
+[data-bs-theme="dark"] {
+    /* Fondos principales copiados de la imagen de referencia */
+    --bs-body-bg: #151521;
+    --bs-body-color: #a1a5b7;
+
+    /* Configuración de Tarjetas */
+    --bs-card-bg: #1e1e2d;
+    --bs-card-border-color: rgba(255, 255, 255, 0.05);
+
+    /* Colores primarios y de acento vibrantes */
+    --bs-primary: #3699ff;
+    --bs-primary-rgb: 54, 153, 255;
+
+    --bs-success: #1bc5bd;
+    --bs-success-rgb: 27, 197, 189;
+
+    --bs-info: #8950fc;
+    --bs-info-rgb: 137, 80, 252;
+
+    --bs-warning: #ffa800;
+    --bs-warning-rgb: 255, 168, 0;
+
+    --bs-danger: #f64e60;
+    --bs-danger-rgb: 246, 78, 96;
+
+    /* Superficies y grises modulares */
+    --bs-light: #2b2b40;
+    --bs-dark: #151521;
+    --bs-tertiary-bg: #1b1b29;
+}
+
+/* =========================================================================
+   Ajustes Globales y Tipografía
+   ========================================================================= */
+body {
+    -webkit-font-smoothing: antialiased;
+    font-size: 0.95rem;
+}
+
+/* Redondear tarjetas a estilo Dashboard moderno */
+.card {
+    border-radius: 12px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15) !important;
+    border: none !important;
+}
+
+.card-header {
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* =========================================================================
+   Topbar y Sidebar Variables Visuales
+   ========================================================================= */
+/* Sidebar Base (Left Panel) */
+.gxon-sidebar {
+    background-color: #1e1e2d !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Enlaces del Sidebar */
+.gxon-sidebar .nav-link {
+    color: #a1a5b7 !important;
+    font-weight: 500;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 0.25rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+/* Hover de los Enlaces no activos */
+.gxon-sidebar .nav-link:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Enlace Activo - Formato Pill Neon Azul */
+.gxon-sidebar .nav-link.active,
+.gxon-sidebar .nav-link:active {
+    background-color: var(--bs-primary) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0px 4px 10px rgba(54, 153, 255, 0.3);
+}
+
+/* Iconos dentro de enlaces */
+.gxon-sidebar .nav-link i {
+    width: 25px;
+    text-align: center;
+    font-size: 1.1rem;
+    color: inherit;
+    opacity: 0.8;
+}
+
+/* Top Navigation */
+.gxon-topbar {
+    background-color: var(--bs-body-bg) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 0.75rem 1.5rem;
+}
+
+.gxon-topbar .navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.5px;
+}
+
+/* Badges e Iconos translúcidos */
+.symbol-light-primary {
+    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
+    color: var(--bs-primary) !important;
+}
+
+.symbol-light-success {
+    background-color: rgba(var(--bs-success-rgb), 0.1) !important;
+    color: var(--bs-success) !important;
+}
+
+.symbol-light-warning {
+    background-color: rgba(var(--bs-warning-rgb), 0.1) !important;
+    color: var(--bs-warning) !important;
+}
+
+.symbol-light-danger {
+    background-color: rgba(var(--bs-danger-rgb), 0.1) !important;
+    color: var(--bs-danger) !important;
+}
+
+.symbol-light-info {
+    background-color: rgba(var(--bs-info-rgb), 0.1) !important;
+    color: var(--bs-info) !important;
+}
+
+.badge-light-success {
+    background-color: rgba(var(--bs-success-rgb), 0.15) !important;
+    color: var(--bs-success) !important;
+}
+
+.badge-light-danger {
+    background-color: rgba(var(--bs-danger-rgb), 0.15) !important;
+    color: var(--bs-danger) !important;
+}
+
+.badge-light-primary {
+    background-color: rgba(var(--bs-primary-rgb), 0.15) !important;
+    color: var(--bs-primary) !important;
+}
+
+/* =========================================================================
+   Scrollbar y Selectores
+   ========================================================================= */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #151521;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2b2b40;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3f3f5a;
+}
+
+/* Forms e Inputs oscuros — definición completa en Fase 4 (línea ~1018) */
+
+/* Selectores genéricos */
+.bg-dark {
+    background-color: var(--bs-dark) !important;
+}
+
+/* Contenido Principal Wrapper */
+.main-content {
+    background-color: var(--bs-body-bg);
+    min-width: 0;
+}
+
+/* Sidebar responsive - más angosto en tablets */
+@media (min-width: 768px) and (max-width: 991px) {
+    .sidebar-wrapper {
+        width: 200px !important;
+        min-width: 200px !important;
+        flex-shrink: 0;
+    }
+}
+
+/* --- Dark-mode overrides for light-mode utility classes --- */
+/* Prevents jarring white backgrounds when templates use bg-white/bg-light in dark theme */
+[data-bs-theme="dark"] .bg-white {
+    background-color: var(--bs-card-bg) !important;
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="dark"] .bg-light {
+    background-color: var(--bs-tertiary-bg) !important;
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="dark"] .table-light {
+    --bs-table-bg: rgba(255, 255, 255, 0.03);
+    --bs-table-color: #a1a5b7;
+    --bs-table-border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-bs-theme="dark"] .card-header.bg-white,
+[data-bs-theme="dark"] .card-header.bg-transparent {
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-bs-theme="dark"] .text-dark {
+    color: var(--bs-body-color) !important;
+}
+
+/* =========================================================================
+   Componentes Adicionales GXON (Botones, Badges, Alertas, Accordions, Breadcrumbs)
+   ========================================================================= */
+
+/* --- Accordions --- */
+.accordion {
+    --bs-accordion-bg: var(--bs-card-bg);
+    --bs-accordion-color: var(--bs-body-color);
+    --bs-accordion-border-color: rgba(255, 255, 255, 0.05);
+    --bs-accordion-border-width: 1px;
+    --bs-accordion-border-radius: 8px;
+    --bs-accordion-inner-border-radius: 8px;
+    --bs-accordion-btn-bg: var(--bs-card-bg);
+    --bs-accordion-btn-color: var(--bs-body-color);
+    --bs-accordion-btn-focus-border-color: rgba(var(--bs-primary-rgb), 0.5);
+    --bs-accordion-btn-focus-box-shadow: none;
+    --bs-accordion-active-color: var(--bs-primary);
+    --bs-accordion-active-bg: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.accordion-button::after {
+    filter: invert(1) grayscale(100%) brightness(200%);
+    /* Chevron blanco por defecto */
+}
+
+.accordion-button:not(.collapsed)::after {
+    filter: invert(1) sepia(100%) saturate(10000%) hue-rotate(180deg) brightness(150%);
+    /* Chevron del color activo */
+}
+
+/* Accordions Personalizados estilo GXON */
+.accordion-custom-primary .accordion-button:not(.collapsed) {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
+.accordion-custom-primary .accordion-button:not(.collapsed)::after {
+    filter: brightness(0) invert(1);
+}
+
+.accordion-custom-secondary .accordion-button:not(.collapsed) {
+    background-color: var(--bs-warning);
+    color: #fff;
+}
+
+.accordion-custom-secondary .accordion-button:not(.collapsed)::after {
+    filter: brightness(0) invert(1);
+}
+
+/* --- Alerts --- */
+.alert {
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+}
+
+.alert-primary {
+    background-color: var(--bs-primary);
+}
+
+.alert-secondary {
+    background-color: #3f4254;
+}
+
+.alert-success {
+    background-color: var(--bs-success);
+}
+
+.alert-danger {
+    background-color: var(--bs-danger);
+}
+
+.alert-warning {
+    background-color: var(--bs-warning);
+    color: #fff;
+}
+
+.alert-info {
+    background-color: var(--bs-info);
+}
+
+.alert-dark {
+    background-color: #181c32;
+}
+
+.alert-light {
+    background-color: #f5f8fa;
+    color: #181c32;
+}
+
+/* --- Badges --- */
+.badge {
+    padding: 0.4em 0.65em;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+.bg-primary {
+    background-color: var(--bs-primary) !important;
+}
+
+.bg-secondary {
+    background-color: #3f4254 !important;
+}
+
+.bg-success {
+    background-color: var(--bs-success) !important;
+}
+
+.bg-danger {
+    background-color: var(--bs-danger) !important;
+}
+
+.bg-warning {
+    background-color: var(--bs-warning) !important;
+    color: #fff !important;
+}
+
+.bg-info {
+    background-color: var(--bs-info) !important;
+}
+
+/* Subtle badges */
+.bg-primary-subtle {
+    background-color: rgba(var(--bs-primary-rgb), 0.15) !important;
+    color: var(--bs-primary) !important;
+}
+
+.bg-success-subtle {
+    background-color: rgba(var(--bs-success-rgb), 0.15) !important;
+    color: var(--bs-success) !important;
+}
+
+.bg-danger-subtle {
+    background-color: rgba(var(--bs-danger-rgb), 0.15) !important;
+    color: var(--bs-danger) !important;
+}
+
+.bg-warning-subtle {
+    background-color: rgba(var(--bs-warning-rgb), 0.15) !important;
+    color: var(--bs-warning) !important;
+}
+
+.bg-info-subtle {
+    background-color: rgba(var(--bs-info-rgb), 0.15) !important;
+    color: var(--bs-info) !important;
+}
+
+.bg-secondary-subtle {
+    background-color: rgba(63, 66, 84, 0.25) !important;
+    color: #a1a5b7 !important;
+}
+
+/* --- Breadcrumbs --- */
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin-bottom: 0;
+}
+
+.breadcrumb-item a {
+    color: var(--bs-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.breadcrumb-item.active {
+    color: var(--bs-body-color);
+}
+
+.breadcrumb-item+.breadcrumb-item::before {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Breadcrumbs Coloridos y Bordes */
+.breadcrumb-colored {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.breadcrumb-border {
+    padding: 1rem;
+    border-radius: 8px;
+    background-color: transparent;
+    border: 1px solid var(--bs-primary);
+    margin-bottom: 1rem;
+}
+
+/* --- Botones --- */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: #2b7bcc;
+    border-color: #2b7bcc;
+    color: #fff;
+}
+
+.btn-secondary {
+    background-color: #3f4254;
+    border-color: #3f4254;
+    color: #fff;
+}
+
+.btn-success {
+    background-color: var(--bs-success);
+    border-color: var(--bs-success);
+    color: #fff;
+}
+
+.btn-danger {
+    background-color: var(--bs-danger);
+    border-color: var(--bs-danger);
+    color: #fff;
+}
+
+.btn-warning {
+    background-color: var(--bs-warning);
+    border-color: var(--bs-warning);
+    color: #fff;
+}
+
+.btn-info {
+    background-color: var(--bs-info);
+    border-color: var(--bs-info);
+    color: #fff;
+}
+
+/* Outline buttons Hover State overrides */
+.btn-outline-primary {
+    color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
+/* Subtle buttons (background claro con texto de color) */
+.btn-subtle-primary {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+    border: none;
+}
+
+.btn-subtle-primary:hover {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
+.btn-subtle-success {
+    background-color: rgba(var(--bs-success-rgb), 0.1);
+    color: var(--bs-success);
+    border: none;
+}
+
+.btn-subtle-success:hover {
+    background-color: var(--bs-success);
+    color: #fff;
+}
+
+.btn-subtle-danger {
+    background-color: rgba(var(--bs-danger-rgb), 0.1);
+    color: var(--bs-danger);
+    border: none;
+}
+
+.btn-subtle-danger:hover {
+    background-color: var(--bs-danger);
+    color: #fff;
+}
+
+.btn-subtle-warning {
+    background-color: rgba(var(--bs-warning-rgb), 0.1);
+    color: var(--bs-warning);
+    border: none;
+}
+
+.btn-subtle-warning:hover {
+    background-color: var(--bs-warning);
+    color: #fff;
+}
+
+.btn-subtle-info {
+    background-color: rgba(var(--bs-info-rgb), 0.1);
+    color: var(--bs-info);
+    border: none;
+}
+
+.btn-subtle-info:hover {
+    background-color: var(--bs-info);
+    color: #fff;
+}
+
+/* Dashed borders */
+.border-dashed-primary {
+    border: 1px dashed var(--bs-primary) !important;
+    color: var(--bs-primary);
+    background: transparent;
+}
+
+.border-dashed-success {
+    border: 1px dashed var(--bs-success) !important;
+    color: var(--bs-success);
+    background: transparent;
+}
+
+.border-dashed-danger {
+    border: 1px dashed var(--bs-danger) !important;
+    color: var(--bs-danger);
+    background: transparent;
+}
+
+.border-dashed-warning {
+    border: 1px dashed var(--bs-warning) !important;
+    color: var(--bs-warning);
+    background: transparent;
+}
+
+.border-dashed-info {
+    border: 1px dashed var(--bs-info) !important;
+    color: var(--bs-info);
+    background: transparent;
+}
+
+/* =========================================================================
+   Nuevos Componentes GXON (Dropdowns, Modals, Button Groups, Cards Extra)
+   ========================================================================= */
+
+/* --- Dropdowns --- */
+.dropdown-menu {
+    background-color: var(--bs-card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 0.5rem 0;
+}
+
+.dropdown-item {
+    color: var(--bs-body-color);
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
+.dropdown-divider {
+    border-top-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Dropdown color variations (como se ve en la imagen) */
+.dropdown-menu-dark {
+    background-color: #181c32;
+    /* Tono más oscuro */
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-menu-dark .dropdown-item {
+    color: #a1a5b7;
+}
+
+.dropdown-menu-dark .dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+/* --- Modals --- */
+.modal-content {
+    background-color: var(--bs-card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Processing modal: dark semi-transparent backdrop */
+#processingModal {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Compatibility: modals shown via inline style.display still align properly with fade class */
+.modal.fade[style*="display: flex"] .modal-dialog,
+.modal.fade[style*="display: block"] .modal-dialog {
+    transform: none;
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+}
+
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.modal-title {
+    font-weight: 600;
+    color: #fff;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    color: var(--bs-body-color);
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+}
+
+/* --- Button Groups --- */
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+/* Button toolbar spacing */
+.btn-toolbar .btn-group {
+    margin-right: 0.5rem;
+}
+
+/* Fix radio/checkbox button group active state styling */
+.btn-check:checked+.btn-outline-primary {
+    background-color: var(--bs-primary);
+    color: #fff;
+    border-color: var(--bs-primary);
+}
+
+/* --- Cards Extra (Imágenes) --- */
+.card-img-top {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    object-fit: cover;
+}
+
+.card-img-bottom {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    object-fit: cover;
+}
+
+/* =========================================================================
+   Componentes Extra Parte 2 (Navbars, List Groups, Tabs, Offcanvas, Pagination)
+   ========================================================================= */
+
+/* --- Navbars --- */
+.navbar-dark {
+    background-color: #1e1e2d;
+}
+
+/* Color Schemes (bg-primary, bg-success, etc.) text fixing */
+.navbar.bg-primary .navbar-brand,
+.navbar.bg-primary .nav-link,
+.navbar.bg-success .navbar-brand,
+.navbar.bg-success .nav-link,
+.navbar.bg-danger .navbar-brand,
+.navbar.bg-danger .nav-link,
+.navbar.bg-warning .navbar-brand,
+.navbar.bg-warning .nav-link,
+.navbar.bg-info .navbar-brand,
+.navbar.bg-info .nav-link {
+    color: #fff;
+}
+
+.navbar.bg-light .navbar-brand,
+.navbar.bg-light .nav-link {
+    color: var(--bs-dark);
+}
+
+/* --- List Groups --- */
+.list-group {
+    border-radius: 8px;
+}
+
+.list-group-item {
+    background-color: var(--bs-card-bg);
+    border-color: rgba(255, 255, 255, 0.05);
+    color: var(--bs-body-color);
+    padding: 0.75rem 1.25rem;
+}
+
+.list-group-item.active {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: #fff;
+}
+
+.list-group-item-action:hover,
+.list-group-item-action:focus {
+    background-color: rgba(255, 255, 255, 0.02);
+    color: var(--bs-body-color);
+}
+
+.list-group-flush>.list-group-item {
+    background-color: transparent;
+}
+
+.list-group-numbered>.list-group-item::before {
+    color: var(--bs-primary);
+    font-weight: 600;
+}
+
+/* --- Tabs & Navs --- */
+.nav-tabs {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #a1a5b7;
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    margin-bottom: -1px;
+    background: transparent;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--bs-primary);
+    border-bottom-color: rgba(var(--bs-primary-rgb), 0.5);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--bs-primary);
+    border-bottom-color: var(--bs-primary);
+    background: transparent;
+}
+
+/* Nav Pills */
+.nav-pills .nav-link {
+    border-radius: 6px;
+    color: #a1a5b7;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+}
+
+.nav-pills .nav-link:hover {
+    color: var(--bs-primary);
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.nav-pills .nav-link.active {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
+/* --- Offcanvas --- */
+.offcanvas {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.offcanvas-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+}
+
+.offcanvas-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.offcanvas-body {
+    padding: 1.5rem;
+}
+
+/* Dark offcanvas variante */
+.offcanvas.text-bg-dark {
+    background-color: #181c32 !important;
+}
+
+/* --- Pagination --- */
+.pagination {
+    margin-bottom: 0;
+}
+
+.page-item .page-link {
+    background-color: transparent;
+    border-color: transparent;
+    color: #a1a5b7;
+    font-weight: 500;
+    margin: 0 0.15rem;
+    border-radius: 6px;
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.page-item:not(.active) .page-link:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+    color: var(--bs-primary);
+}
+
+.page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: #fff;
+}
+
+.page-item.disabled .page-link {
+    background-color: transparent;
+    color: rgba(161, 165, 183, 0.4);
+}
+
+/* Pagination Rounded Circle */
+.pagination-circle .page-link {
+    border-radius: 50% !important;
+}
+
+/* Color variations for pagination */
+.pagination-primary .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.pagination-danger .page-item.active .page-link {
+    background-color: var(--bs-danger);
+    border-color: var(--bs-danger);
+}
+
+.pagination-warning .page-item.active .page-link {
+    background-color: var(--bs-warning);
+    border-color: var(--bs-warning);
+    color: #fff;
+}
+
+.pagination-info .page-item.active .page-link {
+    background-color: var(--bs-info);
+    border-color: var(--bs-info);
+}
+
+.pagination-dark .page-item.active .page-link {
+    background-color: #181c32;
+    border-color: #181c32;
+}
+
+/* =========================================================================
+   Componentes Extra Parte 3 (Progress, Toasts, Tooltips, Spinners, Scrollspy)
+   ========================================================================= */
+
+/* --- Progress --- */
+.progress {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    box-shadow: none;
+    height: 1rem;
+}
+
+.progress-bar {
+    border-radius: 8px;
+}
+
+/* --- Spinners --- */
+.spinner-border {
+    border-width: 0.2em;
+}
+
+.spinner-grow {
+    background-color: currentColor;
+    opacity: 0;
+}
+
+/* --- Toasts --- */
+.toast {
+    background-color: var(--bs-card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    color: var(--bs-body-color);
+}
+
+.toast-header {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.toast-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.toast-body {
+    padding: 1rem;
+}
+
+/* Translucent toasts handling */
+.toast.showing,
+.toast.show {
+    backdrop-filter: blur(10px);
+}
+
+/* --- Tooltips --- */
+.tooltip-inner {
+    background-color: #1e1e2d;
+    color: #fff;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.bs-tooltip-top .tooltip-arrow::before,
+.bs-tooltip-auto[data-popper-placement^="top"] .tooltip-arrow::before {
+    border-top-color: #1e1e2d;
+}
+
+.bs-tooltip-end .tooltip-arrow::before,
+.bs-tooltip-auto[data-popper-placement^="end"] .tooltip-arrow::before {
+    border-right-color: #1e1e2d;
+}
+
+.bs-tooltip-bottom .tooltip-arrow::before,
+.bs-tooltip-auto[data-popper-placement^="bottom"] .tooltip-arrow::before {
+    border-bottom-color: #1e1e2d;
+}
+
+.bs-tooltip-start .tooltip-arrow::before,
+.bs-tooltip-auto[data-popper-placement^="start"] .tooltip-arrow::before {
+    border-left-color: #1e1e2d;
+}
+
+/* Custom Colored Tooltips (Variables locales referenciando a la imagen) */
+.custom-tooltip-primary .tooltip-inner {
+    background-color: var(--bs-primary);
+}
+
+.custom-tooltip-primary.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--bs-primary);
+}
+
+.custom-tooltip-primary.bs-tooltip-start .tooltip-arrow::before {
+    border-left-color: var(--bs-primary);
+}
+
+.custom-tooltip-primary.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: var(--bs-primary);
+}
+
+.custom-tooltip-primary.bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: var(--bs-primary);
+}
+
+.custom-tooltip-success .tooltip-inner {
+    background-color: var(--bs-success);
+}
+
+.custom-tooltip-success.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--bs-success);
+}
+
+.custom-tooltip-danger .tooltip-inner {
+    background-color: var(--bs-danger);
+}
+
+.custom-tooltip-danger.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--bs-danger);
+}
+
+.custom-tooltip-warning .tooltip-inner {
+    background-color: var(--bs-warning);
+    color: #fff;
+}
+
+.custom-tooltip-warning.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--bs-warning);
+}
+
+.custom-tooltip-info .tooltip-inner {
+    background-color: var(--bs-info);
+}
+
+.custom-tooltip-info.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--bs-info);
+}
+
+/* --- Scrollspy & List Groups integration additions --- */
+/* (Las bases para Scrollspy ya se soportan con Navbar, Nav pills, Nav tabs y List groups estilizados arriba) */
+
+/* =========================================================================
+   Componentes Extra Parte 4 (Form Elements, Inputs, Checkboxes, Validation)
+   ========================================================================= */
+
+/* --- Elementos de Formulario Base (Inputs, Selects, Textareas) --- */
+.form-control,
+.form-select {
+    background-color: var(--bs-card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--bs-body-color);
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 400;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--bs-card-bg);
+    border-color: var(--bs-primary);
+    color: var(--bs-body-color);
+    box-shadow: none;
+    /* Quitamos el glow de Bootstrap por defecto para usar outline fino */
+    outline: 0;
+}
+
+.form-control::placeholder {
+    color: #5e6278;
+    /* Muted text para los placeholders */
+}
+
+.form-control:disabled,
+.form-control[readonly],
+.form-select:disabled {
+    background-color: rgba(255, 255, 255, 0.02);
+    color: #5e6278;
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+/* --- Input Groups --- */
+.input-group-text {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #a1a5b7;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+}
+
+.input-group .form-control:focus+.input-group-text,
+.input-group .input-group-text:has(+ .form-control:focus) {
+    border-color: var(--bs-primary);
+}
+
+/* Redondear corners correctamente en los input groups */
+.input-group:not(.has-validation)> :not(:last-child):not(.dropdown-toggle):not(.dropdown-menu),
+.input-group:not(.has-validation)>.dropdown-toggle:nth-last-child(n + 3) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.input-group> :not(:first-child):not(.dropdown-menu):not(.valid-tooltip):not(.valid-feedback):not(.invalid-tooltip):not(.invalid-feedback) {
+    margin-left: -1px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* --- Checkboxes & Radios Customizados (Variantes Coloridas) --- */
+.form-check-input {
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 1.25em;
+    height: 1.25em;
+    margin-top: 0.15em;
+}
+
+.form-check-input:focus {
+    border-color: var(--bs-primary);
+    box-shadow: none;
+}
+
+.form-check-input:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+/* Custom color overrides para Checkboxes y Radios */
+.form-check-input.form-check-primary:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.form-check-input.form-check-secondary:checked {
+    background-color: var(--bs-secondary);
+    border-color: var(--bs-secondary);
+}
+
+.form-check-input.form-check-success:checked {
+    background-color: var(--bs-success);
+    border-color: var(--bs-success);
+}
+
+.form-check-input.form-check-danger:checked {
+    background-color: var(--bs-danger);
+    border-color: var(--bs-danger);
+}
+
+.form-check-input.form-check-warning:checked {
+    background-color: var(--bs-warning);
+    border-color: var(--bs-warning);
+}
+
+.form-check-input.form-check-info:checked {
+    background-color: var(--bs-info);
+    border-color: var(--bs-info);
+}
+
+.form-check-input.form-check-dark:checked {
+    background-color: var(--bs-white);
+    border-color: var(--bs-white);
+}
+
+.form-check-input.form-check-dark:checked[type=checkbox] {
+    filter: invert(1);
+}
+
+/* --- Floating Labels --- */
+.form-floating>.form-control,
+.form-floating>.form-control-plaintext,
+.form-floating>.form-select {
+    height: calc(3.5rem + 2px);
+    line-height: 1.25;
+}
+
+.form-floating>label {
+    padding: 1rem 1rem;
+    color: #a1a5b7;
+}
+
+.form-floating>.form-control:focus~label,
+.form-floating>.form-control:not(:placeholder-shown)~label,
+.form-floating>.form-select~label {
+    color: var(--bs-primary);
+    opacity: 0.8;
+    transform: scale(0.85) translateY(-0.75rem) translateX(0.15rem);
+}
+
+/* Ligeros ajustes al textarea flotante */
+.form-floating>.form-control {
+    padding: 1rem 1rem;
+}
+
+.form-floating>.form-control::-moz-placeholder {
+    color: transparent;
+}
+
+.form-floating>.form-control::placeholder {
+    color: transparent;
+}
+
+.form-floating>.form-control:not(:placeholder-shown) {
+    padding-top: 1.625rem;
+    padding-bottom: 0.625rem;
+}
+
+/* --- Form Validation States --- */
+/* Validación general (Bordes y feedback) */
+.form-control.is-valid,
+.was-validated .form-control:valid {
+    border-color: var(--bs-success);
+    background-image: none;
+    /* Quitamos el icono feo de validación default en modo oscuro si no casa */
+    padding-right: 1rem;
+}
+
+.form-control.is-valid:focus,
+.was-validated .form-control:valid:focus {
+    border-color: var(--bs-success);
+    box-shadow: none;
+}
+
+.valid-feedback,
+.valid-tooltip {
+    color: var(--bs-success);
+}
+
+.form-control.is-invalid,
+.was-validated .form-control:invalid {
+    border-color: var(--bs-danger);
+    background-image: none;
+    padding-right: 1rem;
+}
+
+.form-control.is-invalid:focus,
+.was-validated .form-control:invalid:focus {
+    border-color: var(--bs-danger);
+    box-shadow: none;
+}
+
+.invalid-feedback,
+.invalid-tooltip {
+    color: var(--bs-danger);
+}
+
+/* Contenedores visuales para validaciones al estilo la imagen */
+.validation-container {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.validation-container.is-valid {
+    border-color: var(--bs-success);
+}
+
+.validation-container.is-valid::after {
+    content: '\f00c';
+    /* FontAwesome Check */
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free';
+    font-weight: 900;
+    color: var(--bs-success);
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.validation-container.is-invalid {
+    border-color: var(--bs-danger);
+}
+
+.validation-container.is-invalid::after {
+    content: '\f06a';
+    /* FontAwesome Exclamation Circle */
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free';
+    font-weight: 900;
+    color: var(--bs-danger);
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.validation-container .form-control {
+    border: none;
+    padding: 0;
+    background: transparent;
+}
+
+.validation-container .form-control:focus {
+    border: none;
+    background: transparent;
+}
+
+/* =========================================================================
+   Fase 4: Tablas, DataTables y Gráficos (+ Plugins Avanzados)
+   ========================================================================= */
+
+/* --- Tablas Básicas Bootstrap --- */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--bs-body-color);
+    --bs-table-border-color: rgba(255, 255, 255, 0.08);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.02);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.015);
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+.table> :not(caption)>*>* {
+    padding: 1rem 1rem;
+    border-bottom: 1px solid var(--bs-table-border-color);
+}
+
+.table th {
+    font-weight: 600;
+    color: #a1a5b7;
+    text-transform: capitalize;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+}
+
+.table td {
+    font-size: 0.95rem;
+    color: var(--bs-body-color);
+}
+
+/* Table Dark Variant */
+.table-dark {
+    --bs-table-bg: #181c32;
+    /* Tono más oscuro/azulado */
+    --bs-table-color: #fff;
+    --bs-table-border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* --- DataTables --- */
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    background-color: var(--bs-card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--bs-body-color);
+    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.dataTables_wrapper .dataTables_length select:focus,
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: var(--bs-primary);
+}
+
+.dataTables_wrapper .dataTables_info {
+    color: #a1a5b7;
+    padding-top: 1rem;
+    font-size: 0.85rem;
+}
+
+.dataTables_wrapper .dataTables_paginate {
+    padding-top: 1rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    background: transparent !important;
+    border: none !important;
+    color: #a1a5b7 !important;
+    padding: 0.35rem 0.85rem !important;
+    border-radius: 6px !important;
+    margin: 0 0.15rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled) {
+    background: rgba(var(--bs-primary-rgb), 0.1) !important;
+    color: var(--bs-primary) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: var(--bs-primary) !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* DataTables Sorting Icons (Modificados para dark mode) */
+table.dataTable thead .sorting,
+table.dataTable thead .sorting_asc,
+table.dataTable thead .sorting_desc {
+    background-image: none !important;
+    position: relative;
+    padding-right: 1.5rem;
+}
+
+table.dataTable thead .sorting:after,
+table.dataTable thead .sorting_asc:after,
+table.dataTable thead .sorting_desc:after {
+    content: '\21C5';
+    /* Up/down arrow */
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8em;
+    opacity: 0.3;
+}
+
+table.dataTable thead .sorting_asc:after {
+    content: '\2191';
+    opacity: 1;
+    color: var(--bs-primary);
+}
+
+table.dataTable thead .sorting_desc:after {
+    content: '\2193';
+    opacity: 1;
+    color: var(--bs-primary);
+}
+
+
+/* --- Flatpickr (Date Picker) Tema Oscuro Integrado --- */
+.flatpickr-calendar {
+    background: #1e1e2d;
+    /* Color card-bg principal */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+}
+
+.flatpickr-calendar.arrowTop:before,
+.flatpickr-calendar.arrowTop:after {
+    border-bottom-color: #1e1e2d;
+}
+
+.flatpickr-calendar.arrowBottom:before,
+.flatpickr-calendar.arrowBottom:after {
+    border-top-color: #1e1e2d;
+}
+
+.flatpickr-months .flatpickr-month {
+    background: #1e1e2d;
+    color: #fff;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year {
+    color: #fff;
+    background: transparent;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover,
+.flatpickr-current-month input.cur-year:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.flatpickr-weekdays {
+    background: #1e1e2d;
+}
+
+span.flatpickr-weekday {
+    color: #5e6278;
+    font-weight: 600;
+}
+
+.flatpickr-day {
+    color: #a1a5b7;
+    border-radius: 50%;
+    /* Circulares estilo imagen */
+}
+
+.flatpickr-day:hover,
+.flatpickr-day:focus {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: transparent;
+    color: #fff;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected.inRange,
+.flatpickr-day.startRange.inRange,
+.flatpickr-day.endRange.inRange,
+.flatpickr-day.selected:focus,
+.flatpickr-day.startRange:focus,
+.flatpickr-day.endRange:focus,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover,
+.flatpickr-day.selected.prevMonthDay,
+.flatpickr-day.startRange.prevMonthDay,
+.flatpickr-day.endRange.prevMonthDay,
+.flatpickr-day.selected.nextMonthDay,
+.flatpickr-day.startRange.nextMonthDay,
+.flatpickr-day.endRange.nextMonthDay {
+    background: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: #fff;
+}
+
+.flatpickr-day.inRange,
+.flatpickr-day.prevMonthDay.inRange,
+.flatpickr-day.nextMonthDay.inRange,
+.flatpickr-day.today.inRange,
+.flatpickr-day.prevMonthDay.today.inRange,
+.flatpickr-day.nextMonthDay.today.inRange,
+.flatpickr-day:hover,
+.flatpickr-day.prevMonthDay:hover,
+.flatpickr-day.nextMonthDay:hover,
+.flatpickr-day:focus,
+.flatpickr-day.prevMonthDay:focus,
+.flatpickr-day.nextMonthDay:focus {
+    background: rgba(var(--bs-primary-rgb), 0.1);
+    border-color: transparent;
+    color: var(--bs-primary);
+    box-shadow: none;
+}
+
+.flatpickr-day.today {
+    border-color: var(--bs-primary);
+}
+
+
+/* --- Tagify Tema Oscuro --- */
+.tagify {
+    --tags-border-color: rgba(255, 255, 255, 0.08);
+    --tags-hover-border-color: var(--bs-primary);
+    --tags-focus-border-color: var(--bs-primary);
+    --tag-bg: rgba(255, 255, 255, 0.05);
+    --tag-hover: rgba(255, 255, 255, 0.08);
+    --tag-text-color: var(--bs-body-color);
+    --tag-text-color--edit: var(--bs-body-color);
+    --tag-pad: 0.3rem 0.5rem;
+    --tag-inset-shadow-size: 1.1em;
+    --tag-invalid-color: var(--bs-danger);
+    --tag-invalid-bg: rgba(var(--bs-danger-rgb), 0.1);
+    --tag-remove-bg: rgba(var(--bs-danger-rgb), 0.2);
+    --tag-remove-btn-color: #fff;
+    --tag-remove-btn-bg: transparent;
+    --tag-remove-btn-bg--hover: var(--bs-danger);
+
+    border-radius: 8px;
+    background-color: transparent;
+    /* Se deja que el input original controle o el wrapper .form-control */
+    padding: 0.25rem 0.5rem;
+}
+
+/* Colores personalizados para los Tags parecidos a la imagen */
+.tagify__tag.tagify-primary>div,
+.tagify__tag.tagify-primary .tagify__tag-text {
+    background-color: var(--bs-primary) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+.tagify__tag.tagify-success>div,
+.tagify__tag.tagify-success .tagify__tag-text {
+    background-color: var(--bs-success) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+/* Para inputs con apariencia de pill/badges rounded */
+.tagify__tag {
+    border-radius: 12px;
+}
+
+.tagify__input {
+    color: #a1a5b7;
+}
+
+
+/* --- ApexCharts Tema Oscuro --- */
+.apexcharts-canvas {
+    color: #a1a5b7;
+    /* Color texto general svg */
+}
+
+/* Toolbar (Menu de exportar, pan, zoom) */
+.apexcharts-toolbar {
+    color: #a1a5b7;
+}
+
+.apexcharts-menu {
+    background: var(--bs-card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.apexcharts-menu.apexcharts-menu-open {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.apexcharts-theme-light .apexcharts-menu-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Force dark hover */
+
+/* Ejes y Cuadrícula (Axes & Grid) */
+.apexcharts-xaxis line,
+.apexcharts-yaxis line {
+    stroke: rgba(255, 255, 255, 0.1);
+}
+
+.apexcharts-xaxis-tick {
+    stroke: rgba(255, 255, 255, 0.1);
+}
+
+.apexcharts-gridline {
+    stroke: rgba(255, 255, 255, 0.05);
+}
+
+/* Etiquetas de Texto en Gráficos */
+.apexcharts-text {
+    fill: #a1a5b7;
+    font-family: inherit !important;
+    /* Forza Inter Font */
+}
+
+.apexcharts-legend-text {
+    color: #a1a5b7 !important;
+    font-family: inherit !important;
+}
+
+/* Tooltip nativo de ApexChart flotante */
+.apexcharts-tooltip {
+    background: #1e1e2d !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3) !important;
+    color: #fff !important;
+}
+
+.apexcharts-tooltip-title {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    font-family: inherit !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 0.75rem !important;
+}
+
+.apexcharts-xaxistooltip {
+    background: #1e1e2d !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #fff !important;
+}
+
+.apexcharts-xaxistooltip:after,
+.apexcharts-xaxistooltip:before {
+    border-bottom-color: #1e1e2d !important;
+}
+
+/* =========================================================================
+   Fase 4 (Parte Final): Integraciones UI Especiales y Layouts Avanzados
+   (Vector Maps, Chat App, Multi-level Submenus)
+   ========================================================================= */
+
+/* --- Mapas Vectoriales (jsVectorMap / jVectorMap) --- */
+.jvm-container {
+    background-color: transparent !important;
+}
+
+.jvm-region {
+    fill: #2b2e42;
+    /* Color oscuro base de los países */
+    stroke: #181c32;
+    /* Borde oscuro */
+    stroke-width: 0.5;
+    transition: fill 0.2s ease;
+}
+
+.jvm-region:hover {
+    fill: rgba(var(--bs-primary-rgb), 0.5);
+    cursor: pointer;
+}
+
+.jvm-region.jvm-region-active {
+    fill: var(--bs-primary);
+}
+
+.jvm-marker {
+    fill: var(--bs-warning);
+    /* Color de pines comunes */
+    stroke: rgba(255, 255, 255, 0.2);
+    stroke-width: 2;
+    transition: transform 0.2s;
+}
+
+/* Glowing Markers effect */
+.jvm-marker:hover {
+    transform: scale(1.3);
+    fill: var(--bs-primary);
+    stroke: #fff;
+}
+
+.jvm-tooltip {
+    background-color: #1e1e2d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Para la variante del mapa con polígonos/región coloreada (ej. Rusia Themed) */
+.jvm-region[data-code="RU"] {
+    /* Placeholder select - normally done via JS data */
+    fill: var(--bs-danger);
+}
+
+
+/* --- Interfaz de Aplicación de Chat --- */
+.chat-app-wrapper {
+    display: flex;
+    flex-direction: row;
+    height: calc(100vh - 140px);
+    background-color: var(--bs-card-bg);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+/* Chat Sidebar (Contact List) */
+.chat-sidebar {
+    width: 300px;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    background-color: transparent;
+}
+
+.chat-search-container {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chat-contact-list {
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.chat-contact-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.chat-contact-item:hover,
+.chat-contact-item.active {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.chat-contact-item.active {
+    border-left: 3px solid var(--bs-primary);
+}
+
+.chat-contact-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    margin-right: 1rem;
+    object-fit: cover;
+}
+
+.chat-contact-info h6 {
+    margin: 0;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.chat-contact-info p {
+    margin: 0;
+    color: #a1a5b7;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+/* Chat Main Panel (Messages) */
+.chat-main-panel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #1a1d2d;
+    /* Ligeramente diferente al sidebar */
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: var(--bs-card-bg);
+}
+
+.chat-messages-container {
+    flex-grow: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.chat-message-bubble {
+    max-width: 70%;
+    padding: 0.8rem 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    position: relative;
+}
+
+.chat-message-bubble.received {
+    align-self: flex-start;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--bs-body-color);
+    border-top-left-radius: 0;
+}
+
+.chat-message-bubble.sent {
+    align-self: flex-end;
+    background-color: var(--bs-primary);
+    color: #fff;
+    border-bottom-right-radius: 0;
+    margin-left: auto;
+}
+
+.chat-input-area {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: var(--bs-card-bg);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.chat-input-area .form-control {
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border: none;
+}
+
+.chat-input-area .form-control:focus {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+
+/* --- Sidebar Submenus (Multi Level representation) --- */
+/* Refinamiento para los dropdowns y colapsos de navegación multinivel en el sidebar izquierdo */
+.gxon-sidebar .nav-item .collapse .nav {
+    padding-left: 1.5rem;
+    /* Indentación visual */
+    position: relative;
+}
+
+.gxon-sidebar .nav-item .collapse .nav::before {
+    content: '';
+    position: absolute;
+    left: 1.5rem;
+    /* Un poco a la izquierda de los items */
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: rgba(255, 255, 255, 0.05);
+    /* Línea vertical sutil del Multi Level */
+}
+
+/* Modificamos el hover de los enlaces de segundo/tercer nivel */
+.gxon-sidebar .nav-item .collapse .nav-link {
+    padding-left: 1rem;
+    /* Margen respecto a la línea guía */
+    font-size: 0.85rem;
+    color: #a1a5b7;
+}
+
+.gxon-sidebar .nav-item .collapse .nav-link:hover,
+.gxon-sidebar .nav-item .collapse .nav-link.active {
+    color: #fff;
+    background: transparent;
+}
+
+/* Botón flecha (caret) para submenús - simulamos el Chevron que se voltea */
+.gxon-sidebar .nav-link[data-bs-toggle="collapse"] {
+    position: relative;
+}
+
+.gxon-sidebar .nav-link[data-bs-toggle="collapse"]::after {
+    content: '\f107';
+    /* FontAwesome Chevron Down */
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: transform 0.3s ease;
+    font-size: 0.8em;
+}
+
+.gxon-sidebar .nav-link[data-bs-toggle="collapse"][aria-expanded="true"]::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* Multi Level Active Highlight similar a la imagen (fondo Primary tenue o Active Font) */
+.gxon-sidebar .nav-link.active-multi-level {
+    color: #fff !important;
+    font-weight: 600;
+}
+
+.gxon-sidebar .nav-link.active-multi-level i::before {
+    content: '\f111';
+    /* Bullet sólido */
+    font-size: 0.4em;
+    vertical-align: middle;
+}
+
+/* =========================================================================
+   Fase 5: Extensiones Finales UI (Calendario, Email, Authentication Forms)
+   ========================================================================= */
+
+/* --- Aplicación de Calendario (Calendar App Wrapper) --- */
+.calendar-app-wrapper {
+    display: flex;
+    flex-direction: row;
+    background-color: transparent;
+    gap: 1.5rem;
+}
+
+/* Calendar Sidebar (Draggable Events) */
+.calendar-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+}
+
+.calendar-sidebar .btn-add-event {
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+.calendar-draggable-events {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.calendar-draggable-events h6 {
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.calendar-event-pill {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+/* Colores de Eventos típicos como en la captura */
+.event-primary {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+    border-left: 3px solid var(--bs-primary);
+}
+
+.event-success {
+    background-color: rgba(var(--bs-success-rgb), 0.1);
+    color: var(--bs-success);
+    border-left: 3px solid var(--bs-success);
+}
+
+.event-info {
+    background-color: rgba(var(--bs-info-rgb), 0.1);
+    color: var(--bs-info);
+    border-left: 3px solid var(--bs-info);
+}
+
+.event-warning {
+    background-color: rgba(var(--bs-warning-rgb), 0.1);
+    color: var(--bs-warning);
+    border-left: 3px solid var(--bs-warning);
+}
+
+.event-danger {
+    background-color: rgba(var(--bs-danger-rgb), 0.1);
+    color: var(--bs-danger);
+    border-left: 3px solid var(--bs-danger);
+}
+
+/* Main Calendar Area (Simulando clases de FullCalendar oscuras) */
+.calendar-main-panel {
+    flex-grow: 1;
+    background-color: var(--bs-card-bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fc-theme-standard .fc-scrollgrid {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.fc-col-header-cell-cushion {
+    color: #fff;
+    font-weight: 600;
+    padding: 0.75rem 0 !important;
+}
+
+.fc-daygrid-day-number {
+    color: #a1a5b7;
+    padding: 0.5rem !important;
+}
+
+.fc-day-today {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+.fc .fc-toolbar-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.fc .fc-button-primary {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.fc .fc-button-primary:hover {
+    background-color: #3f6ad8;
+    border-color: #3f6ad8;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+    background-color: #2651be;
+    border-color: #2651be;
+}
+
+
+/* --- Aplicación de Correo Electrónico (Email App Wrapper) --- */
+.email-app-wrapper {
+    display: flex;
+    flex-direction: row;
+    height: calc(100vh - 140px);
+    background-color: var(--bs-card-bg);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+/* Email Sidebar */
+.email-sidebar {
+    width: 260px;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    background-color: transparent;
+    padding: 1.5rem 0;
+}
+
+.email-sidebar .p-4 {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+.email-menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.email-menu-item {
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #a1a5b7;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.email-menu-item i {
+    width: 24px;
+    font-size: 1.1rem;
+}
+
+.email-menu-item:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.email-menu-item.active {
+    color: #fff;
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    border-left-color: var(--bs-primary);
+}
+
+/* Email List Panel */
+.email-list-panel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: transparent;
+}
+
+.email-toolbar {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.email-list-container {
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.email-list-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.email-list-item:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.email-list-item.unread .email-sender,
+.email-list-item.unread .email-subject {
+    color: #fff;
+    font-weight: 600;
+}
+
+.email-list-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-right: 1.5rem;
+}
+
+.email-list-actions .form-check-input {
+    margin-top: 0;
+}
+
+.email-list-actions i.fa-star {
+    color: #5e6278;
+    transition: color 0.2s;
+}
+
+.email-list-actions i.fa-star.active {
+    color: var(--bs-warning);
+}
+
+.email-sender {
+    width: 180px;
+    color: #a1a5b7;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.email-subject {
+    flex-grow: 1;
+    color: #a1a5b7;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.email-time {
+    width: 80px;
+    text-align: right;
+    color: #5e6278;
+    font-size: 0.85rem;
+}
+
+/* Email Read Details */
+.email-read-panel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 2rem;
+    overflow-y: auto;
+}
+
+.email-read-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.email-read-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.email-read-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.email-read-sender-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.email-read-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.email-read-body {
+    color: #a1a5b7;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+/* Attachments UI */
+.email-attachments-wrapper {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 1.5rem;
+}
+
+.email-attachments-title {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.email-attachment-card {
+    background-color: #1a1d2d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 250px;
+}
+
+.email-attachment-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.email-attachment-icon.pdf {
+    background-color: rgba(var(--bs-danger-rgb), 0.1);
+    color: var(--bs-danger);
+}
+
+.email-attachment-icon.img {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+}
+
+.email-attachment-info h6 {
+    color: #fff;
+    font-size: 0.9rem;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.email-attachment-info span {
+    color: #5e6278;
+    font-size: 0.8rem;
+}
+
+.email-attachment-download {
+    margin-left: auto;
+    color: #a1a5b7;
+}
+
+.email-attachment-download:hover {
+    color: var(--bs-primary);
+}
+
+/* Email Compose Setup */
+.email-compose-form .form-group {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: stretch;
+}
+
+.email-compose-form .form-label {
+    width: 80px;
+    padding: 1rem 0;
+    margin: 0;
+    color: #5e6278;
+    display: flex;
+    align-items: center;
+}
+
+.email-compose-form .form-control {
+    border: none;
+    background-color: transparent;
+    padding: 1rem 0;
+    flex-grow: 1;
+}
+
+.email-compose-form .form-control:focus {
+    outline: none;
+    box-shadow: none;
+    background-color: transparent;
+}
+
+.email-compose-body-area {
+    width: 100%;
+    min-height: 300px;
+    background-color: transparent;
+    border: none;
+    color: var(--bs-body-color);
+    padding: 1.5rem 0;
+    resize: none;
+}
+
+.email-compose-body-area:focus {
+    outline: none;
+}
+
+
+/* --- Pantalla de Autenticación (Login / Register Split) --- */
+.auth-page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    background-color: #f4f6f9;
+    /* Color claro para contrastar el card oscuro */
+    position: relative;
+    overflow: hidden;
+}
+
+/* Graphic Side (Left) - Si aplica, simulamos ese 3D render con un bg radial/imagen y un color de fondo plano claro */
+.auth-graphic-side {
+    flex: 1;
+    display: none;
+    /* Oculto en móvil */
+    background: radial-gradient(circle at center, #edf2fc 0%, #e2eafc 100%);
+    position: relative;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (min-width: 992px) {
+    .auth-graphic-side {
+        display: flex;
+    }
+}
+
+/* Card Panel (Right) */
+.auth-card-side {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    max-width: 100%;
+}
+
+@media (min-width: 992px) {
+    .auth-card-side {
+        max-width: 500px;
+        padding: 3rem;
+        background-color: transparent;
+    }
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 450px;
+    background-color: #1e1e2d;
+    /* El card oscuro característico */
+    border-radius: 16px;
+    padding: 3rem 2.5rem;
+    box-shadow: 0px 10px 40px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.auth-logo {
+    margin-bottom: 1.5rem;
+    height: 32px;
+}
+
+.auth-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.auth-subtitle {
+    color: #a1a5b7;
+    font-size: 0.95rem;
+}
+
+.auth-card .form-label {
+    color: #a1a5b7;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.auth-card .form-control {
+    background-color: #1a1d2d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fff;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+}
+
+.auth-card .form-control:focus {
+    border-color: var(--bs-primary);
+    background-color: #1a1d2d;
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.auth-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.auth-options .form-check-label {
+    color: #a1a5b7;
+    font-size: 0.9rem;
+}
+
+.auth-options a {
+    color: var(--bs-primary);
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.auth-options a:hover {
+    text-decoration: underline;
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 0.8rem;
+    font-weight: 600;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.auth-footer {
+    text-align: center;
+    color: #a1a5b7;
+    font-size: 0.9rem;
+}
+
+.auth-footer a {
+    color: var(--bs-primary);
+    text-decoration: none;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #5e6278;
+    margin: 2rem 0 1.5rem 0;
+    font-size: 0.85rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auth-divider:not(:empty)::before {
+    margin-right: 1em;
+}
+
+.auth-divider:not(:empty)::after {
+    margin-left: 1em;
+}
+
+.auth-social-btns {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.auth-social-btns .btn-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #a1a5b7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    transition: all 0.3s;
+}
+
+.auth-social-btns .btn-icon:hover {
+    background-color: var(--bs-primary);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+/* =========================================================================
+   Fase 6: Componentes Funcionales DataZenith
+   ========================================================================= */
+
+/* --- Quick Access Cards (Panel Dashboards) --- */
+.quick-access-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.quick-access-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25) !important;
+    border-color: rgba(var(--bs-primary-rgb), 0.3) !important;
+}
+
+.quick-access-card h6 {
+    color: #fff;
+    transition: color 0.3s;
+}
+
+.quick-access-card:hover h6 {
+    color: var(--bs-primary);
+}
+
+/* --- Database Selector Dark Mode --- */
+.database-selector-wrapper {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.75rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.database-selector-wrapper .form-select {
+    background-color: var(--bs-card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--bs-body-color);
+    font-size: 0.875rem;
+    padding: 0.45rem 2rem 0.45rem 0.75rem;
+}
+
+.database-selector-wrapper .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.15);
+}
+
+.database-selector-wrapper .selector-label {
+    color: #a1a5b7;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* --- Daterangepicker Dark Mode Overrides --- */
+.daterangepicker {
+    background-color: var(--bs-card-bg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: var(--bs-body-color) !important;
+}
+
+.daterangepicker .calendar-table {
+    background-color: transparent !important;
+    border: none !important;
+}
+
+.daterangepicker td.off,
+.daterangepicker td.off.in-range,
+.daterangepicker td.off.start-date,
+.daterangepicker td.off.end-date {
+    background-color: transparent !important;
+    color: #5e6278 !important;
+}
+
+.daterangepicker td.available:hover,
+.daterangepicker th.available:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.2) !important;
+    color: #fff !important;
+}
+
+.daterangepicker td.active,
+.daterangepicker td.active:hover {
+    background-color: var(--bs-primary) !important;
+    color: #fff !important;
+}
+
+.daterangepicker td.in-range {
+    background-color: rgba(var(--bs-primary-rgb), 0.15) !important;
+    color: var(--bs-body-color) !important;
+}
+
+.daterangepicker .drp-buttons {
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.daterangepicker th {
+    color: var(--bs-body-color) !important;
+}
+
+.daterangepicker td {
+    color: var(--bs-body-color) !important;
+}
+
+.daterangepicker select.monthselect,
+.daterangepicker select.yearselect {
+    background-color: var(--bs-card-bg) !important;
+    color: var(--bs-body-color) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* --- Report Date Range Trigger (Dark Mode) --- */
+#reportrange {
+    background-color: var(--bs-card-bg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: var(--bs-body-color) !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1rem !important;
+    cursor: pointer;
+}
+
+#reportrange:hover {
+    border-color: var(--bs-primary) !important;
+}
+
+/* --- Messages Container --- */
+.messages-container .alert {
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Report Card Form Styling (max-width removed — fills column naturally) --- */
+.report-form-card .card-header {
+    padding: 1rem 1.5rem;
+}
+
+.report-form-card .card-body {
+    padding: 1.5rem;
+}
+
+.report-form-card .form-select,
+.report-form-card .form-control {
+    font-size: 0.9rem;
+}
+
+/* --- #reportrange flex alignment --- */
+#reportrange {
+    display: flex !important;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+#reportrange span {
+    flex: 1;
+}
+
+/* --- Daterangepicker Ranges Panel Dark Mode --- */
+.daterangepicker .ranges {
+    background-color: var(--bs-card-bg) !important;
+}
+
+.daterangepicker .ranges li {
+    background-color: transparent;
+    color: var(--bs-body-color);
+    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.daterangepicker .ranges li:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+}
+
+.daterangepicker .ranges li.active {
+    background-color: var(--bs-primary) !important;
+    color: #fff !important;
+}
+
+/* Daterangepicker input fields (from/to text inputs) */
+.daterangepicker .drp-calendar .input-mini {
+    background-color: var(--bs-card-bg) !important;
+    color: var(--bs-body-color) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 6px;
+}
+
+.daterangepicker .drp-buttons .btn-default,
+.daterangepicker .drp-buttons .cancelBtn {
+    background-color: #3f4254 !important;
+    color: #fff !important;
+    border: none !important;
+}
+
+.daterangepicker .drp-buttons .btn-primary,
+.daterangepicker .drp-buttons .applyBtn {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+    color: #fff !important;
+}
+
+/* Daterangepicker arrows */
+.daterangepicker::before,
+.daterangepicker::after {
+    border-bottom-color: var(--bs-card-bg) !important;
+}
+
+/* --- Responsive daterangepicker overflow fix --- */
+@media (max-width: 576px) {
+    .daterangepicker {
+        max-width: calc(100vw - 20px) !important;
+        left: 10px !important;
+        right: 10px !important;
+    }
+
+    .daterangepicker .drp-calendar {
+        max-width: 100% !important;
+    }
+
+    .daterangepicker .ranges {
+        width: 100% !important;
+    }
+}
+
+/* --- form-text helper visibility in dark mode --- */
+.form-text {
+    color: #7e8299 !important;
+}
+
+/* --- Alert btn-close visibility in dark mode --- */
+.alert .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+    opacity: 0.6;
+}
+
+.alert .btn-close:hover {
+    opacity: 1;
+}

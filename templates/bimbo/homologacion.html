@@ -1,0 +1,179 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Homologacion BIMBO{% endblock title %}
+{% block barra_lateral %}
+{% include 'bimbo/includes/sidebar.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<div class="container-fluid py-4 bg-light">
+  {% if messages %}
+  <div class="alert alert-warning" role="alert">
+    {% for message in messages %}
+    <p class="mb-0">{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1 text-danger fw-bold">Homologacion Automatica</h1>
+      <p class="text-muted small mb-0">Procesa equivalencias PENDIENTES contra el catalogo canonico BIMBO.</p>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+      <h6 class="mb-0 fw-bold text-danger">Ejecutar Auto-Homologacion</h6>
+    </div>
+    <div class="card-body">
+      <p class="text-muted small">
+        Este proceso busca coincidencias exactas entre <code>idhml_original</code> de las equivalencias PENDIENTES
+        y los codigos en <code>bi_productos_canonico</code>. Los que coincidan se marcan como <strong>AUTO_EXACTO</strong>.
+      </p>
+      <p class="text-muted small mb-3">
+        Empresa seleccionada: <strong>{{ database_name }}</strong>
+      </p>
+      <form id="FormHomologacion" onsubmit="event.preventDefault(); return false;">
+        {% csrf_token %}
+        <button id="btnSubmit" type="button" class="btn btn-danger">
+          <i class="fas fa-sync-alt me-2"></i> Ejecutar Homologacion
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="result-area" class="d-none">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold text-danger">Resultado</h6>
+      </div>
+      <div class="card-body">
+        <div id="result-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="processingModal" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-0 shadow">
+      <div class="modal-body text-center py-4">
+        <h5 id="progress-stage" class="mb-3"><i class="fas fa-sync-alt fa-spin me-2 text-danger"></i>Iniciando...</h5>
+        <div class="progress mb-2" style="height: 10px; background-color: rgba(255,255,255,0.2);">
+          <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger" role="progressbar" style="width: 0%;">0%</div>
+        </div>
+        <div id="detailedStatus" class="small text-white-50 mb-2"></div>
+        <div id="time-info" class="small text-white-50">Tiempo: 0s</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script>
+const csrfToken = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+const progressBar = document.getElementById("progressBar");
+const progressStage = document.getElementById("progress-stage");
+const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
+let progressInterval = null;
+let startTime = 0;
+
+function updateProgressBar(value, stageText) {
+  const v = Math.max(0, Math.min(100, Number(value) || 0));
+  progressBar.style.width = v + "%";
+  progressBar.setAttribute("aria-valuenow", v);
+  progressBar.textContent = v.toFixed(0) + "%";
+  if (stageText) progressStage.innerHTML = '<i class="fas fa-sync-alt fa-spin me-2 text-danger"></i>' + stageText;
+}
+
+function resetUI() {
+  bsProcessingModal.hide();
+  document.getElementById("btnSubmit").disabled = false;
+  clearInterval(progressInterval);
+}
+
+function checkTaskStatus(jobId) {
+  const fd = new FormData();
+  fd.append("task_id", jobId);
+
+  fetch("{% url 'home_app:check_task_status' %}", {method: "POST", body: fd, headers: {"X-CSRFToken": csrfToken}})
+    .then(r => r.json())
+    .then(data => {
+      if (data.state === "COMPLETED" || data.status === "completed") {
+        updateProgressBar(100, "Completado");
+        setTimeout(() => {
+          resetUI();
+          const result = data.result || {};
+          const area = document.getElementById("result-area");
+          const content = document.getElementById("result-content");
+          area.classList.remove("d-none");
+
+          if (result.success) {
+            content.innerHTML =
+              '<div class="alert alert-success">' +
+              '<i class="fas fa-check-circle me-2"></i><strong>Homologacion completada</strong><br>' +
+              '<span class="small">' + (result.message || '') + '</span>' +
+              '</div>' +
+              '<div class="row g-3 mt-2">' +
+              '<div class="col-md-3"><div class="card border-start border-4 border-info"><div class="card-body py-2"><div class="small text-muted">Total Pendientes</div><div class="h5 fw-bold">' + (result.total_pendientes || 0) + '</div></div></div></div>' +
+              '<div class="col-md-3"><div class="card border-start border-4 border-success"><div class="card-body py-2"><div class="small text-muted">Auto Exacto</div><div class="h5 fw-bold text-success">' + (result.auto_exacto || 0) + '</div></div></div></div>' +
+              '<div class="col-md-3"><div class="card border-start border-4 border-warning"><div class="card-body py-2"><div class="small text-muted">Sin Match</div><div class="h5 fw-bold text-warning">' + (result.sin_match || 0) + '</div></div></div></div>' +
+              '<div class="col-md-3"><div class="card border-start border-4 border-danger"><div class="card-body py-2"><div class="small text-muted">Errores</div><div class="h5 fw-bold text-danger">' + (result.errores || 0) + '</div></div></div></div>' +
+              '</div>';
+          } else {
+            content.innerHTML =
+              '<div class="alert alert-danger"><i class="fas fa-times-circle me-2"></i>' +
+              (result.message || result.error_message || 'Error desconocido') + '</div>';
+          }
+        }, 500);
+      } else if (data.state === "FAILED" || data.status === "failed") {
+        resetUI();
+        const area = document.getElementById("result-area");
+        const content = document.getElementById("result-content");
+        area.classList.remove("d-none");
+        content.innerHTML = '<div class="alert alert-danger"><i class="fas fa-times-circle me-2"></i>La tarea fallo.</div>';
+      } else {
+        const meta = data.meta || {};
+        updateProgressBar(meta.progress || data.progress || 10, meta.stage || "Procesando...");
+        setTimeout(() => checkTaskStatus(jobId), 3000);
+      }
+    })
+    .catch(() => setTimeout(() => checkTaskStatus(jobId), 5000));
+}
+
+document.getElementById("btnSubmit").addEventListener("click", function() {
+  this.disabled = true;
+  startTime = Date.now();
+  updateProgressBar(0, "Iniciando...");
+  bsProcessingModal.show();
+  document.getElementById("result-area").classList.add("d-none");
+  if (progressInterval) clearInterval(progressInterval);
+  progressInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById("time-info").textContent = "Tiempo: " + (s >= 60 ? Math.floor(s/60) + "m " : "") + (s % 60) + "s";
+  }, 1000);
+
+  fetch("{% url form_url %}", {
+    method: "POST",
+    headers: {"X-CSRFToken": csrfToken, "Content-Type": "application/x-www-form-urlencoded"},
+    body: ""
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success && data.job_id) {
+        checkTaskStatus(data.job_id);
+      } else {
+        resetUI();
+        alert("Error: " + (data.error_message || "No se pudo iniciar"));
+      }
+    })
+    .catch(() => {
+      resetUI();
+      alert("Error de conexion");
+    });
+});
+</script>
+{% endblock script %}
+

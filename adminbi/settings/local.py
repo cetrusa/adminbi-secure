@@ -29,6 +29,14 @@ if DB_ENGINE and DB_NAME and DB_USERNAME:
             "HOST": DB_HOST,
             "PORT": DB_PORT,
         },
+        "bimbo": {
+            "ENGINE": "django.db.backends." + DB_ENGINE,
+            "NAME": "powerbi_bimbo",
+            "USER": DB_USERNAME,
+            "PASSWORD": DB_PASS,
+            "HOST": DB_HOST,
+            "PORT": DB_PORT,
+        },
     }
 else:
     DATABASES = {
@@ -37,6 +45,8 @@ else:
             "NAME": "db.sqlite3",
         }
     }
+
+DATABASE_ROUTERS = ["apps.bimbo.db_router.BimboRouter"]
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 

@@ -129,6 +129,7 @@ class InterfaceContable:
         try:
             # Ejecutar el query (puede ser CALL o SELECT)
             with self.engine_mysql.connect() as conn:
+                conn.execute(text("SET collation_connection = 'utf8mb4_general_ci'"))
                 result = conn.execute(query)
                 columns = list(result.keys())
                 all_rows = [
@@ -215,6 +216,7 @@ class InterfaceContable:
             # Usar openpyxl como engine para ExcelWriter
             with pd.ExcelWriter(self.file_path, engine="openpyxl") as writer:
                 total_global_records = 0
+                any_sheet_written = False
                 for idx, hoja in enumerate(
                     self.config["txProcedureInterface"], start=1
                 ):
@@ -228,6 +230,7 @@ class InterfaceContable:
                         query = self._generate_sqlout(hoja)
                         logger.info(f"[InterfaceContable] Query generado: {query}")
                         self._write_query_to_excel(query, hoja, writer)
+                        any_sheet_written = True
                         total_global_records += self.total_records_processed
                     except Exception as e:
                         logger.error(
@@ -247,11 +250,27 @@ class InterfaceContable:
                             total_hojas=len(self.config["txProcedureInterface"]),
                         )
 
+                # Evita IndexError de openpyxl si no se alcanzó a crear ninguna hoja.
+                if not any_sheet_written:
+                    pd.DataFrame({"estado": ["SIN_DATOS"]}).to_excel(
+                        writer,
+                        sheet_name="SIN_DATOS",
+                        index=False,
+                    )
+
             execution_time = time.time() - self.start_time
             if total_global_records == 0:
                 logger.warning(
                     "[InterfaceContable] No hay datos para mostrar en ninguna hoja."
                 )
+                if self.file_path and os.path.exists(self.file_path):
+                    try:
+                        os.remove(self.file_path)
+                    except Exception:
+                        logger.warning(
+                            "[InterfaceContable] No se pudo eliminar archivo sin datos: %s",
+                            self.file_path,
+                        )
                 return {
                     "success": False,
                     "error_message": "No hay datos para mostrar en ninguna hoja.",

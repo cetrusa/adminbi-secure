@@ -9,11 +9,14 @@ Informe Amovildesk
 {% endblock barra_lateral %}
 {% block window %}
 {% include 'includes/datepicker_range.html' %}
-<!-- contenido de la pagina -->
-<br>
-<br>
-<div class="container">
-  <!-- Mensajes de alerta -->
+
+<div class="container-fluid px-0">
+  <div class="mb-4">
+    <h3 class="fw-bold mb-1">
+      <i class="fas fa-tablet-alt text-primary me-2"></i> Informe Amovildesk
+    </h3>
+    <p class="text-muted small mb-0">Genere el informe de Amovildesk para el rango de fechas seleccionado.</p>
+  </div>
   {% if messages %}
   <div class="alert alert-warning" role="alert">
     {% for message in messages %}
@@ -22,16 +25,17 @@ Informe Amovildesk
   </div>
   {% endif %}
 
-  <div class="card" style="width: 25rem;">
-    <div class="card-header text-center">
-      <h2>Informe Amovildesk</h2>
+  <div class="card report-form-card" style="max-width: 500px;">
+    <div class="card-header d-flex align-items-center">
+      <i class="fas fa-tablet-alt text-primary me-2"></i>
+      <h6 class="fw-bold mb-0">Configuración</h6>
     </div>
     <div class="card-body">
       <form action="{% url form_url %}" method="post" id="FormAmovildesk">
         {% csrf_token %}
         <label for="date_input">Fecha:</label>
         <div id="reportrange"
-          style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+          style="cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
           <i class="fa fa-calendar"></i>&nbsp;
           <span></span> <i class="fa fa-caret-down"></i>
         </div>
@@ -58,9 +62,10 @@ Informe Amovildesk
             <option value="100000">100,000 (Para conjuntos de datos grandes)</option>
             <option value="200000">200,000 (Para equipos con muchos recursos)</option>
           </select>
-          <small class="form-text text-muted">Ajuste este valor según el rendimiento de su sistema y el tamaño de los datos</small>
+          <small class="form-text text-muted">Ajuste este valor según el rendimiento de su sistema y el tamaño de los
+            datos</small>
         </div>
-       
+
     </div>
     <span class="card text-center"><button id="submitBtnAmovildesk" type="submit" class="btn btn-primary"
         data-submitted="false">Generar Informe de Amovildesk</button></span>
@@ -71,8 +76,8 @@ Informe Amovildesk
     {% include 'includes/download_file.html' %}
   </div>
   <!-- Este es el Modal -->
-  <div class="modal" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
-    aria-hidden="true" style="display: none; background-color: rgba(0, 0, 0, 0.5);">
+  <div class="modal fade" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content bg-dark text-white">
         <div class="modal-header">
@@ -96,9 +101,10 @@ Informe Amovildesk
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 
 <script>
-  document.getElementById("processingModal").style.display = "none";
+  const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
   document.getElementById("download_file").className = 'd-none';
   var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
   var startTime = 0;
@@ -122,7 +128,7 @@ Informe Amovildesk
     this.setAttribute("data-submitted", "true");
     startTime = new Date().getTime();
     updateProgressBar(0, "Iniciando generación...");
-    document.getElementById("processingModal").style.display = "flex";
+    bsProcessingModal.show();
     if (progressInterval) clearInterval(progressInterval);
     progressInterval = setInterval(updateElapsedTime, 1000);
     var xhr = new XMLHttpRequest();
@@ -319,7 +325,7 @@ Informe Amovildesk
     }
     progressBar.className = finalBarClass;
     const finalize = () => {
-      document.getElementById("processingModal").style.display = "none";
+      bsProcessingModal.hide();
       if (showAlert && alertMessage) alert(alertMessage);
       document.getElementById("submitBtnAmovildesk").setAttribute("data-submitted", "false");
       window.sessionStorage.removeItem("amovildesk_task_id");
@@ -378,7 +384,7 @@ Informe Amovildesk
     if (amovildeskTaskId) {
       if (confirm("Detectamos una generación de Amovildesk pendiente. ¿Desea continuar monitoreando su progreso?")) {
         document.getElementById("submitBtnAmovildesk").setAttribute("data-submitted", "true");
-        document.getElementById("processingModal").style.display = "flex";
+        bsProcessingModal.show();
         updateProgressBar(5, "Reanudando monitoreo...");
         startTime = new Date().getTime();
         if (progressInterval) clearInterval(progressInterval);

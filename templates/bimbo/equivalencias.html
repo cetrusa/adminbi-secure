@@ -1,0 +1,342 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Equivalencias BIMBO{% endblock title %}
+{% block barra_lateral %}
+{% include 'bimbo/includes/sidebar.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<div class="container-fluid py-4 bg-light">
+  {% if messages %}
+  <div class="alert alert-warning" role="alert">
+    {% for message in messages %}
+    <p class="mb-0">{{ message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1 text-danger fw-bold">Equivalencias BIMBO</h1>
+      <p class="text-muted small mb-0">Gestionar equivalencias de productos por agencia.</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+      <h6 class="mb-0 fw-bold text-danger">Filtros</h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" for="filterAgencia">Agencia</label>
+          <select class="form-select form-select-sm" id="filterAgencia">
+            <option value="">-- Todas --</option>
+            {% for ag in agencias_catalog %}
+            <option value="{{ ag.id }}">{{ ag.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" for="filterTipo">Tipo Asignacion</label>
+          <select class="form-select form-select-sm" id="filterTipo">
+            <option value="">-- Todos --</option>
+            <option value="PENDIENTE">PENDIENTE</option>
+            <option value="AUTO_EXACTO">AUTO_EXACTO</option>
+            <option value="MANUAL">MANUAL</option>
+            <option value="DESCARTADO">DESCARTADO</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" for="filterSearch">Buscar</label>
+          <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="Codigo, nombre o idhml...">
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button class="btn btn-danger btn-sm" id="btnBuscar"><i class="fas fa-search me-1"></i>Buscar</button>
+          <button class="btn btn-outline-secondary btn-sm" id="btnLimpiar">Limpiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row mb-3 g-3" id="eq-kpis" style="display:none;">
+    <div class="col">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+        <div class="card-body py-2">
+          <div class="text-secondary small fw-bold text-uppercase">Total</div>
+          <div class="h5 mb-0 fw-bold text-info" id="kpi-total">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+        <div class="card-body py-2">
+          <div class="text-secondary small fw-bold text-uppercase">Auto</div>
+          <div class="h5 mb-0 fw-bold text-success" id="kpi-auto">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+        <div class="card-body py-2">
+          <div class="text-secondary small fw-bold text-uppercase">Manual</div>
+          <div class="h5 mb-0 fw-bold text-primary" id="kpi-manual">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+        <div class="card-body py-2">
+          <div class="text-secondary small fw-bold text-uppercase">Pendientes</div>
+          <div class="h5 mb-0 fw-bold text-warning" id="kpi-pend">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-secondary">
+        <div class="card-body py-2">
+          <div class="text-secondary small fw-bold text-uppercase">Descartados</div>
+          <div class="h5 mb-0 fw-bold text-secondary" id="kpi-desc">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-exchange-alt me-2"></i>Equivalencias</h5>
+        <div class="d-flex align-items-center gap-2">
+          <label class="form-label mb-0 small fw-semibold" for="eq-page-size">Filas:</label>
+          <select id="eq-page-size" class="form-select form-select-sm" style="width:80px;">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+          <small class="text-muted" id="eq-info"></small>
+        </div>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+        <table class="table table-hover table-sm small align-middle mb-0" id="eq-table">
+          <thead class="table-light sticky-top" style="z-index:1;">
+            <tr>
+              <th>Agencia</th>
+              <th>nbProducto</th>
+              <th>nmProducto</th>
+              <th>idhml_original</th>
+              <th>codigo_canonico</th>
+              <th>Tipo</th>
+              <th>Sync</th>
+              <th>Accion</th>
+            </tr>
+          </thead>
+          <tbody id="eq-body">
+            <tr><td colspan="8" class="text-center text-muted py-4">Use los filtros para buscar equivalencias.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paginacion -->
+  <div class="d-flex justify-content-between align-items-center mb-3" id="eq-pagination" style="display:none;">
+    <button class="btn btn-outline-secondary btn-sm" id="eq-prev">Anterior</button>
+    <div class="small text-muted" id="eq-page-info">Pagina 1</div>
+    <button class="btn btn-outline-secondary btn-sm" id="eq-next">Siguiente</button>
+  </div>
+
+  <!-- Status de match manual -->
+  <div id="match-result" class="alert d-none mt-2"></div>
+</div>
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script>
+const csrfToken = '{{ csrf_token }}';
+let eqPage = 1;
+let eqTotalPages = 1;
+
+function loadEquivalencias(page) {
+  const agencia = document.getElementById("filterAgencia").value;
+  const tipo = document.getElementById("filterTipo").value;
+  const search = document.getElementById("filterSearch").value;
+  const pageSize = document.getElementById("eq-page-size").value;
+
+  let url = "{% url 'bimbo_app:equivalencias_bimbo_data' %}?page=" + page + "&page_size=" + pageSize;
+  if (agencia) url += "&id_agencia=" + encodeURIComponent(agencia);
+  if (tipo) url += "&tipo_asignacion=" + encodeURIComponent(tipo);
+  if (search) url += "&search=" + encodeURIComponent(search);
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        console.error(data.error);
+        return;
+      }
+
+      eqPage = data.page || 1;
+      const total = data.total_records || 0;
+      const size = data.page_size || Number(pageSize);
+      eqTotalPages = Math.max(1, Math.ceil(total / size));
+
+      renderTable(data.rows || []);
+      updateKpis(data.rows || [], total);
+
+      document.getElementById("eq-info").textContent = total + " registros";
+      document.getElementById("eq-pagination").style.display = "flex";
+      document.getElementById("eq-page-info").textContent = "Pagina " + eqPage + " de " + eqTotalPages;
+      document.getElementById("eq-prev").disabled = eqPage <= 1;
+      document.getElementById("eq-next").disabled = eqPage >= eqTotalPages;
+      document.getElementById("eq-kpis").style.display = "flex";
+    })
+    .catch(err => console.error(err));
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById("eq-body");
+  tbody.innerHTML = "";
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Sin resultados.</td></tr>';
+    return;
+  }
+
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+
+    const tipoBadge = {
+      "AUTO_EXACTO": '<span class="badge bg-success">AUTO_EXACTO</span>',
+      "MANUAL": '<span class="badge bg-primary">MANUAL</span>',
+      "PENDIENTE": '<span class="badge bg-warning text-dark">PENDIENTE</span>',
+      "DESCARTADO": '<span class="badge bg-secondary">DESCARTADO</span>',
+    };
+
+    const syncBadge = {
+      "NO_REQUIERE": '<span class="badge bg-light text-dark">NO_REQUIERE</span>',
+      "REQUIERE_UPDATE": '<span class="badge bg-info">REQUIERE_UPDATE</span>',
+      "SINCRONIZADO": '<span class="badge bg-success">SINCRONIZADO</span>',
+      "ERROR": '<span class="badge bg-danger">ERROR</span>',
+      "REQUIERE_REVISION": '<span class="badge bg-warning text-dark">REQUIERE_REVISION</span>',
+    };
+
+    let actionCell = "";
+    if (r.tipo_asignacion === "PENDIENTE") {
+      actionCell =
+        '<div class="input-group input-group-sm" style="min-width:180px;">' +
+        '<input type="text" class="form-control form-control-sm match-input" placeholder="Codigo BIMBO" data-id="' + r.id + '">' +
+        '<button class="btn btn-outline-success btn-sm match-btn" data-id="' + r.id + '" title="Asignar"><i class="fas fa-check"></i></button>' +
+        '</div>';
+    } else {
+      actionCell = '<span class="text-muted small">-</span>';
+    }
+
+    tr.innerHTML =
+      '<td>' + (r.agencia || "") + '</td>' +
+      '<td><code>' + (r.nbProducto || "") + '</code></td>' +
+      '<td>' + (r.nmProducto || "") + '</td>' +
+      '<td><code>' + (r.idhml_original || "") + '</code></td>' +
+      '<td><code>' + (r.codigo_canonico || "-") + '</code></td>' +
+      '<td>' + (tipoBadge[r.tipo_asignacion] || r.tipo_asignacion) + '</td>' +
+      '<td>' + (syncBadge[r.estado_sync] || r.estado_sync) + '</td>' +
+      '<td>' + actionCell + '</td>';
+
+    tbody.appendChild(tr);
+  });
+
+  // Attach match handlers
+  document.querySelectorAll(".match-btn").forEach(btn => {
+    btn.addEventListener("click", function() {
+      const id = this.dataset.id;
+      const input = document.querySelector('.match-input[data-id="' + id + '"]');
+      if (input && input.value.trim()) {
+        doMatch(id, input.value.trim());
+      }
+    });
+  });
+
+  document.querySelectorAll(".match-input").forEach(inp => {
+    inp.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const id = this.dataset.id;
+        if (this.value.trim()) doMatch(id, this.value.trim());
+      }
+    });
+  });
+}
+
+function updateKpis(rows, total) {
+  let auto = 0, manual = 0, pend = 0, desc = 0;
+  // KPIs from current page only as indication
+  rows.forEach(r => {
+    if (r.tipo_asignacion === "AUTO_EXACTO") auto++;
+    else if (r.tipo_asignacion === "MANUAL") manual++;
+    else if (r.tipo_asignacion === "PENDIENTE") pend++;
+    else if (r.tipo_asignacion === "DESCARTADO") desc++;
+  });
+  document.getElementById("kpi-total").textContent = total;
+  document.getElementById("kpi-auto").textContent = auto;
+  document.getElementById("kpi-manual").textContent = manual;
+  document.getElementById("kpi-pend").textContent = pend;
+  document.getElementById("kpi-desc").textContent = desc;
+}
+
+function doMatch(idEquivalencia, codigoCanon) {
+  const fd = new FormData();
+  fd.append("id_equivalencia", idEquivalencia);
+  fd.append("codigo_canonico", codigoCanon);
+
+  const resultEl = document.getElementById("match-result");
+
+  fetch("{% url 'bimbo_app:equivalencias_bimbo_match' %}", {
+    method: "POST",
+    body: fd,
+    headers: {"X-CSRFToken": csrfToken}
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        resultEl.className = "alert alert-success mt-2";
+        resultEl.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + data.message;
+        resultEl.classList.remove("d-none");
+        // Reload current page
+        loadEquivalencias(eqPage);
+        setTimeout(() => resultEl.classList.add("d-none"), 3000);
+      } else {
+        resultEl.className = "alert alert-danger mt-2";
+        resultEl.innerHTML = '<i class="fas fa-times-circle me-2"></i>' + (data.error || "Error");
+        resultEl.classList.remove("d-none");
+      }
+    })
+    .catch(() => {
+      resultEl.className = "alert alert-danger mt-2";
+      resultEl.innerHTML = '<i class="fas fa-times-circle me-2"></i>Error de conexion';
+      resultEl.classList.remove("d-none");
+    });
+}
+
+// Event listeners
+document.getElementById("btnBuscar").addEventListener("click", () => loadEquivalencias(1));
+document.getElementById("btnLimpiar").addEventListener("click", () => {
+  document.getElementById("filterAgencia").value = "";
+  document.getElementById("filterTipo").value = "";
+  document.getElementById("filterSearch").value = "";
+  loadEquivalencias(1);
+});
+document.getElementById("eq-prev").addEventListener("click", () => { if (eqPage > 1) loadEquivalencias(eqPage - 1); });
+document.getElementById("eq-next").addEventListener("click", () => { if (eqPage < eqTotalPages) loadEquivalencias(eqPage + 1); });
+document.getElementById("eq-page-size").addEventListener("change", () => loadEquivalencias(1));
+document.getElementById("filterSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); loadEquivalencias(1); } });
+
+// Auto-load on page ready
+loadEquivalencias(1);
+</script>
+{% endblock script %}
+

@@ -9,14 +9,20 @@ Actualización
 {% endblock barra_lateral %}
 {% block window %}
 {% include 'includes/datepicker_range.html' %}
-<!-- contenido de la pagina -->
-<br>
-<br>
-<div class="card" style="width: 25rem;">
-  <div class="card-header text-center">
-    <h2>Actualizar Base de Datos</h2>
+
+<div class="container-fluid px-0">
+  <div class="mb-4">
+    <h3 class="fw-bold mb-1">
+      <i class="fas fa-sync-alt text-info me-2"></i> Actualizar Base de Datos
+    </h3>
+    <p class="text-muted small mb-0">Actualización rápida de base de datos y PowerBi.</p>
   </div>
-  <div class="card-body">
+  <div class="card report-form-card" style="max-width: 500px;">
+    <div class="card-header d-flex align-items-center">
+      <i class="fas fa-sync-alt text-info me-2"></i>
+      <h6 class="fw-bold mb-0">Opciones de Actualización</h6>
+    </div>
+    <div class="card-body">
     <!-- Pestañas -->
     <ul class="nav nav-tabs" id="actualizacionTabs" role="tablist">
       <li class="nav-item" role="presentation">
@@ -55,7 +61,7 @@ Actualización
 </div>
 
 <!-- Este es el Modal -->
-<div class="modal" id="processingModal">
+<div class="modal fade" id="processingModal">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
@@ -75,11 +81,13 @@ Actualización
   </div>
 </div>
 <!-- final del modal -->
+</div>
 {% endblock window %}
 
 {% block script %}
+{{ block.super }}
 <script>
-  document.getElementById("processingModal").style.display = "none";
+  const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
   var csrf_token = document.getElementsByName("csrfmiddlewaretoken")[0].value;
 
   // Al cargar la página, verificar si hay procesos pendientes
@@ -94,7 +102,7 @@ Actualización
       // Preguntar al usuario si desea continuar monitoreando la tarea
       if (confirm("Detectamos una actualización de Base de Datos pendiente. ¿Desea continuar monitoreando su progreso?")) {
         document.getElementById("submitBtn").setAttribute("data-submitted", "true");
-        document.getElementById("processingModal").style.display = "flex";
+        bsProcessingModal.show();
         showMessage("database");
         checkTaskStatus("FormActualizacion", "db_task_id");
       } else {
@@ -113,7 +121,7 @@ Actualización
       if (!dbTaskId || !document.getElementById("submitBtn").getAttribute("data-submitted") === "true") {
         if (confirm("Detectamos una actualización de BI pendiente. ¿Desea continuar monitoreando su progreso?")) {
           document.getElementById("submitBtnPowerBi").setAttribute("data-submitted", "true");
-          document.getElementById("processingModal").style.display = "flex";
+          bsProcessingModal.show();
           showMessage("powerbi");
           checkTaskStatus("myFormPowerBi", "bi_task_id");
         } else {
@@ -141,7 +149,7 @@ Actualización
     }
 
     this.setAttribute("data-submitted", "true");
-    document.getElementById("processingModal").style.display = "flex";
+    bsProcessingModal.show();
     showMessage("database");
     submitForm("{% url 'home_app:actualizacion' %}", "FormActualizacion", "db_task_id");
   });
@@ -156,7 +164,7 @@ Actualización
     }
 
     this.setAttribute("data-submitted", "true");
-    document.getElementById("processingModal").style.display = "flex";
+    bsProcessingModal.show();
     showMessage("powerbi");
     submitForm("{% url 'bi_app:actualizacion_bi' %}", "myFormPowerBi", "bi_task_id");
   });
@@ -171,7 +179,7 @@ Actualización
   }
 
   function submitForm(url, formId, taskIdKey) {
-    document.getElementById("processingModal").style.display = "flex";
+    bsProcessingModal.show();
 
     // Depuración para identificar el problema
     console.log("Enviando formulario a URL:", url);
@@ -193,7 +201,7 @@ Actualización
           handleServerResponse(this.status, response, formId, taskIdKey);
         } catch (e) {
           console.error("Error al procesar respuesta:", e);
-          document.getElementById("processingModal").style.display = "none";
+          bsProcessingModal.hide();
           alert("Error al procesar la respuesta del servidor.");
           document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");
         }
@@ -214,17 +222,17 @@ Actualización
           // Comprueba el estado de la tarea
           checkTaskStatus(formId, taskIdKey);
         } else {
-          document.getElementById("processingModal").style.display = "none";
+          bsProcessingModal.hide();
           alert("Hubo un error en el proceso: " + response.error_message);
           document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");
         }
       } else {
-        document.getElementById("processingModal").style.display = "none";
+        bsProcessingModal.hide();
         alert("La respuesta del servidor no es un objeto JSON válido");
         document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");
       }
     } else {
-      document.getElementById("processingModal").style.display = "none";
+      bsProcessingModal.hide();
       alert("Hubo un error al enviar la solicitud, código de estado: " + status);
       document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");
     }
@@ -247,7 +255,7 @@ Actualización
           handleTaskStatus(this.status, response, formId, taskIdKey);
         } catch (e) {
           console.error("Error al procesar respuesta de estado:", e);
-          document.getElementById("processingModal").style.display = "none";
+          bsProcessingModal.hide();
           alert("Error al procesar la respuesta del servidor.");
           document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");
         }
@@ -262,13 +270,13 @@ Actualización
       if (typeof response === "object" && "status" in response) {
         if (response.status === "finished") {
           // La tarea se ha completado, podemos mostrar el resultado al usuario
-          document.getElementById("processingModal").style.display = "none";
+          bsProcessingModal.hide();
           alert("Proceso terminado");
           // Resetear el estado del botón
           document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");
         } else if (response.status === "failed") {
           // La tarea falló
-          document.getElementById("processingModal").style.display = "none";
+          bsProcessingModal.hide();
           alert("Hubo un error en el proceso: " + response.result);
           // Resetear el estado del botón
           document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");
@@ -276,19 +284,19 @@ Actualización
           // La tarea aún se está ejecutando, verifica el estado de nuevo después de un tiempo
           setTimeout(function () { checkTaskStatus(formId, taskIdKey); }, 20000);
         } else {
-          document.getElementById("processingModal").style.display = "none";
+          bsProcessingModal.hide();
           alert("Estado desconocido de la tarea: " + response.status);
           // Resetear el estado del botón
           document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");
         }
       } else {
-        document.getElementById("processingModal").style.display = "none";
+        bsProcessingModal.hide();
         alert("La respuesta del servidor no es un objeto JSON válido");
         // Resetear el estado del botón
         document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");
       }
     } else {
-      document.getElementById("processingModal").style.display = "none";
+      bsProcessingModal.hide();
       alert("Hubo un error al comprobar el estado de la tarea, código de estado: " + status);
       // Resetear el estado del botón
       document.getElementById(formId === "FormActualizacion" ? "submitBtn" : "submitBtnPowerBi").setAttribute("data-submitted", "false");

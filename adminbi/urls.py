@@ -24,6 +24,7 @@ urlpatterns = (
     [
         path("admin/", admin.site.urls),
         path("monitor/", include("apps.monitor.urls", namespace="monitor")),
+        path("bimbo/", include("apps.bimbo.urls")),
         re_path("", include("apps.home.urls")),
         re_path("", include("apps.users.urls")),
         re_path("", include("apps.bi.urls")),
