@@ -37,6 +37,24 @@
       </li>
       {% endif %}
 
+      {% if perms.permisos.faltantes %}
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'faltantes' %}active{% endif %}"
+          href="{% url 'home_app:faltantes'%}">
+          <i class="fas fa-exclamation-triangle"></i> <span class="ms-2 d-none d-sm-inline">Faltantes</span>
+        </a>
+      </li>
+      {% endif %}
+
+      {% if perms.permisos.preventa %}
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'preventa' %}active{% endif %}"
+          href="{% url 'home_app:preventa'%}">
+          <i class="fas fa-shopping-cart"></i> <span class="ms-2 d-none d-sm-inline">Preventa</span>
+        </a>
+      </li>
+      {% endif %}
+
       {% if perms.permisos.amovildesk %}
       <li class="nav-item">
         <a class="nav-link {% if request.resolver_match.url_name == 'amovildesk' %}active{% endif %}"
@@ -63,6 +81,24 @@
         <a class="nav-link {% if request.resolver_match.url_name == 'matrix' %}active{% endif %}"
           href="{% url 'home_app:matrix' %}">
           <i class="fas fa-border-all"></i> <span class="ms-2 d-none d-sm-inline">Matrix Ventas</span>
+        </a>
+      </li>
+      {% endif %}
+
+      {% if perms.permisos.config_email_reportes %}
+      <h6 class="text-uppercase text-muted fw-bold fs-7 px-3 mt-4 mb-2 w-100 d-none d-sm-block"
+        style="letter-spacing: 1px;">Configuracion</h6>
+
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'proveedores_bi_list' or request.resolver_match.url_name == 'proveedores_bi_create' or request.resolver_match.url_name == 'proveedores_bi_edit' %}active{% endif %}"
+          href="{% url 'home_app:proveedores_bi_list' %}">
+          <i class="fas fa-envelope"></i> <span class="ms-2 d-none d-sm-inline">Correos Proveedores</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'supervisores_list' or request.resolver_match.url_name == 'supervisores_create' or request.resolver_match.url_name == 'supervisores_edit' %}active{% endif %}"
+          href="{% url 'home_app:supervisores_list' %}">
+          <i class="fas fa-user-tie"></i> <span class="ms-2 d-none d-sm-inline">Correos Supervisores</span>
         </a>
       </li>
       {% endif %}

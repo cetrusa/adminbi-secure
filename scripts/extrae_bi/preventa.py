@@ -221,7 +221,7 @@ class PreventaReport:
         matrix_df['Cobertura %'] = 0.0
         if ('programados' in matrix_df.columns or 'clientescom' in matrix_df.columns):
             matrix_df['Cobertura %'] = matrix_df.apply(
-                lambda x: (x['AtendidosCalc'] / (x['programados'] if 'programados' in x else x['clientescom'])) * 100
+                lambda x: (x['AtendidosCalc'] / (x.get('programados') or x.get('clientescom', 0))) * 100
                 if (x.get('programados') or x.get('clientescom')) else 0,
                 axis=1,
             )
@@ -234,7 +234,7 @@ class PreventaReport:
         matrix_df['Eficiencia %'] = 0.0
         if ('totalpa' in matrix_df.columns) and 'pedidos_ruta' in matrix_df.columns and ('programados' in matrix_df.columns or 'clientescom' in matrix_df.columns):
             matrix_df['Eficiencia %'] = matrix_df.apply(
-                lambda x: (((x['totalpa']) + x['pedidos_ruta']) / (x['programados'] if 'programados' in x else x['clientescom'])) * 100
+                lambda x: (((x['totalpa']) + x['pedidos_ruta']) / (x.get('programados') or x.get('clientescom', 0))) * 100
                 if (x.get('programados') or x.get('clientescom')) else 0,
                 axis=1,
             )
@@ -245,7 +245,7 @@ class PreventaReport:
             matrix_df['Efectividad %'] = matrix_df['efectividad_visita']
         elif 'totalpendientes' in matrix_df.columns and ('programados' in matrix_df.columns or 'clientescom' in matrix_df.columns):
             matrix_df['Efectividad %'] = matrix_df.apply(
-                lambda x: (((x['programados'] if 'programados' in x else x['clientescom']) - x['totalpendientes']) / (x['programados'] if 'programados' in x else x['clientescom'])) * 100
+                lambda x: (((x.get('programados') or x.get('clientescom', 0)) - x['totalpendientes']) / (x.get('programados') or x.get('clientescom', 0))) * 100
                 if (x.get('programados') or x.get('clientescom')) else 0,
                 axis=1,
             )

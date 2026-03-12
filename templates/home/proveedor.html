@@ -19,6 +19,64 @@ Informe Proveedores
     <p class="text-muted small mb-0">Genera reportes detallados de movimientos y análisis por proveedor.</p>
   </div>
 
+  <!-- KPIs -->
+  {% if kpis %}
+  <div class="row mb-4 g-3">
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Ultimo Dato</div>
+              <div class="h5 mb-0 fw-bold text-success">{{ kpis.ultimo_dato|default:"-" }}</div>
+            </div>
+            <div class="fs-2 text-success opacity-25"><i class="fas fa-calendar-check"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Ventas (30d)</div>
+              <div class="h5 mb-0 fw-bold text-primary">${{ kpis.ventas_ultimo_mes|floatformat:0|default:"0" }}</div>
+            </div>
+            <div class="fs-2 text-primary opacity-25"><i class="fas fa-dollar-sign"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Productos</div>
+              <div class="h5 mb-0 fw-bold text-info">{{ kpis.productos_unicos|default:"0" }}</div>
+            </div>
+            <div class="fs-2 text-info opacity-25"><i class="fas fa-boxes-stacked"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Puntos de Venta</div>
+              <div class="h5 mb-0 fw-bold text-warning">{{ kpis.puntos_venta|default:"0" }}</div>
+            </div>
+            <div class="fs-2 text-warning opacity-25"><i class="fas fa-store"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="card report-form-card">
     <div class="card-header d-flex align-items-center">
       <i class="fas fa-cog text-success me-2"></i>
@@ -72,6 +130,24 @@ Informe Proveedores
     </div>
   </div>
 
+  <!-- Vista previa de datos -->
+  <div class="card shadow-sm border-0 mb-3 mt-3" id="previewCard" style="display:none;">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 fw-bold text-success"><i class="fas fa-list me-2"></i>Vista Previa - Proveedores</h5>
+      <small class="text-muted" id="preview-info"></small>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+        <table class="table table-hover table-sm small align-middle">
+          <thead class="table-light sticky-top" style="z-index:1;">
+            <tr id="previewHead"></tr>
+          </thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="modal fade" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -99,6 +175,7 @@ Informe Proveedores
 {% block script %}
 {{ block.super }}
 <script src="{% static 'js/task-monitor.js' %}"></script>
+<script src="{% static 'js/render-preview.js' %}"></script>
 <script>
   var monitor = new TaskMonitor({
     taskType: 'proveedor',
@@ -106,7 +183,13 @@ Informe Proveedores
     formUrl: '{% url form_url %}',
     checkTaskUrl: '{% url "home_app:check_task_status" %}',
     csrfToken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
-    modalTitle: 'Procesando Informe Proveedores...'
+    modalTitle: 'Procesando Informe Proveedores...',
+    onComplete: function(response) {
+      var result = response.result || {};
+      var headers = result.preview_headers || [];
+      var rows = result.preview_sample || [];
+      renderPreview(headers, rows);
+    }
   });
 </script>
 {% endblock script %}

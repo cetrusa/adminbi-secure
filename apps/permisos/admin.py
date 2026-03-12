@@ -52,12 +52,13 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
         "name_display",
         "nmEmpresa",
         "es_bimbo_badge",
+        "envio_email_badge",
         "idProveedorBimbo",
-        "get_actions",
+        "display_actions",
     )
     list_display_links = ("id", "name_display")
     search_fields = ("name", "nmEmpresa")
-    list_filter = ("es_bimbo", "estado")
+    list_filter = ("es_bimbo", "envio_email_activo", "estado")
     list_per_page = 25
 
     def name_display(self, obj):
@@ -79,7 +80,19 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
     es_bimbo_badge.short_description = _("Bimbo")
     es_bimbo_badge.admin_order_field = "es_bimbo"
 
-    def get_actions(self, obj):
+    def envio_email_badge(self, obj):
+        if obj.envio_email_activo:
+            return format_html(
+                '<span style="color:white;background:#007bff;padding:3px 8px;border-radius:4px;">SI</span>'
+            )
+        return format_html(
+            '<span style="color:#666;background:#eee;padding:3px 8px;border-radius:4px;">NO</span>'
+        )
+
+    envio_email_badge.short_description = _("Email")
+    envio_email_badge.admin_order_field = "envio_email_activo"
+
+    def display_actions(self, obj):
         """Muestra acciones para cada empresa."""
         buttons = []
 
@@ -94,7 +107,7 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
 
         return format_html(" ".join(buttons))
 
-    get_actions.short_description = _("Acciones")
+    display_actions.short_description = _("Acciones")
 
     fieldsets = (
         (
@@ -115,6 +128,13 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
             {
                 "fields": ("es_bimbo", "ceve", "idProveedorBimbo"),
                 "description": _("Marque 'Es Bimbo' para habilitar la integración con BIMBO."),
+            },
+        ),
+        (
+            _("Reportes por Correo"),
+            {
+                "fields": ("envio_email_activo",),
+                "description": _("Habilite para incluir esta empresa en el envío nocturno automático de reportes."),
             },
         ),
         (

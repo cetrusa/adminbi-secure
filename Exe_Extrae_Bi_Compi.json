@@ -1,0 +1,125 @@
+{
+ "version": "auto-py-to-exe-configuration_v1",
+ "pyinstallerOptions": [
+  {
+   "optionDest": "noconfirm",
+   "value": true
+  },
+  {
+   "optionDest": "filenames",
+   "value": "D:/Python/DataZenithBi/adminbi/main.py"
+  },
+  {
+   "optionDest": "onefile",
+   "value": true
+  },
+  {
+   "optionDest": "console",
+   "value": true
+  },
+  {
+   "optionDest": "icon_file",
+   "value": "D:/Python/DataZenithBi/adminbi/logo_amovil.ico"
+  },
+  {
+   "optionDest": "name",
+   "value": "extrae_bi_compi"
+  },
+  {
+   "optionDest": "clean_build",
+   "value": false
+  },
+  {
+   "optionDest": "strip",
+   "value": false
+  },
+  {
+   "optionDest": "noupx",
+   "value": false
+  },
+  {
+   "optionDest": "disable_windowed_traceback",
+   "value": false
+  },
+  {
+   "optionDest": "uac_admin",
+   "value": false
+  },
+  {
+   "optionDest": "uac_uiaccess",
+   "value": false
+  },
+  {
+   "optionDest": "argv_emulation",
+   "value": false
+  },
+  {
+   "optionDest": "bootloader_ignore_signals",
+   "value": false
+  },
+  {
+   "optionDest": "datas",
+   "value": "D:/Python/DataZenithBi/adminbi/logo_amovil.ico;."
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "pymysql"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "sqlalchemy"
+  },
+  {
+   "optionDest": "collect_submodules",
+   "value": "pandas"
+  },
+  {
+   "optionDest": "collect_submodules",
+   "value": "pymysql"
+  },
+  {
+   "optionDest": "collect_submodules",
+   "value": "sqlalchemy"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "charset_normalizer"
+  },
+  {
+   "optionDest": "collect_submodules",
+   "value": "charset_normalizer"
+  },
+  {
+   "optionDest": "collect_data",
+   "value": "pandas"
+  },
+  {
+   "optionDest": "excludes",
+   "value": "django"
+  },
+  {
+   "optionDest": "datas",
+   "value": "D:/Python/DataZenithBi/adminbi/config_email.json;."
+  },
+  {
+   "optionDest": "collect_data",
+   "value": "pymysql"
+  },
+  {
+   "optionDest": "collect_data",
+   "value": "sqlalchemy"
+  },
+  {
+   "optionDest": "collect_data",
+   "value": "charset_normalizer"
+  },
+  {
+   "optionDest": "hiddenimports",
+   "value": "pywinauto"
+  }
+ ],
+ "nonPyinstallerOptions": {
+  "increaseRecursionLimit": true,
+  "manualArguments": ""
+ }
+}

@@ -1,0 +1,141 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}{{ modo|title }} Supervisor{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_cubo.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+{% include 'includes/messages.html' %}
+
+<div class="container-fluid px-0">
+  <div class="mb-4">
+    <h3 class="fw-bold mb-1">
+      <i class="fas fa-{% if modo == 'crear' %}plus-circle{% else %}edit{% endif %} text-info me-2"></i>
+      {% if modo == 'crear' %}Nuevo Supervisor{% else %}Editar Supervisor{% endif %}
+    </h3>
+    <p class="text-muted small mb-0">Base de datos: <strong>{{ database_name }}</strong></p>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <form method="post"
+            action="{% if modo == 'crear' %}{% url 'home_app:supervisores_create' %}{% else %}{% url 'home_app:supervisores_edit' pk=supervisor.id %}{% endif %}">
+        {% csrf_token %}
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-8">
+            <label for="nombre" class="form-label small fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" id="nombre" name="nombre" required
+                   value="{{ supervisor.nombre|default:'' }}">
+          </div>
+          <div class="col-md-4">
+            <div class="form-check mt-4">
+              <input class="form-check-input" type="checkbox" id="activo" name="activo"
+                     {% if modo == 'crear' or supervisor.activo %}checked{% endif %}>
+              <label class="form-check-label small" for="activo">Activo</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="notas" class="form-label small fw-semibold">Notas</label>
+          <textarea class="form-control form-control-sm" id="notas" name="notas" rows="2">{{ supervisor.notas|default:'' }}</textarea>
+        </div>
+
+        <hr>
+        <h6 class="fw-bold mb-3"><i class="fas fa-map-marker-alt me-1 text-info"></i> Macrozonas</h6>
+        <div id="macrozonasContainer" class="mb-3">
+          <div class="text-muted small mb-2"><i class="fas fa-spinner fa-spin me-1"></i> Cargando macrozonas...</div>
+        </div>
+
+        <hr>
+        <h6 class="fw-bold mb-3"><i class="fas fa-envelope me-1 text-info"></i> Correos electronicos</h6>
+        <div id="correosContainer">
+          {% if correos %}
+            {% for c in correos %}
+            <div class="input-group input-group-sm mb-2 correo-row">
+              <input type="email" class="form-control" name="correos" value="{{ c.correo }}" placeholder="correo@ejemplo.com">
+              <button type="button" class="btn btn-outline-danger btn-remove-correo"><i class="fas fa-times"></i></button>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="input-group input-group-sm mb-2 correo-row">
+              <input type="email" class="form-control" name="correos" placeholder="correo@ejemplo.com">
+              <button type="button" class="btn btn-outline-danger btn-remove-correo"><i class="fas fa-times"></i></button>
+            </div>
+          {% endif %}
+        </div>
+        <button type="button" class="btn btn-outline-info btn-sm mb-3" id="btnAddCorreo">
+          <i class="fas fa-plus me-1"></i> Agregar correo
+        </button>
+
+        <hr>
+        <div class="d-flex justify-content-between">
+          <a href="{% url 'home_app:supervisores_list' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+          </a>
+          <button type="submit" class="btn btn-info text-white btn-sm">
+            <i class="fas fa-save me-1"></i> {% if modo == 'crear' %}Crear{% else %}Guardar{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script>
+// Correos: agregar / quitar
+document.getElementById('btnAddCorreo').addEventListener('click', function() {
+  var row = document.createElement('div');
+  row.className = 'input-group input-group-sm mb-2 correo-row';
+  row.innerHTML = '<input type="email" class="form-control" name="correos" placeholder="correo@ejemplo.com">' +
+                  '<button type="button" class="btn btn-outline-danger btn-remove-correo"><i class="fas fa-times"></i></button>';
+  document.getElementById('correosContainer').appendChild(row);
+});
+document.getElementById('correosContainer').addEventListener('click', function(e) {
+  var btn = e.target.closest('.btn-remove-correo');
+  if (btn) {
+    var rows = document.querySelectorAll('.correo-row');
+    if (rows.length > 1) {
+      btn.closest('.correo-row').remove();
+    } else {
+      btn.closest('.correo-row').querySelector('input').value = '';
+    }
+  }
+});
+
+// Macrozonas: cargar via AJAX
+var asignadas = {{ macrozonas_asignadas|default:"[]" }};
+fetch('{% url "home_app:macrozonas_json" %}')
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var container = document.getElementById('macrozonasContainer');
+    if (!data.ok) {
+      container.innerHTML = '<div class="text-danger small">' + (data.error || 'Error cargando macrozonas') + '</div>';
+      return;
+    }
+    if (data.macrozonas.length === 0) {
+      container.innerHTML = '<div class="text-muted small">No se encontraron macrozonas en la tabla zona.</div>';
+      return;
+    }
+    var html = '<div class="row g-2">';
+    data.macrozonas.forEach(function(mz) {
+      var checked = asignadas.indexOf(mz.id) !== -1 ? 'checked' : '';
+      html += '<div class="col-md-4 col-lg-3">' +
+              '<div class="form-check">' +
+              '<input class="form-check-input" type="checkbox" name="macrozonas" value="' + mz.id + '" id="mz_' + mz.id + '" ' + checked + '>' +
+              '<label class="form-check-label small" for="mz_' + mz.id + '">' + mz.nombre + ' <span class="text-muted">(ID: ' + mz.id + ')</span></label>' +
+              '</div></div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  })
+  .catch(function(err) {
+    document.getElementById('macrozonasContainer').innerHTML = '<div class="text-danger small">Error de red: ' + err + '</div>';
+  });
+</script>
+{% endblock script %}

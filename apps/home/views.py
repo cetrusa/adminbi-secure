@@ -235,6 +235,11 @@ class HomePanelCuboPage(BaseView):
                 "ultimo_reporte": config.config.get("ultima_actualizacion", ""),
             }
 
+            # KPIs de cuboventas
+            kpis = self._get_cubo_kpis(database_name)
+            if kpis:
+                user_context["kpis"] = kpis
+
             # Guardar en cachÃ©
             cache.set(cache_key, user_context, 60 * 15)  # 15 minutos
 
@@ -262,6 +267,125 @@ class HomePanelCuboPage(BaseView):
 
         pattern = re.compile(r"^[a-zA-Z0-9_\-]+$")
         return bool(pattern.match(database_name))
+
+    @staticmethod
+    def _get_cubo_kpis(database_name):
+        """
+        Obtiene KPIs de cuboventas desde la base BI para el panel y reportes.
+        Incluye ultima facturacion (td=FV) y estado de tablas.
+        Retorna dict vacio si no hay datos o si ocurre un error.
+        """
+        try:
+            config = ConfigBasic(database_name)
+            c = config.config
+            db_bi = c.get("dbBi")
+            if not db_bi:
+                return {}
+
+            engine = Conexion.ConexionMariadb3(
+                str(c.get("nmUsrIn")),
+                str(c.get("txPassIn")),
+                str(c.get("hostServerIn")),
+                int(c.get("portServerIn")),
+                db_bi,
+            )
+
+            with engine.connect() as conn:
+                # KPIs principales de cuboventas
+                row = conn.execute(
+                    text(
+                        f"SELECT "
+                        f"MAX(cv.dtContabilizacion) AS ultimo_dato, "
+                        f"COUNT(*) AS total_registros, "
+                        f"COUNT(DISTINCT cv.nbProducto) AS productos_unicos, "
+                        f"COUNT(DISTINCT cv.idPuntoVenta) AS puntos_venta, "
+                        f"COALESCE(SUM(cv.vlrTotalconIva), 0) AS valor_total_ventas, "
+                        f"COALESCE(SUM(CASE WHEN cv.dtContabilizacion >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) "
+                        f"THEN cv.vlrTotalconIva ELSE 0 END), 0) AS ventas_ultimo_mes, "
+                        f"MAX(CASE WHEN cv.td = 'FV' THEN cv.dtContabilizacion END) AS ultima_facturacion "
+                        f"FROM `{db_bi}`.cuboventas cv "
+                        f"WHERE cv.dtContabilizacion >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)"
+                    )
+                ).mappings().first()
+
+                if not row or row["ultimo_dato"] is None:
+                    return {}
+
+                # Estado de tablas: verificar cuales existen y tienen datos
+                tablas_check = conn.execute(
+                    text(
+                        "SELECT "
+                        "t.TABLE_NAME AS tabla, "
+                        "t.TABLE_ROWS AS filas "
+                        "FROM information_schema.TABLES t "
+                        "WHERE t.TABLE_SCHEMA = :db "
+                        "AND t.TABLE_NAME IN ("
+                        "'cuboventas','faltantes','fact_preventa_diaria',"
+                        "'clientes','productos','zona')"
+                    ),
+                    {"db": db_bi},
+                ).mappings().all()
+
+                tablas_estado = {}
+                for t in tablas_check:
+                    tablas_estado[t["tabla"]] = int(t["filas"] or 0)
+
+                tablas_esperadas = [
+                    "cuboventas", "faltantes", "fact_preventa_diaria",
+                    "clientes", "productos", "zona",
+                ]
+                tablas_info = []
+                for nombre in tablas_esperadas:
+                    filas = tablas_estado.get(nombre)
+                    if filas is None:
+                        tablas_info.append({"nombre": nombre, "estado": "ausente", "filas": 0})
+                    elif filas == 0:
+                        tablas_info.append({"nombre": nombre, "estado": "vacia", "filas": 0})
+                    else:
+                        tablas_info.append({"nombre": nombre, "estado": "ok", "filas": filas})
+
+                tablas_ok = sum(1 for t in tablas_info if t["estado"] == "ok")
+                tablas_total = len(tablas_esperadas)
+
+            reportes_activos = Reporte.objects.filter(activo=True).count()
+
+            return {
+                "ultimo_dato": str(row["ultimo_dato"]) if row["ultimo_dato"] else None,
+                "ultima_facturacion": str(row["ultima_facturacion"]) if row["ultima_facturacion"] else None,
+                "total_registros": int(row["total_registros"] or 0),
+                "productos_unicos": int(row["productos_unicos"] or 0),
+                "puntos_venta": int(row["puntos_venta"] or 0),
+                "valor_total_ventas": float(row["valor_total_ventas"] or 0),
+                "ventas_ultimo_mes": float(row["ventas_ultimo_mes"] or 0),
+                "reportes_activos": reportes_activos,
+                "tablas_info": tablas_info,
+                "tablas_ok": tablas_ok,
+                "tablas_total": tablas_total,
+            }
+        except Exception as exc:
+            logger.warning("Error obteniendo KPIs de cuboventas para %s: %s", database_name, exc)
+            return {}
+
+
+class CuboKpisAjaxView(LoginRequiredMixin, View):
+    """Endpoint AJAX para obtener KPIs de cuboventas sin recargar la pagina."""
+
+    login_url = reverse_lazy("users_app:user-login")
+
+    def get(self, request, *args, **kwargs):
+        database_name = request.session.get("database_name")
+        if not database_name:
+            return JsonResponse({"ok": False, "error": "No hay empresa seleccionada."})
+
+        # Invalidar cache para forzar datos frescos
+        cache_key = f"user_cubo_context_{database_name}"
+        cache.delete(cache_key)
+
+        kpis = HomePanelCuboPage._get_cubo_kpis(database_name)
+        if not kpis:
+            return JsonResponse({"ok": False, "error": "No se encontraron datos para esta empresa."})
+
+        return JsonResponse({"ok": True, "kpis": kpis, "database_name": database_name})
 
 
 class HomePanelBiPage(BaseView):
@@ -1824,6 +1948,15 @@ class ReporteGenericoPage(BaseView):
             config = ConfigBasic(database_name, user_id)
             context["proveedores"] = config.config.get("proveedores", [])
             context["macrozonas"] = config.config.get("macrozonas", [])
+            # KPIs de cuboventas (cacheados via _get_cached_user_context del panel)
+            cache_key = f"user_cubo_context_{database_name}"
+            cached = cache.get(cache_key)
+            if cached and cached.get("kpis"):
+                context["kpis"] = cached["kpis"]
+            else:
+                kpis = HomePanelCuboPage._get_cubo_kpis(database_name)
+                if kpis:
+                    context["kpis"] = kpis
         file_name = self.request.session.get("file_name")
         file_path = self.request.session.get("file_path")
         if file_name:
@@ -1888,6 +2021,36 @@ class ProveedorPage(ReporteGenericoPage):
     task_func = cubo_ventas_task
 
     @method_decorator(permission_required("permisos.proveedor", raise_exception=True))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+
+class FaltantesPage(ReporteGenericoPage):
+    template_name = "home/faltantes.html"
+    permiso = "permisos.faltantes"
+    id_reporte = 4
+    form_url = "home_app:faltantes"
+    task_func = cubo_ventas_task
+
+    @method_decorator(permission_required("permisos.faltantes", raise_exception=True))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        formato = request.POST.get("formato", "detalle")
+        if formato == "consolidado":
+            self.id_reporte = 6
+        return super().post(request, *args, **kwargs)
+
+
+class PreventaPage(ReporteGenericoPage):
+    template_name = "home/preventa.html"
+    permiso = "permisos.preventa"
+    id_reporte = 5
+    form_url = "home_app:preventa"
+    task_func = cubo_ventas_task
+
+    @method_decorator(permission_required("permisos.preventa", raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 

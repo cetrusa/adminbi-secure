@@ -414,6 +414,15 @@ class ExtraeBiExtractor:
             )
             logging.info(f"[OPT] Conversión Timedelta->TIME aplicada vectorizadamente: {col}")
 
+        # float64 no puede almacenar None (lo convierte de vuelta a NaN),
+        # convertir columnas float con NaN a object para que .where() funcione
+        float_with_nan = [
+            col for col in result.columns
+            if result[col].dtype.kind == 'f' and result[col].isna().any()
+        ]
+        if float_with_nan:
+            result[float_with_nan] = result[float_with_nan].astype(object)
+
         # Reemplazar NaN/empty con None (para columnas nullable)
         result = result.where(pd.notnull(result), None)
         result = result.replace({"": None})
@@ -1285,6 +1294,14 @@ class ExtraeBiExtractor:
 
             # to_dict solo del sub-chunk, con columnas ya renombradas
             bound = df_for_insert.iloc[start_idx:end_idx][bind_keys].to_dict(orient="records")
+
+            # Red de seguridad: NaN en columnas numéricas sobrevive .where() de pandas
+            # en ciertos escenarios (mixed-type object columns, versiones de pandas).
+            # v != v es True SOLO para NaN (IEEE 754).
+            for rec in bound:
+                for k, v in rec.items():
+                    if isinstance(v, float) and v != v:
+                        rec[k] = None
 
             # Insertar con reintentos
             chunk_success = False

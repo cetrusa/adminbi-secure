@@ -1,0 +1,119 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}Carga Masiva {{ tipo|title }}{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_cubo.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+{% include 'includes/messages.html' %}
+
+<div class="container-fluid px-0">
+  <div class="mb-4">
+    <h3 class="fw-bold mb-1">
+      <i class="fas fa-file-excel text-success me-2"></i> Carga Masiva de {{ tipo|title }}
+    </h3>
+    <p class="text-muted small mb-0">Base de datos: <strong>{{ database_name }}</strong></p>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h6 class="fw-bold mb-3"><i class="fas fa-info-circle text-info me-1"></i> Formato del Excel (.xlsx)</h6>
+      {% if tipo == 'proveedores' %}
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm small mb-2">
+          <thead class="table-light">
+            <tr>
+              <th>nombre <span class="text-danger">*</span></th>
+              <th>nit</th>
+              <th>proveedor_ids</th>
+              <th>correo1</th>
+              <th>correo2</th>
+              <th>...</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Distribuidora ABC</td>
+              <td>900123456</td>
+              <td>6,40</td>
+              <td>ventas@abc.com</td>
+              <td>gerencia@abc.com</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>Proveedor XYZ</td>
+              <td>800654321</td>
+              <td>12</td>
+              <td>info@xyz.com</td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="small text-muted mb-0">
+        <li><strong>nombre</strong> es obligatorio. Si ya existe un proveedor con el mismo nombre, se omite.</li>
+        <li><strong>proveedor_ids</strong>: IDs separados por coma para filtro CuboVentas.</li>
+        <li>Puede agregar tantas columnas de correo como necesite (correo1, correo2, email1, email2...).</li>
+      </ul>
+      {% else %}
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm small mb-2">
+          <thead class="table-light">
+            <tr>
+              <th>nombre <span class="text-danger">*</span></th>
+              <th>correo1</th>
+              <th>correo2</th>
+              <th>...</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Juan Perez</td>
+              <td>jperez@empresa.com</td>
+              <td>juan.p@gmail.com</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>Maria Lopez</td>
+              <td>mlopez@empresa.com</td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="small text-muted mb-0">
+        <li><strong>nombre</strong> es obligatorio. Si ya existe un supervisor con el mismo nombre, se omite.</li>
+        <li>Las macrozonas se asignan despues desde el formulario de edicion de cada supervisor.</li>
+        <li>Puede agregar tantas columnas de correo como necesite (correo1, correo2, email1, email2...).</li>
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data"
+            action="{% if tipo == 'proveedores' %}{% url 'home_app:carga_masiva_proveedores' %}{% else %}{% url 'home_app:carga_masiva_supervisores' %}{% endif %}">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="archivo" class="form-label small fw-semibold">Archivo Excel (.xlsx)</label>
+          <input type="file" class="form-control form-control-sm" id="archivo" name="archivo"
+                 accept=".xlsx,.xls" required>
+        </div>
+        <div class="d-flex justify-content-between">
+          <a href="{% if tipo == 'proveedores' %}{% url 'home_app:proveedores_bi_list' %}{% else %}{% url 'home_app:supervisores_list' %}{% endif %}"
+             class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+          </a>
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="fas fa-upload me-1"></i> Cargar Excel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock window %}

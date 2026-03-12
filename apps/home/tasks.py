@@ -210,6 +210,24 @@ def task_handler(f: Callable[..., T]) -> Callable[..., ResultDict]:
             )
             logger.error(f"{error_msg}\n{error_details}")
 
+            # Notificar admins por correo sobre la falla
+            try:
+                from django.core.mail import mail_admins
+                mail_admins(
+                    subject=f"[DataZenith] Tarea fallida: {task_name}",
+                    message=(
+                        f"Tarea: {task_name}\n"
+                        f"Job ID: {job_id}\n"
+                        f"Args: {args}\n"
+                        f"DB: {args[0] if args else 'N/A'}\n"
+                        f"Error: {e}\n\n"
+                        f"{error_details}"
+                    ),
+                    fail_silently=True,
+                )
+            except Exception:
+                pass
+
             final_result = {
                 "success": False,
                 "error_message": error_msg,
@@ -226,6 +244,77 @@ def task_handler(f: Callable[..., T]) -> Callable[..., ResultDict]:
             return final_result
 
     return wrapper
+
+
+# --- Helpers ---
+
+
+def _post_process_faltantes_consolidado(file_path):
+    """
+    Post-procesa el Excel de Faltantes Consolidado (report_id=6).
+    Lee el Excel de hoja unica generado por CuboVentas y lo reemplaza
+    con un Excel de 3 hojas: Macrozonas, Asesores, Agotados.
+    """
+    import pandas as pd
+
+    df = pd.read_excel(file_path, engine="openpyxl")
+
+    # Hoja 1: VENTA X MACROZONAS (agrupado por sede)
+    df_macro = (
+        df.groupby("sede", sort=True)
+        .agg(
+            macrozona=("macrozona", "first"),
+            total_pedidos=("nbCantidadPedidos", "sum"),
+            total_facturado=("nbCantidadFacturadaPedidos", "sum"),
+            total_faltantes=("nbCantidadFaltantePedidos", "sum"),
+            valor_faltante=("vlFaltante", "sum"),
+        )
+        .reset_index()
+    )
+    df_macro["pct_faltante"] = (
+        (df_macro["total_faltantes"] / df_macro["total_pedidos"].replace(0, 1) * 100)
+        .round(2)
+    )
+
+    # Hoja 2: VENTA X ASESORES (agrupado por sede + asesor)
+    df_asesor = (
+        df.groupby(["sede", "asesor"], sort=True)
+        .agg(
+            total_pedidos=("nbCantidadPedidos", "sum"),
+            total_facturado=("nbCantidadFacturadaPedidos", "sum"),
+            total_faltantes=("nbCantidadFaltantePedidos", "sum"),
+            valor_faltante=("vlFaltante", "sum"),
+        )
+        .reset_index()
+    )
+    df_asesor["pct_faltante"] = (
+        (df_asesor["total_faltantes"] / df_asesor["total_pedidos"].replace(0, 1) * 100)
+        .round(2)
+    )
+
+    # Hoja 3: AGOTADOS (productos con faltantes > 0)
+    df_agotados = (
+        df[df["nbCantidadFaltantePedidos"] > 0]
+        .groupby(["sede", "asesor", "nbProducto", "nombre_producto"], sort=True)
+        .agg(
+            cantidad_pedida=("nbCantidadPedidos", "sum"),
+            cantidad_facturada=("nbCantidadFacturadaPedidos", "sum"),
+            cantidad_faltante=("nbCantidadFaltantePedidos", "sum"),
+            valor_faltante=("vlFaltante", "sum"),
+        )
+        .reset_index()
+    )
+
+    # Guardar Excel multi-hoja (sobreescribe el archivo original)
+    with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+        df_macro.to_excel(writer, sheet_name="VENTA X MACROZONAS", index=False)
+        df_asesor.to_excel(writer, sheet_name="VENTA X ASESORES", index=False)
+        df_agotados.to_excel(writer, sheet_name="AGOTADOS", index=False)
+
+    logger.info(
+        f"Faltantes Consolidado: {len(df_macro)} macrozonas, "
+        f"{len(df_asesor)} asesores, {len(df_agotados)} agotados"
+    )
 
 
 # --- Tareas RQ ---
@@ -305,6 +394,15 @@ def cubo_ventas_task(
     # El decorador @task_handler se encargará del manejo de errores y formato final
     result_data = cubo_processor.run()
 
+    # Post-procesamiento: Faltantes Consolidado (report_id=6) → Excel multi-hoja
+    if result_data.get("success") and report_id == 6:
+        try:
+            _post_process_faltantes_consolidado(result_data["file_path"])
+            print("[cubo_ventas_task] Post-procesamiento Faltantes Consolidado completado")
+        except Exception as e:
+            logger.warning(f"Error en post-procesamiento Faltantes Consolidado: {e}")
+            print(f"[cubo_ventas_task] Error post-procesamiento: {e}")
+
     # --- Asegurar que el progreso final se reporte correctamente para el frontend ---
     job = get_current_job()
     job_id = job.id if job else None
@@ -334,6 +432,14 @@ def cubo_ventas_task(
             result_data["preview_sample"] = []
 
     print(f"[cubo_ventas_task] RESULTADO: {result_data}")
+
+    # Invalidar cache de KPIs para que reflejen datos frescos
+    if result_data.get("success"):
+        try:
+            from django.core.cache import cache
+            cache.delete(f"user_cubo_context_{database_name}")
+        except Exception:
+            pass
 
     # Cerrar conexión Django después de finalizar procesamiento pesado
     try:
@@ -824,6 +930,15 @@ def extrae_bi_task(
     update_job_progress(job_id, 15, meta={"stage": "Ejecutando extractor principal"})
     result = extractor.run()
     print(f"[extrae_bi_task] RESULTADO: {result}")
+
+    # Invalidar cache de KPIs tras actualizar datos BI
+    if result.get("success"):
+        try:
+            from django.core.cache import cache
+            cache.delete(f"user_cubo_context_{database_name}")
+        except Exception:
+            pass
+
     update_job_progress(job_id, 95, meta={"stage": "Finalizando extracción BI"})
     print("[extrae_bi_task] FIN")
     return result
@@ -1232,3 +1347,255 @@ def cargue_tabla_individual_task(database_name, nombre_tabla):
     return resultado
 
 
+# ---------------------------------------------------------------------------
+# Tareas de envio de reportes por correo
+# ---------------------------------------------------------------------------
+
+def _send_report_email(subject, recipients, file_path, body_html):
+    """Helper: envia un correo con archivo Excel adjunto."""
+    from django.core.mail import EmailMessage
+
+    msg = EmailMessage(
+        subject=subject,
+        body=body_html,
+        to=recipients,
+    )
+    msg.content_subtype = "html"
+    if file_path and os.path.exists(file_path):
+        msg.attach_file(file_path)
+    msg.send(fail_silently=False)
+
+
+def _log_envio(engine, tipo, dest_id, dest_nombre, correos, fecha_ini, fecha_fin,
+               archivo, estado, error_detalle=None):
+    """Registra un envio en log_envio_reportes de la base BI."""
+    from sqlalchemy import text as sa_text
+    try:
+        with engine.connect() as conn:
+            conn.execute(
+                sa_text(
+                    "INSERT INTO log_envio_reportes "
+                    "(tipo, destinatario_id, destinatario_nombre, correos, "
+                    "fecha_ini, fecha_fin, archivo, estado, error_detalle) "
+                    "VALUES (:tipo, :did, :dnombre, :correos, :fini, :ffin, "
+                    ":archivo, :estado, :error)"
+                ),
+                {
+                    "tipo": tipo, "did": dest_id, "dnombre": dest_nombre,
+                    "correos": correos, "fini": fecha_ini, "ffin": fecha_fin,
+                    "archivo": archivo, "estado": estado, "error": error_detalle,
+                },
+            )
+            conn.commit()
+    except Exception as exc:
+        logger.warning("Error registrando log_envio_reportes: %s", exc)
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def enviar_reportes_email_task(database_name):
+    """
+    Genera y envia reportes por correo para UNA empresa.
+    - Por cada proveedor activo: CuboVentas filtrado por proveedor_ids
+    - Por cada supervisor activo: CuboVentas filtrado por macrozonas
+    Rango: 1ro del mes actual hasta hoy.
+    """
+    from sqlalchemy import text as sa_text
+    from scripts.conexion import Conexion as Cnx
+    from scripts.config import ConfigBasic as CB
+
+    rq_job = get_current_job()
+    job_id = rq_job.id if rq_job else None
+
+    logger.info("[enviar_reportes_email_task] INICIO para %s", database_name)
+
+    config = CB(database_name)
+    c = config.config
+    db_bi = c.get("dbBi")
+    if not db_bi:
+        return {"success": False, "error_message": f"No se encontro dbBi para {database_name}"}
+
+    engine = Cnx.ConexionMariadb3(
+        str(c.get("nmUsrIn")), str(c.get("txPassIn")),
+        str(c.get("hostServerIn")), int(c.get("portServerIn")), db_bi,
+    )
+
+    # Rango de fechas: 1ro del mes actual -> hoy
+    from datetime import date
+    hoy = date.today()
+    fecha_ini = hoy.replace(day=1).strftime("%Y-%m-%d")
+    fecha_fin = hoy.strftime("%Y-%m-%d")
+
+    enviados = 0
+    errores = 0
+
+    update_job_progress(job_id, 5, meta={"stage": "Leyendo destinatarios"})
+
+    with engine.connect() as conn:
+        # --- Proveedores ---
+        proveedores = conn.execute(
+            sa_text(
+                "SELECT p.id, p.nombre, p.proveedor_ids, "
+                "GROUP_CONCAT(pc.correo SEPARATOR ',') AS correos "
+                "FROM proveedores_bi p "
+                "JOIN proveedores_correo pc ON pc.proveedor_id = p.id AND pc.activo = 1 "
+                "WHERE p.activo = 1 GROUP BY p.id"
+            )
+        ).mappings().all()
+
+        # --- Supervisores ---
+        supervisores = conn.execute(
+            sa_text(
+                "SELECT s.id, s.nombre, "
+                "GROUP_CONCAT(DISTINCT sc.correo SEPARATOR ',') AS correos, "
+                "GROUP_CONCAT(DISTINCT sm.macrozona_id SEPARATOR ',') AS macrozonas "
+                "FROM supervisores s "
+                "JOIN supervisores_correo sc ON sc.supervisor_id = s.id AND sc.activo = 1 "
+                "LEFT JOIN supervisores_macrozona sm ON sm.supervisor_id = s.id "
+                "WHERE s.activo = 1 GROUP BY s.id"
+            )
+        ).mappings().all()
+
+    total = len(proveedores) + len(supervisores)
+    if total == 0:
+        return {"success": True, "message": "No hay destinatarios activos."}
+
+    idx = 0
+
+    # Enviar reportes a proveedores
+    for prov in proveedores:
+        idx += 1
+        pct = int(10 + (idx / total) * 80)
+        update_job_progress(job_id, pct, meta={"stage": f"Proveedor: {prov['nombre']}"})
+
+        correos_list = [e.strip() for e in (prov["correos"] or "").split(",") if e.strip()]
+        if not correos_list:
+            continue
+
+        try:
+            # Generar reporte filtrado por proveedor_ids
+            cubo = CuboVentas(
+                database_name, fecha_ini, fecha_fin,
+                user_id=None, id_reporte=2,
+            )
+            # Inyectar filtro de proveedor
+            if prov["proveedor_ids"]:
+                cubo.proveedores = [int(x.strip()) for x in prov["proveedor_ids"].split(",") if x.strip()]
+            result = cubo.run()
+
+            if result.get("success") and result.get("file_path"):
+                subject = f"Reporte {database_name} - {prov['nombre']} ({fecha_ini} a {fecha_fin})"
+                body = (
+                    f"<h3>Reporte de Ventas - {prov['nombre']}</h3>"
+                    f"<p>Periodo: {fecha_ini} a {fecha_fin}</p>"
+                    f"<p>Empresa: {database_name}</p>"
+                    f"<p>Adjunto encontrara el archivo Excel con el detalle.</p>"
+                    f"<hr><small>Generado automaticamente por DataZenith.</small>"
+                )
+                _send_report_email(subject, correos_list, result["file_path"], body)
+                _log_envio(engine, "proveedor", prov["id"], prov["nombre"],
+                           prov["correos"], fecha_ini, fecha_fin,
+                           result.get("file_path"), "enviado")
+                enviados += 1
+            else:
+                _log_envio(engine, "proveedor", prov["id"], prov["nombre"],
+                           prov["correos"], fecha_ini, fecha_fin, None,
+                           "error", result.get("error_message", "Sin datos"))
+                errores += 1
+        except Exception as exc:
+            logger.error("Error enviando reporte proveedor %s: %s", prov["nombre"], exc)
+            _log_envio(engine, "proveedor", prov["id"], prov["nombre"],
+                       prov["correos"], fecha_ini, fecha_fin, None, "error", str(exc))
+            errores += 1
+
+    # Enviar reportes a supervisores
+    for sup in supervisores:
+        idx += 1
+        pct = int(10 + (idx / total) * 80)
+        update_job_progress(job_id, pct, meta={"stage": f"Supervisor: {sup['nombre']}"})
+
+        correos_list = [e.strip() for e in (sup["correos"] or "").split(",") if e.strip()]
+        if not correos_list:
+            continue
+
+        try:
+            cubo = CuboVentas(
+                database_name, fecha_ini, fecha_fin,
+                user_id=None, id_reporte=2,
+            )
+            # Inyectar filtro de macrozonas
+            if sup["macrozonas"]:
+                cubo.macrozonas = [int(x.strip()) for x in sup["macrozonas"].split(",") if x.strip()]
+            result = cubo.run()
+
+            if result.get("success") and result.get("file_path"):
+                subject = f"Reporte {database_name} - {sup['nombre']} ({fecha_ini} a {fecha_fin})"
+                body = (
+                    f"<h3>Reporte de Ventas - {sup['nombre']}</h3>"
+                    f"<p>Periodo: {fecha_ini} a {fecha_fin}</p>"
+                    f"<p>Empresa: {database_name}</p>"
+                    f"<p>Adjunto encontrara el archivo Excel con el detalle.</p>"
+                    f"<hr><small>Generado automaticamente por DataZenith.</small>"
+                )
+                _send_report_email(subject, correos_list, result["file_path"], body)
+                _log_envio(engine, "supervisor", sup["id"], sup["nombre"],
+                           sup["correos"], fecha_ini, fecha_fin,
+                           result.get("file_path"), "enviado")
+                enviados += 1
+            else:
+                _log_envio(engine, "supervisor", sup["id"], sup["nombre"],
+                           sup["correos"], fecha_ini, fecha_fin, None,
+                           "error", result.get("error_message", "Sin datos"))
+                errores += 1
+        except Exception as exc:
+            logger.error("Error enviando reporte supervisor %s: %s", sup["nombre"], exc)
+            _log_envio(engine, "supervisor", sup["id"], sup["nombre"],
+                       sup["correos"], fecha_ini, fecha_fin, None, "error", str(exc))
+            errores += 1
+
+    update_job_progress(job_id, 100, meta={"stage": "Completado"})
+    return {
+        "success": errores == 0,
+        "message": f"Enviados: {enviados}, Errores: {errores}",
+        "enviados": enviados,
+        "errores": errores,
+    }
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def enviar_reportes_email_todas_empresas_task():
+    """
+    Orquestador: encola enviar_reportes_email_task para cada empresa
+    que tenga envio_email_activo=True.
+    """
+    from apps.permisos.models import ConfEmpresas
+
+    rq_job = get_current_job()
+    job_id = rq_job.id if rq_job else None
+
+    empresas = ConfEmpresas.objects.filter(estado=1, envio_email_activo=True)
+    total = empresas.count()
+    logger.info("[enviar_reportes_todas] Empresas con email activo: %d", total)
+
+    if total == 0:
+        return {"success": True, "message": "No hay empresas con envio de email activo."}
+
+    encoladas = 0
+    for i, emp in enumerate(empresas):
+        update_job_progress(
+            job_id, int((i / total) * 100),
+            meta={"stage": f"Encolando {emp.name}"},
+        )
+        try:
+            enviar_reportes_email_task.delay(emp.name)
+            encoladas += 1
+        except Exception as exc:
+            logger.error("Error encolando email task para %s: %s", emp.name, exc)
+
+    return {
+        "success": True,
+        "message": f"{encoladas}/{total} empresas encoladas para envio de reportes.",
+        "encoladas": encoladas,
+        "total": total,
+    }

@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}
-Informe Cubo de Ventas
+Informe Faltantes
 {% endblock title %}
 {% block barra_lateral %}
 {% include 'includes/left_sidebar_cubo.html' %}
@@ -15,23 +15,23 @@ Informe Cubo de Ventas
   <!-- Header -->
   <div class="mb-4">
     <h3 class="fw-bold mb-1">
-      <i class="fas fa-cube text-primary me-2"></i> Informe Cubo de Ventas
+      <i class="fas fa-exclamation-triangle text-danger me-2"></i> Informe de Faltantes
     </h3>
-    <p class="text-muted small mb-0">Genera informes consolidados de ventas por rango de fechas.</p>
+    <p class="text-muted small mb-0">Genera reportes de productos faltantes por periodo y zona.</p>
   </div>
 
   <!-- KPIs -->
   {% if kpis %}
   <div class="row mb-4 g-3">
     <div class="col-md-6 col-lg-3">
-      <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
         <div class="card-body py-2">
           <div class="d-flex justify-content-between align-items-center">
             <div>
               <div class="text-secondary small fw-bold text-uppercase mb-1">Ultimo Dato</div>
-              <div class="h5 mb-0 fw-bold text-primary">{{ kpis.ultimo_dato|default:"-" }}</div>
+              <div class="h5 mb-0 fw-bold text-danger">{{ kpis.ultimo_dato|default:"-" }}</div>
             </div>
-            <div class="fs-2 text-primary opacity-25"><i class="fas fa-calendar-check"></i></div>
+            <div class="fs-2 text-danger opacity-25"><i class="fas fa-calendar-check"></i></div>
           </div>
         </div>
       </div>
@@ -79,13 +79,13 @@ Informe Cubo de Ventas
   {% endif %}
 
   <!-- Formulario -->
-  <div class="card report-form-card">
+  <div class="card report-form-card" id="formCard">
     <div class="card-header d-flex align-items-center">
-      <i class="fas fa-cog text-primary me-2"></i>
-      <h6 class="fw-bold mb-0">Configuración del Informe</h6>
+      <i class="fas fa-cog text-danger me-2"></i>
+      <h6 class="fw-bold mb-0">Configuracion del Informe</h6>
     </div>
     <div class="card-body">
-      <form action="{% url form_url %}" method="post" id="FormCubo">
+      <form action="{% url form_url %}" method="post" id="FormFaltantes">
         {% csrf_token %}
 
         <div class="mb-3">
@@ -108,19 +108,28 @@ Informe Cubo de Ventas
         </div>
 
         <div class="mb-3">
-          <label for="batch_size" class="form-label small fw-semibold text-muted">Tamaño de lote</label>
+          <label for="formato" class="form-label small fw-semibold text-muted">Formato del Informe</label>
+          <select class="form-select form-select-sm" id="formato" name="formato">
+            <option value="detalle" selected>Detalle (todas las filas)</option>
+            <option value="consolidado">Consolidado (Macrozonas + Asesores + Agotados)</option>
+          </select>
+          <span class="form-text small">Consolidado genera un Excel con 3 hojas resumen.</span>
+        </div>
+
+        <div class="mb-3">
+          <label for="batch_size" class="form-label small fw-semibold text-muted">Tamano de lote</label>
           <select class="form-select form-select-sm" id="batch_size" name="batch_size">
             <option value="10000">10,000 (Recursos limitados)</option>
             <option value="20000">20,000</option>
-            <option value="50000" selected>50,000 (Estándar)</option>
+            <option value="50000" selected>50,000 (Estandar)</option>
             <option value="100000">100,000 (Datos grandes)</option>
             <option value="200000">200,000 (Muchos recursos)</option>
           </select>
-          <span class="form-text small">Ajuste según el rendimiento de su sistema.</span>
+          <span class="form-text small">Ajuste segun el rendimiento de su sistema.</span>
         </div>
 
-        <button id="submitBtnCubo" type="submit" class="btn btn-primary w-100" data-submitted="false">
-          <i class="fas fa-play me-2"></i> Generar Informe de Cubo de Ventas
+        <button id="submitBtnFaltantes" type="submit" class="btn btn-danger w-100" data-submitted="false">
+          <i class="fas fa-play me-2"></i> Generar Informe de Faltantes
         </button>
       </form>
 
@@ -133,12 +142,12 @@ Informe Cubo de Ventas
   <!-- Vista previa de datos -->
   <div class="card shadow-sm border-0 mb-3 mt-3" id="previewCard" style="display:none;">
     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-      <h5 class="mb-0 fw-bold text-primary"><i class="fas fa-list me-2"></i>Vista Previa - Cubo de Ventas</h5>
+      <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-list me-2"></i>Vista Previa - Faltantes</h5>
       <small class="text-muted" id="preview-info"></small>
     </div>
     <div class="card-body p-0">
-      <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
-        <table class="table table-hover table-sm small align-middle">
+      <div class="table-responsive" id="previewTableWrapper" style="max-height: 550px; overflow-y: auto;">
+        <table class="table table-hover table-sm small align-middle" id="previewTable">
           <thead class="table-light sticky-top" style="z-index:1;">
             <tr id="previewHead"></tr>
           </thead>
@@ -155,13 +164,13 @@ Informe Cubo de Ventas
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="processingModalLabel">
-            <i class="fas fa-spinner fa-spin me-2 text-primary"></i> Procesando Cubo de Ventas...
+            <i class="fas fa-spinner fa-spin me-2 text-danger"></i> Procesando Faltantes...
           </h5>
         </div>
         <div class="modal-body">
           <div id="progress-stage" class="mb-3 fw-semibold">Por favor, espere mientras se genera el archivo...</div>
           <div class="progress" style="height: 20px;">
-            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger"
               role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
           </div>
           <div id="detailedStatus" class="small text-muted mt-3 p-2 border-top"></div>
@@ -179,12 +188,16 @@ Informe Cubo de Ventas
 <script src="{% static 'js/render-preview.js' %}"></script>
 <script>
   var monitor = new TaskMonitor({
-    taskType: 'cubo',
-    submitBtnId: 'submitBtnCubo',
+    taskType: 'faltantes',
+    submitBtnId: 'submitBtnFaltantes',
     formUrl: '{% url form_url %}',
     checkTaskUrl: '{% url "home_app:check_task_status" %}',
     csrfToken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
-    modalTitle: 'Procesando Cubo de Ventas...',
+    modalTitle: 'Procesando Faltantes...',
+    extraParams: function() {
+      var el = document.getElementById('formato');
+      return el ? { formato: el.value } : {};
+    },
     onComplete: function(response) {
       var result = response.result || {};
       var headers = result.preview_headers || [];

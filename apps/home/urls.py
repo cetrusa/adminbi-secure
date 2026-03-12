@@ -2,6 +2,7 @@
 from django.urls import path
 
 from . import views
+from . import views_email_config as email_views
 from .views import CleanMediaView
 
 app_name = "home_app"
@@ -43,6 +44,16 @@ urlpatterns = [
         name="proveedor",
     ),
     path(
+        "faltantes/",
+        views.FaltantesPage.as_view(),
+        name="faltantes",
+    ),
+    path(
+        "preventa/",
+        views.PreventaPage.as_view(),
+        name="preventa",
+    ),
+    path(
         "matrix/",
         views.MatrixPage.as_view(),
         name="matrix",
@@ -74,6 +85,7 @@ urlpatterns = [
         views.CheckTaskStatusView.as_view(),
         name="check_task_status",
     ),
+    path("cubo-kpis/", views.CuboKpisAjaxView.as_view(), name="cubo_kpis_ajax"),
     path("amovildesk/", views.AmovildeskPage.as_view(), name="amovildesk"),
     path("reporte-list/", views.ReporteListView.as_view(), name="reporte_list"),
     path(
@@ -91,4 +103,17 @@ urlpatterns = [
         CleanMediaView.as_view(),
         name="clean_media",
     ),
+    # --- Email config (proveedores / supervisores) ---
+    path("email-config/init-tables/", email_views.InitEmailTablesView.as_view(), name="init_email_tables"),
+    path("email-config/proveedores/", email_views.ProveedoresBiListView.as_view(), name="proveedores_bi_list"),
+    path("email-config/proveedores/crear/", email_views.ProveedoresBiCreateView.as_view(), name="proveedores_bi_create"),
+    path("email-config/proveedores/<int:pk>/editar/", email_views.ProveedoresBiEditView.as_view(), name="proveedores_bi_edit"),
+    path("email-config/proveedores/<int:pk>/eliminar/", email_views.ProveedoresBiDeleteView.as_view(), name="proveedores_bi_delete"),
+    path("email-config/proveedores/carga-masiva/", email_views.CargaMasivaProveedoresView.as_view(), name="carga_masiva_proveedores"),
+    path("email-config/supervisores/", email_views.SupervisoresListView.as_view(), name="supervisores_list"),
+    path("email-config/supervisores/crear/", email_views.SupervisoresCreateView.as_view(), name="supervisores_create"),
+    path("email-config/supervisores/<int:pk>/editar/", email_views.SupervisoresEditView.as_view(), name="supervisores_edit"),
+    path("email-config/supervisores/<int:pk>/eliminar/", email_views.SupervisoresDeleteView.as_view(), name="supervisores_delete"),
+    path("email-config/supervisores/carga-masiva/", email_views.CargaMasivaSupervisoresView.as_view(), name="carga_masiva_supervisores"),
+    path("email-config/macrozonas/", email_views.MacrozonasJsonView.as_view(), name="macrozonas_json"),
 ]

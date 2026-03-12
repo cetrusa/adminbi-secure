@@ -41,6 +41,9 @@ class PermisosBarra(models.Model):
             ("reporte_preventa_bimbo", _("Puede ver Reporte Preventa Bimbo")),
             ("cargue_infoventas", _("Cargar Archivo Infoventas")),
             ("cargue_maestras", _("Cargar Tablas Maestras")),
+            ("faltantes", _("Generar informe de Faltantes")),
+            ("preventa", _("Generar informe de Preventa")),
+            ("config_email_reportes", _("Configurar correos para reportes programados")),
         )
         verbose_name = _("Permiso")
         verbose_name_plural = _("Permisos")
@@ -280,6 +283,11 @@ class ConfEmpresas(models.Model):
         blank=True,
         verbose_name=_("Activo"),
         help_text=_("Estado de la empresa (1: activo, 0: inactivo)"),
+    )
+    envio_email_activo = models.BooleanField(
+        default=False,
+        verbose_name=_("Envío email activo"),
+        help_text=_("Habilita el envío nocturno automático de reportes por correo para esta empresa"),
     )
     fecha_actualizacion = models.DateTimeField(
         auto_now=True,
