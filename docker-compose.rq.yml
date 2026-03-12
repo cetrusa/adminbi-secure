@@ -5,6 +5,7 @@ services:
     build: .
     command: sh -c "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:4084 --timeout 28800 adminbi.wsgi:application"
     volumes:
+      - ./secret.json:/code/secret.json
       - ./staticfiles:/code/staticfiles
       - ./media:/code/media
     ports:
