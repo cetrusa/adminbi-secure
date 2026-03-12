@@ -31,4 +31,4 @@ RUN mkdir -p /code/media
 RUN chmod -R 755 /code/media
 
 # Comando para iniciar la aplicación
-CMD ["gunicorn", "--bind", "0.0.0.0:4085", "--timeout", "28800", "adminbi.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:4084", "--timeout", "28800", "adminbi.wsgi:application"]
