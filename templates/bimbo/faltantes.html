@@ -203,6 +203,7 @@
 
 {% block script %}
 {{ block.super }}
+<script src="{% static 'js/format-utils.js' %}"></script>
 <script>
   const csrfToken = "{{ csrf_token }}";
   const ceveSelect = document.getElementById('ceves_code_select');
@@ -373,10 +374,6 @@
     document.getElementById('progress-stage').textContent = text;
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value || 0);
-  };
-
   const renderDashboard = (payload) => {
     if (!payload || !payload.dashboard) {
       updateStatus('La tarea terminó sin resultados.', 'warning');
@@ -386,7 +383,7 @@
     dashboardResults.style.display = 'block';
     emptyState.style.display = 'none';
     document.getElementById('kpi-total-valor').innerText = formatCurrency(data.kpis.total_valor_faltante || 0);
-    document.getElementById('kpi-total-unidades').innerText = (data.kpis.total_und_faltante || 0).toLocaleString();
+    document.getElementById('kpi-total-unidades').innerText = formatNumber(data.kpis.total_und_faltante || 0);
     document.getElementById('kpi-nivel-servicio').innerText = data.kpis.porcentaje_nivel_servicio !== undefined ? (Number(data.kpis.porcentaje_nivel_servicio).toFixed(2) + '%') : '-';
     document.getElementById('kpi-top-prod').innerText = data.kpis.top_producto || '-';
     document.getElementById('kpi-top-prod').title = data.kpis.top_producto || '-';
@@ -405,8 +402,8 @@
         <td class="text-muted small">${row.cod_producto || '-'}</td>
         <td class="fw-bold text-dark" title="${row.nom_producto || '-'}">${row.nom_producto || '-'}</td>
         <td class="small text-muted">${row.categoria || '-'}</td>
-        <td class="text-center">${Number(row.cant_pedida || 0).toLocaleString()}</td>
-        <td class="text-center fw-bold text-danger">${Number(row.cant_faltante || 0).toLocaleString()}</td>
+        <td class="text-center">${formatNumber(row.cant_pedida || 0)}</td>
+        <td class="text-center fw-bold text-danger">${formatNumber(row.cant_faltante || 0)}</td>
         <td class="text-end fw-bold text-danger pe-3">${formatCurrency(row.valor_faltante || 0)}</td>
       `;
       tbody.appendChild(tr);
@@ -417,7 +414,7 @@
     footer.innerHTML = `
       <tr>
         <td colspan="7" class="text-end fw-bold pe-3">TOTALES GENERALES:</td>
-        <td class="text-center fw-bold text-white bg-secondary">${totalUnits.toLocaleString()}</td>
+        <td class="text-center fw-bold text-white bg-secondary">${formatNumber(totalUnits)}</td>
         <td class="text-end fw-bold text-white bg-secondary pe-3">${formatCurrency(totalValue)}</td>
       </tr>
     `;

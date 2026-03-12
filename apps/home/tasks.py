@@ -254,12 +254,18 @@ def _post_process_faltantes_consolidado(file_path):
     Post-procesa el Excel de Faltantes Consolidado (report_id=6).
     Lee el Excel de hoja unica generado por CuboVentas y lo reemplaza
     con un Excel de 3 hojas: Macrozonas, Asesores, Agotados.
+    Incluye nombres legibles, fila de totales y formato Excel.
     """
     import pandas as pd
+    from openpyxl.styles import Font, numbers, Alignment
+    from openpyxl.utils import get_column_letter
 
     df = pd.read_excel(file_path, engine="openpyxl")
 
-    # Hoja 1: VENTA X MACROZONAS (agrupado por sede)
+    # Fallback para nombre_producto NULL (LEFT JOIN puede dejar vacío)
+    df["nombre_producto"] = df["nombre_producto"].fillna(df["nbProducto"])
+
+    # --- Hoja 1: VENTA X MACROZONAS (agrupado por sede) ---
     df_macro = (
         df.groupby("sede", sort=True)
         .agg(
@@ -275,8 +281,12 @@ def _post_process_faltantes_consolidado(file_path):
         (df_macro["total_faltantes"] / df_macro["total_pedidos"].replace(0, 1) * 100)
         .round(2)
     )
+    df_macro.columns = [
+        "Sede", "Macrozona", "Cant. Pedidos", "Cant. Facturada",
+        "Cant. Faltantes", "Valor Faltante", "% Faltante",
+    ]
 
-    # Hoja 2: VENTA X ASESORES (agrupado por sede + asesor)
+    # --- Hoja 2: VENTA X ASESORES (agrupado por sede + asesor) ---
     df_asesor = (
         df.groupby(["sede", "asesor"], sort=True)
         .agg(
@@ -291,8 +301,12 @@ def _post_process_faltantes_consolidado(file_path):
         (df_asesor["total_faltantes"] / df_asesor["total_pedidos"].replace(0, 1) * 100)
         .round(2)
     )
+    df_asesor.columns = [
+        "Sede", "Asesor", "Cant. Pedidos", "Cant. Facturada",
+        "Cant. Faltantes", "Valor Faltante", "% Faltante",
+    ]
 
-    # Hoja 3: AGOTADOS (productos con faltantes > 0)
+    # --- Hoja 3: AGOTADOS (productos con faltantes > 0) ---
     df_agotados = (
         df[df["nbCantidadFaltantePedidos"] > 0]
         .groupby(["sede", "asesor", "nbProducto", "nombre_producto"], sort=True)
@@ -304,16 +318,93 @@ def _post_process_faltantes_consolidado(file_path):
         )
         .reset_index()
     )
+    df_agotados.columns = [
+        "Sede", "Asesor", "Cod. Producto", "Producto",
+        "Cant. Pedida", "Cant. Facturada", "Cant. Faltante", "Valor Faltante",
+    ]
 
-    # Guardar Excel multi-hoja (sobreescribe el archivo original)
+    # --- Guardar Excel multi-hoja ---
     with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
         df_macro.to_excel(writer, sheet_name="VENTA X MACROZONAS", index=False)
         df_asesor.to_excel(writer, sheet_name="VENTA X ASESORES", index=False)
         df_agotados.to_excel(writer, sheet_name="AGOTADOS", index=False)
 
+        # --- Formato Excel ---
+        bold_font = Font(bold=True)
+        num_fmt = '#,##0'
+        money_fmt = '#,##0.00'
+        pct_fmt = '0.00"%"'
+
+        for sheet_name, sheet_df in [
+            ("VENTA X MACROZONAS", df_macro),
+            ("VENTA X ASESORES", df_asesor),
+            ("AGOTADOS", df_agotados),
+        ]:
+            ws = writer.sheets[sheet_name]
+
+            # Headers en negrita
+            for cell in ws[1]:
+                cell.font = bold_font
+
+            # Auto-ajuste de ancho de columnas
+            for col_idx, col_name in enumerate(sheet_df.columns, 1):
+                max_len = max(
+                    len(str(col_name)),
+                    sheet_df[col_name].astype(str).str.len().max() if len(sheet_df) > 0 else 0,
+                )
+                ws.column_dimensions[get_column_letter(col_idx)].width = min(max_len + 3, 40)
+
+            # Formato numerico para columnas de valor y porcentaje
+            for col_idx, col_name in enumerate(sheet_df.columns, 1):
+                col_letter = get_column_letter(col_idx)
+                if "Valor" in col_name:
+                    for row in range(2, len(sheet_df) + 3):  # +3 para incluir fila totales
+                        cell = ws[f"{col_letter}{row}"]
+                        if cell.value is not None:
+                            cell.number_format = money_fmt
+                elif "%" in col_name:
+                    for row in range(2, len(sheet_df) + 3):
+                        cell = ws[f"{col_letter}{row}"]
+                        if cell.value is not None:
+                            cell.number_format = pct_fmt
+                elif "Cant" in col_name:
+                    for row in range(2, len(sheet_df) + 3):
+                        cell = ws[f"{col_letter}{row}"]
+                        if cell.value is not None:
+                            cell.number_format = num_fmt
+
+            # Fila de totales
+            total_row = len(sheet_df) + 2  # +1 header, +1 zero-index
+            ws.cell(row=total_row, column=1, value="TOTAL").font = bold_font
+            for col_idx, col_name in enumerate(sheet_df.columns, 1):
+                if col_name in ("Sede", "Macrozona", "Asesor", "Cod. Producto", "Producto"):
+                    continue
+                if "%" in col_name:
+                    # Recalcular % total
+                    if "Cant. Faltantes" in sheet_df.columns:
+                        t_falt = sheet_df["Cant. Faltantes"].sum()
+                        t_ped = sheet_df["Cant. Pedidos"].sum()
+                    elif "Cant. Faltante" in sheet_df.columns:
+                        t_falt = sheet_df["Cant. Faltante"].sum()
+                        t_ped = sheet_df["Cant. Pedida"].sum()
+                    else:
+                        continue
+                    pct_total = round(t_falt / max(t_ped, 1) * 100, 2)
+                    cell = ws.cell(row=total_row, column=col_idx, value=pct_total)
+                    cell.font = bold_font
+                    cell.number_format = pct_fmt
+                else:
+                    total_val = sheet_df[col_name].sum()
+                    cell = ws.cell(row=total_row, column=col_idx, value=total_val)
+                    cell.font = bold_font
+                    if "Valor" in col_name:
+                        cell.number_format = money_fmt
+                    else:
+                        cell.number_format = num_fmt
+
     logger.info(
-        f"Faltantes Consolidado: {len(df_macro)} macrozonas, "
-        f"{len(df_asesor)} asesores, {len(df_agotados)} agotados"
+        f"Faltantes Consolidado: {len(df_macro)} sedes, "
+        f"{len(df_asesor)} asesores, {len(df_agotados)} productos agotados"
     )
 
 

@@ -262,6 +262,7 @@ Informe de Preventa
 
 {% block script %}
 {{ block.super }}
+<script src="{% static 'js/format-utils.js' %}"></script>
 <script>
     // --- Lógica del Dashboard ---
     var csrf_token = "{{ csrf_token }}";
@@ -376,17 +377,17 @@ Informe de Preventa
         }
 
         // Actualizar KPIs con animación simple o directa
-        document.getElementById("kpi-total-pedidos").innerText = kpis.total_pedidos.toLocaleString();
-        document.getElementById("kpi-clientes-atendidos").innerText = kpis.clientes_atendidos.toLocaleString();
-        document.getElementById("kpi-clientes-nuevos").innerText = kpis.clientes_nuevos.toLocaleString();
+        document.getElementById("kpi-total-pedidos").innerText = formatNumber(kpis.total_pedidos);
+        document.getElementById("kpi-clientes-atendidos").innerText = formatNumber(kpis.clientes_atendidos);
+        document.getElementById("kpi-clientes-nuevos").innerText = formatNumber(kpis.clientes_nuevos);
         document.getElementById("kpi-valor-total").innerText = formatCurrency(kpis.valor_total);
         document.getElementById("kpi-valor-promedio").innerText = formatCurrency(kpis.valor_promedio);
         document.getElementById("kpi-tiempo-promedio").innerText = kpis.tiempo_promedio;
-        document.getElementById("kpi-programados").innerText = (kpis.programados || 0).toLocaleString();
-        document.getElementById("kpi-eficiencia").innerText = ((kpis.eficiencia_pct || 0).toFixed(1)) + "%";
-        document.getElementById("kpi-efectividad").innerText = ((kpis.efectividad_pct || 0).toFixed(1)) + "%";
-        document.getElementById("kpi-clientes-pedido").innerText = (kpis.clientes_con_pedido || 0).toLocaleString();
-        document.getElementById("kpi-no-compra").innerText = (kpis.clientes_no_compra || 0).toLocaleString();
+        document.getElementById("kpi-programados").innerText = formatNumber(kpis.programados || 0);
+        document.getElementById("kpi-eficiencia").innerText = formatPercent(kpis.eficiencia_pct || 0);
+        document.getElementById("kpi-efectividad").innerText = formatPercent(kpis.efectividad_pct || 0);
+        document.getElementById("kpi-clientes-pedido").innerText = formatNumber(kpis.clientes_con_pedido || 0);
+        document.getElementById("kpi-no-compra").innerText = formatNumber(kpis.clientes_no_compra || 0);
 
         // Renderizar Matriz
         var tbody = document.getElementById("matrixBody");
@@ -471,20 +472,20 @@ Informe de Preventa
                 <td class="text-center">-</td>
                 <td class="text-center">-</td>
                 <td class="text-center">-</td>
-                <td class="text-center">${totals.prog.toLocaleString()}</td>
-                <td class="text-center">${totals.aten.toLocaleString()}</td>
-                <td class="text-center">${totals.clped.toLocaleString()}</td>
-                <td class="text-center">${totals.noc.toLocaleString()}</td>
-                <td class="text-center fw-bold">${totalCobertura.toFixed(1)}%</td>
-                <td class="text-center fw-bold">${totalEficiencia.toFixed(1)}%</td>
-                <td class="text-center fw-bold">${totalEfectividad.toFixed(1)}%</td>
-                <td class="text-center">${totals.ped.toLocaleString()}</td>
+                <td class="text-center">${formatNumber(totals.prog)}</td>
+                <td class="text-center">${formatNumber(totals.aten)}</td>
+                <td class="text-center">${formatNumber(totals.clped)}</td>
+                <td class="text-center">${formatNumber(totals.noc)}</td>
+                <td class="text-center fw-bold">${formatPercent(totalCobertura)}</td>
+                <td class="text-center fw-bold">${formatPercent(totalEficiencia)}</td>
+                <td class="text-center fw-bold">${formatPercent(totalEfectividad)}</td>
+                <td class="text-center">${formatNumber(totals.ped)}</td>
                 <td class="text-center">${formatCurrency(totalTicket)}</td>
                 <td class="text-center">${formatCurrency(totals.vto)}</td>
                 <td class="text-center">${formatCurrency(totals.vca)}</td>
-                <td class="text-center">${totals.pru.toLocaleString()}</td>
-                <td class="text-center">${totals.pex.toLocaleString()}</td>
-                <td class="text-center pe-4">${totals.pen.toLocaleString()}</td>
+                <td class="text-center">${formatNumber(totals.pru)}</td>
+                <td class="text-center">${formatNumber(totals.pex)}</td>
+                <td class="text-center pe-4">${formatNumber(totals.pen)}</td>
             </tr>
         `;
 
@@ -494,10 +495,6 @@ Informe de Preventa
             var link = document.querySelector("#download_file a");
             if(link) link.href = "/media/" + result.file_name;
         }
-    }
-
-    function formatCurrency(val) {
-        return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
     }
 
     function startMonitoringUI() {

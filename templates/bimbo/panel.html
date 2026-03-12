@@ -367,6 +367,7 @@
 
 {% block script %}
 {{ block.super }}
+<script src="{% static 'js/format-utils.js' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
@@ -437,7 +438,7 @@
       tooltip: {
         callbacks: {
           label: function(context) {
-            return 'Cobertura: ' + context.parsed.y.toFixed(1) + '%';
+            return 'Cobertura: ' + formatPercent(context.parsed.y);
           }
         }
       }
@@ -493,8 +494,8 @@
         callbacks: {
           label: function(context) {
             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            const pct = ((context.parsed / total) * 100).toFixed(1);
-            return context.label + ': ' + context.parsed + ' (' + pct + '%)';
+            const pct = ((context.parsed / total) * 100);
+            return context.label + ': ' + formatNumber(context.parsed) + ' (' + formatPercent(pct) + ')';
           }
         }
       }
@@ -570,11 +571,11 @@
               }
               if (context.parsed.y !== null) {
                 if (label.includes('Valor')) {
-                  label += '$' + context.parsed.y.toLocaleString('es-ES', { maximumFractionDigits: 0 });
+                  label += formatCurrency(context.parsed.y);
                 } else if (label.includes('%')) {
-                  label += context.parsed.y.toFixed(1) + '%';
+                  label += formatPercent(context.parsed.y);
                 } else {
-                  label += context.parsed.y;
+                  label += formatNumber(context.parsed.y);
                 }
               }
               return label;

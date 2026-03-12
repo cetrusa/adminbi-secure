@@ -1,5 +1,5 @@
 {% extends 'black.html' %}
-{% load static %}
+{% load static utils %}
 {% block title %}Panel — Cubos de Ventas{% endblock title %}
 
 {% block barra_lateral %}
@@ -69,7 +69,7 @@
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <div class="text-secondary small fw-bold text-uppercase mb-1">Ventas Ultimo Mes</div>
-            <div class="h4 mb-0 fw-bold text-info" id="kpi-ventas-mes">${{ kpis.ventas_ultimo_mes|floatformat:0|default:"0" }}</div>
+            <div class="h4 mb-0 fw-bold text-info" id="kpi-ventas-mes">{{ kpis.ventas_ultimo_mes|formato_moneda }}</div>
             <small class="text-muted">
               <i class="fas fa-chart-line"></i> Ultimos 30 dias
             </small>
@@ -330,6 +330,7 @@
 
 {% block script %}
 {{ block.super }}
+<script src="{% static 'js/format-utils.js' %}"></script>
 <script>
 (function() {
   var btn = document.getElementById('btnRefreshKpis');
@@ -368,10 +369,6 @@
       icon.classList.remove('fa-spin');
     });
   });
-
-  function fmt(n) {
-    return Number(n || 0).toLocaleString('es-CO', {maximumFractionDigits: 0});
-  }
 
   function renderKpis(k, dbName) {
     var tablasOk = k.tablas_ok || 0;
@@ -417,7 +414,7 @@
           '<div class="card border-0 shadow-sm h-100 border-start border-4 border-info">' +
             '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
               '<div class="text-secondary small fw-bold text-uppercase mb-1">Ventas Ultimo Mes</div>' +
-              '<div class="h4 mb-0 fw-bold text-info">$' + fmt(k.ventas_ultimo_mes) + '</div>' +
+              '<div class="h4 mb-0 fw-bold text-info">' + formatCurrency(k.ventas_ultimo_mes) + '</div>' +
               '<small class="text-muted"><i class="fas fa-chart-line"></i> Ultimos 30 dias</small>' +
             '</div><div class="fs-1 text-info opacity-25"><i class="fas fa-dollar-sign"></i></div></div></div>' +
           '</div>' +
@@ -426,7 +423,7 @@
           '<div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">' +
             '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
               '<div class="text-secondary small fw-bold text-uppercase mb-1">Productos / P. Venta</div>' +
-              '<div class="h4 mb-0 fw-bold text-warning">' + fmt(k.productos_unicos) + ' <span class="text-muted fs-6">/</span> ' + fmt(k.puntos_venta) + '</div>' +
+              '<div class="h4 mb-0 fw-bold text-warning">' + formatNumber(k.productos_unicos) + ' <span class="text-muted fs-6">/</span> ' + formatNumber(k.puntos_venta) + '</div>' +
               '<small class="text-muted"><i class="fas fa-box"></i> Productos unicos / <i class="fas fa-store"></i> Clientes</small>' +
             '</div><div class="fs-1 text-warning opacity-25"><i class="fas fa-boxes-stacked"></i></div></div></div>' +
           '</div>' +
@@ -446,7 +443,7 @@
           '<div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">' +
             '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
               '<div class="text-secondary small fw-bold text-uppercase mb-1">Total Registros</div>' +
-              '<div class="h4 mb-0 fw-bold text-danger">' + fmt(k.total_registros) + '</div>' +
+              '<div class="h4 mb-0 fw-bold text-danger">' + formatNumber(k.total_registros) + '</div>' +
               '<small class="text-muted"><i class="fas fa-clock"></i> Ultimos 90 dias</small>' +
             '</div><div class="fs-1 text-danger opacity-25"><i class="fas fa-database"></i></div></div></div>' +
           '</div>' +
