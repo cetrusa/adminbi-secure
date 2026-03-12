@@ -26,12 +26,6 @@ COPY . .
 # Ajustamos la zona horaria del contenedor
 RUN ln -sf /usr/share/zoneinfo/America/Bogota /etc/localtime
 
-# Ejecutamos el comando collectstatic de Django
-RUN python manage.py collectstatic --no-input
-
-# Cambiamos permisos de los archivos estáticos
-RUN chmod -R 755 /code/static
-
 # Crea la carpeta media y establece permisos adecuados
 RUN mkdir -p /code/media
 RUN chmod -R 755 /code/media
