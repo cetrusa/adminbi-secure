@@ -23,6 +23,8 @@ from django.conf import settings
 from django.core.cache import cache
 import logging
 
+from django.contrib.auth.views import PasswordResetView
+
 from .utils import code_generator
 from .forms import (
     UserRegisterForm,
@@ -1030,6 +1032,19 @@ class AdminSetPasswordView(LoginRequiredMixin, FormView):
             % {"user": self.target_user.username},
         )
         return super().form_valid(form)
+
+
+class SafePasswordResetView(PasswordResetView):
+    """PasswordResetView que no lanza 500 si el SMTP falla."""
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except Exception as e:
+            logger.error("Error al enviar correo de recuperación: %s", e)
+            # Redirige a la página de "correo enviado" de todas formas
+            # para no revelar si el email existe y no mostrar error 500
+            return HttpResponseRedirect(self.get_success_url())
 
 
 class EmailTestView(LoginRequiredMixin, View):

@@ -62,7 +62,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 200 * 1024 * 1024  # 200 MB
 
 # EMAIL SETTINGS
 EMAIL_USE_TLS = True
-EMAIL_HOST = "smtp.gmail.com"
+EMAIL_HOST = get_secret("EMAIL_HOST", default="mail.amovil.com.co")
 EMAIL_HOST_USER = get_secret("EMAIL")
 EMAIL_HOST_PASSWORD = get_secret("PASS_EMAIL")
 EMAIL_PORT = 587

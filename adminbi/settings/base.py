@@ -16,10 +16,15 @@ with open("secret.json") as f:
     secret = json.loads(f.read())
 
 
-def get_secret(secret_name, secrets=secret):
+_SENTINEL = object()
+
+
+def get_secret(secret_name, secrets=secret, default=_SENTINEL):
     try:
         return secrets[secret_name]
-    except:
+    except KeyError:
+        if default is not _SENTINEL:
+            return default
         msg = "la variable %s no existe" % secret_name
         raise ImproperlyConfigured(msg)
 

@@ -3,7 +3,6 @@ from django.shortcuts import redirect
 
 
 from django.contrib.auth.views import (
-    PasswordResetView,
     PasswordResetDoneView,
     PasswordResetConfirmView,
     PasswordResetCompleteView,
@@ -92,7 +91,7 @@ urlpatterns = [
     ),
     path(
         "password_reset/",
-        PasswordResetView.as_view(
+        views.SafePasswordResetView.as_view(
             template_name="users/password_reset_form.html",
             email_template_name="users/password_reset_email.html",
             success_url=reverse_lazy("users_app:password_reset_done"),
