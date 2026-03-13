@@ -34,6 +34,7 @@ from .tasks import (
     interface_siigo_task,
     plano_task,
     extrae_bi_task,
+    trazabilidad_task,
 )
 from apps.users.models import UserPermission
 from django.views.decorators.cache import cache_page
@@ -2293,4 +2294,79 @@ class CleanMediaView(View):
             return JsonResponse({"success": False, "error_message": str(e)}, status=500)
 
 
+class TrazabilidadPage(ReporteGenericoPage):
+    template_name = "home/trazabilidad.html"
+    permiso = "permisos.trazabilidad"
+    id_reporte = 0
+    form_url = "home_app:trazabilidad"
+    task_func = trazabilidad_task
+
+    @method_decorator(permission_required("permisos.trazabilidad", raise_exception=True))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+
+class TrazabilidadDataAjaxView(View):
+    """AJAX endpoint para DataTables server-side del reporte de trazabilidad."""
+
+    def get(self, request, *args, **kwargs):
+        try:
+            from scripts.extrae_bi.trazabilidad import TrazabilidadExtractor
+
+            draw = int(request.GET.get("draw", 1))
+            start = int(request.GET.get("start", 0))
+            length = int(request.GET.get("length", 100))
+            search_value = request.GET.get("search[value]", "")
+            agrupacion = request.GET.get("agrupacion", "detalle")
+            database_name = request.GET.get("database_select") or request.session.get("database_name")
+            fecha_ini = request.GET.get("IdtReporteIni") or request.session.get("IdtReporteIni")
+            fecha_fin = request.GET.get("IdtReporteFin") or request.session.get("IdtReporteFin")
+            user_id = request.user.id
+
+            if not all([database_name, fecha_ini, fecha_fin]):
+                return JsonResponse({
+                    "draw": draw, "recordsTotal": 0,
+                    "recordsFiltered": 0, "data": [],
+                })
+
+            result = TrazabilidadExtractor.get_data(
+                database_name, fecha_ini, fecha_fin, user_id,
+                agrupacion=agrupacion, start=start, length=length, search=search_value,
+            )
+
+            return JsonResponse({
+                "draw": draw,
+                "recordsTotal": result["total_records"],
+                "recordsFiltered": result["filtered_records"],
+                "data": result["rows"],
+            })
+        except Exception as e:
+            logger.error(f"[TrazabilidadDataAjaxView] Error: {e}", exc_info=True)
+            return JsonResponse({
+                "error": str(e),
+                "draw": request.GET.get("draw", 1),
+                "recordsTotal": 0, "recordsFiltered": 0, "data": [],
+            }, status=500)
+
+
+class TrazabilidadKpisAjaxView(View):
+    """AJAX endpoint para KPIs del reporte de trazabilidad."""
+
+    def get(self, request, *args, **kwargs):
+        try:
+            from scripts.extrae_bi.trazabilidad import TrazabilidadExtractor
+
+            database_name = request.GET.get("database_select") or request.session.get("database_name")
+            fecha_ini = request.GET.get("IdtReporteIni")
+            fecha_fin = request.GET.get("IdtReporteFin")
+            user_id = request.user.id
+
+            if not all([database_name, fecha_ini, fecha_fin]):
+                return JsonResponse({"success": False, "error_message": "Faltan parametros."}, status=400)
+
+            kpis = TrazabilidadExtractor.get_kpis(database_name, fecha_ini, fecha_fin, user_id)
+            return JsonResponse({"success": True, "kpis": kpis})
+        except Exception as e:
+            logger.error(f"[TrazabilidadKpisAjaxView] Error: {e}", exc_info=True)
+            return JsonResponse({"success": False, "error_message": str(e)}, status=500)
 

@@ -55,6 +55,15 @@
       </li>
       {% endif %}
 
+      {% if perms.permisos.trazabilidad %}
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'trazabilidad' %}active{% endif %}"
+          href="{% url 'home_app:trazabilidad'%}">
+          <i class="fas fa-route"></i> <span class="ms-2 d-none d-sm-inline">Trazabilidad</span>
+        </a>
+      </li>
+      {% endif %}
+
       {% if perms.permisos.amovildesk %}
       <li class="nav-item">
         <a class="nav-link {% if request.resolver_match.url_name == 'amovildesk' %}active{% endif %}"

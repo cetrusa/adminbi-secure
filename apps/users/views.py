@@ -30,6 +30,7 @@ from .forms import (
     UpdatePasswordForm,
     VerificationForm,
     UserVerificationForm,
+    AdminSetPasswordForm,
 )
 from .models import User
 from apps.permisos.models import ConfEmpresas
@@ -998,3 +999,69 @@ def session_check(request):
     if request.user.is_authenticated:
         return JsonResponse({"authenticated": True})
     return JsonResponse({"authenticated": False}, status=401)
+
+
+class AdminSetPasswordView(LoginRequiredMixin, FormView):
+    """Vista para que un administrador asigne una nueva contraseña a un usuario."""
+
+    template_name = "users/set_password.html"
+    form_class = AdminSetPasswordForm
+    success_url = reverse_lazy("users_app:user-list")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            messages.error(request, _("No tiene permisos para realizar esta acción."))
+            return redirect("users_app:user-login")
+        self.target_user = get_object_or_404(User, pk=self.kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["target_user"] = self.target_user
+        return context
+
+    def form_valid(self, form):
+        password = form.cleaned_data["password_new"]
+        self.target_user.set_password(password)
+        self.target_user.save()
+        messages.success(
+            self.request,
+            _("Contraseña de %(user)s actualizada correctamente.")
+            % {"user": self.target_user.username},
+        )
+        return super().form_valid(form)
+
+
+class EmailTestView(LoginRequiredMixin, View):
+    """Vista de diagnóstico para verificar la configuración SMTP. Solo superusuarios."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            messages.error(request, _("Acceso restringido a superusuarios."))
+            return redirect("users_app:user-login")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        from django.core.mail import send_mail
+
+        test_email = request.user.email
+        try:
+            send_mail(
+                subject="[DataZenith] Correo de prueba SMTP",
+                message="Este es un correo de prueba para verificar la configuración SMTP de DataZenith.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[test_email],
+                fail_silently=False,
+            )
+            messages.success(
+                request,
+                _("Correo de prueba enviado exitosamente a %(email)s. Revisa tu bandeja de entrada.")
+                % {"email": test_email},
+            )
+        except Exception as e:
+            logger.error("Error al enviar correo de prueba SMTP: %s", e)
+            messages.error(
+                request,
+                _("Error al enviar correo: %(error)s") % {"error": str(e)},
+            )
+        return redirect("users_app:user-list")

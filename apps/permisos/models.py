@@ -45,6 +45,7 @@ class PermisosBarra(models.Model):
             ("cargue_infoproveedor", _("Cargar Información de Proveedor")),
             ("faltantes", _("Generar informe de Faltantes")),
             ("preventa", _("Generar informe de Preventa")),
+            ("trazabilidad", _("Generar informe de Trazabilidad Preventa")),
             ("config_email_reportes", _("Configurar correos para reportes programados")),
         )
         verbose_name = _("Permiso")

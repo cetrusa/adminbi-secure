@@ -135,6 +135,18 @@ urlpatterns = [
         views.Verify2FAView.as_view(),
         name="verify-2fa",
     ),
+    # Administración de contraseñas (staff)
+    path(
+        "users/set-password/<int:pk>/",
+        views.AdminSetPasswordView.as_view(),
+        name="set-password",
+    ),
+    # Diagnóstico de email (superuser)
+    path(
+        "email-test/",
+        views.EmailTestView.as_view(),
+        name="email-test",
+    ),
     # API endpoints JSON
     path("api/users/", views.api_user_list, name="api-user-list"),
     path("api/users/<int:pk>/", views.api_user_detail, name="api-user-detail"),

@@ -116,4 +116,8 @@ urlpatterns = [
     path("email-config/supervisores/<int:pk>/eliminar/", email_views.SupervisoresDeleteView.as_view(), name="supervisores_delete"),
     path("email-config/supervisores/carga-masiva/", email_views.CargaMasivaSupervisoresView.as_view(), name="carga_masiva_supervisores"),
     path("email-config/macrozonas/", email_views.MacrozonasJsonView.as_view(), name="macrozonas_json"),
+    # --- Trazabilidad Preventa vs Facturación ---
+    path("trazabilidad/", views.TrazabilidadPage.as_view(), name="trazabilidad"),
+    path("trazabilidad/data/", views.TrazabilidadDataAjaxView.as_view(), name="trazabilidad_data_ajax"),
+    path("trazabilidad/kpis/", views.TrazabilidadKpisAjaxView.as_view(), name="trazabilidad_kpis_ajax"),
 ]

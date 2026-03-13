@@ -1,0 +1,408 @@
+{% extends 'black.html' %}
+{% load static utils %}
+
+{% block title %}
+Trazabilidad Preventa
+{% endblock title %}
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_cubo.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+{% include 'includes/datepicker_range.html' %}
+{% include 'includes/messages.html' %}
+
+<div class="container-fluid px-0">
+  <!-- Header -->
+  <div class="mb-4">
+    <h3 class="fw-bold mb-1">
+      <i class="fas fa-route text-info me-2"></i> Trazabilidad Preventa vs Facturacion
+    </h3>
+    <p class="text-muted small mb-0">Analisis de diferencias entre la preventa y la facturacion/entrega.</p>
+  </div>
+
+  <!-- KPIs (se cargan via AJAX despues del ETL) -->
+  <div class="row mb-4 g-3" id="kpiRow" style="display:none;">
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Total Registros</div>
+              <div class="h5 mb-0 fw-bold text-info" id="kpi_total_registros">-</div>
+            </div>
+            <div class="fs-2 text-info opacity-25"><i class="fas fa-database"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Agotados Total</div>
+              <div class="h5 mb-0 fw-bold text-danger" id="kpi_agotados_total">-</div>
+            </div>
+            <div class="fs-2 text-danger opacity-25"><i class="fas fa-times-circle"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">% Agotamiento</div>
+              <div class="h5 mb-0 fw-bold text-warning" id="kpi_pct_agotamiento">-</div>
+            </div>
+            <div class="fs-2 text-warning opacity-25"><i class="fas fa-percent"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-secondary small fw-bold text-uppercase mb-1">Valor Brecha Total</div>
+              <div class="h5 mb-0 fw-bold text-success" id="kpi_valor_brecha">-</div>
+            </div>
+            <div class="fs-2 text-success opacity-25"><i class="fas fa-dollar-sign"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulario -->
+  <div class="card report-form-card" id="formCard">
+    <div class="card-header d-flex align-items-center">
+      <i class="fas fa-cog text-info me-2"></i>
+      <h6 class="fw-bold mb-0">Configuracion del Reporte</h6>
+    </div>
+    <div class="card-body">
+      <form action="{% url form_url %}" method="post" id="FormTrazabilidad">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label for="reportrange" class="form-label small fw-semibold text-muted">Rango de Fechas</label>
+          <div id="reportrange">
+            <i class="fa fa-calendar me-1"></i>
+            <span></span> <i class="fa fa-caret-down ms-1"></i>
+          </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label for="IdtReporteIni" class="form-label small fw-semibold text-muted">Fecha Inicial</label>
+            <input type="date" name="IdtReporteIni" id="IdtReporteIni" class="form-control form-control-sm" readonly>
+          </div>
+          <div class="col-6">
+            <label for="IdtReporteFin" class="form-label small fw-semibold text-muted">Fecha Final</label>
+            <input type="date" name="IdtReporteFin" id="IdtReporteFin" class="form-control form-control-sm" readonly>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="batch_size" class="form-label small fw-semibold text-muted">Tamano de lote</label>
+          <select class="form-select form-select-sm" id="batch_size" name="batch_size">
+            <option value="10000">10,000 (Recursos limitados)</option>
+            <option value="20000">20,000</option>
+            <option value="50000" selected>50,000 (Estandar)</option>
+            <option value="100000">100,000 (Datos grandes)</option>
+          </select>
+        </div>
+
+        <button id="submitBtnTrazabilidad" type="submit" class="btn btn-info w-100" data-submitted="false">
+          <i class="fas fa-play me-2"></i> Extraer y Generar Trazabilidad
+        </button>
+      </form>
+
+      <div class="mt-3">
+        {% include 'includes/download_file.html' %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Consulta de datos (se muestra despues del ETL) -->
+  <div class="card shadow-sm border-0 mb-3 mt-3" id="consultaCard" style="display:none;">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <h6 class="fw-bold mb-0 text-info"><i class="fas fa-table me-2"></i>Consulta de Datos</h6>
+      <div class="d-flex align-items-center gap-2">
+        <label for="agrupacion" class="form-label small fw-semibold text-muted mb-0">Agrupar por:</label>
+        <select class="form-select form-select-sm" id="agrupacion" style="width: auto;">
+          <option value="detalle" selected>Detalle (todas las filas)</option>
+          <option value="cliente">Por Cliente</option>
+          <option value="zona">Por Zona</option>
+          <option value="macrozona">Por Macrozona</option>
+          <option value="producto">Por Producto</option>
+          <option value="total">Total Empresa</option>
+        </select>
+        <button class="btn btn-sm btn-outline-info" id="btnRefreshData" title="Recargar datos">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+        <table class="table table-hover table-sm small align-middle" id="tablaTrazabilidad" style="width:100%;">
+          <thead class="table-light sticky-top" style="z-index:1;">
+            <tr id="tablaTrazabilidadHead"></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de procesamiento -->
+  <div class="modal fade" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel"
+    aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="processingModalLabel">
+            <i class="fas fa-spinner fa-spin me-2 text-info"></i> Procesando Trazabilidad...
+          </h5>
+        </div>
+        <div class="modal-body">
+          <div id="progress-stage" class="mb-3 fw-semibold">Por favor, espere mientras se extraen los datos...</div>
+          <div class="progress" style="height: 20px;">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-info"
+              role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+          </div>
+          <div id="detailedStatus" class="small text-muted mt-3 p-2 border-top"></div>
+          <p id="time-info" class="mt-2 small text-muted">Tiempo transcurrido: 0 seg</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script src="{% static 'js/task-monitor.js' %}"></script>
+<script>
+(function() {
+  'use strict';
+
+  var dataTable = null;
+  var etlCompleted = false;
+
+  // ---- TaskMonitor para el ETL ----
+  var monitor = new TaskMonitor({
+    taskType: 'trazabilidad',
+    submitBtnId: 'submitBtnTrazabilidad',
+    formUrl: '{% url form_url %}',
+    checkTaskUrl: '{% url "home_app:check_task_status" %}',
+    csrfToken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
+    modalTitle: 'Procesando Trazabilidad...',
+    onComplete: function(response) {
+      etlCompleted = true;
+      loadKpis();
+      showConsultaCard();
+      initOrReloadDataTable();
+    }
+  });
+
+  // ---- Formateo de numeros ----
+  function fmtNum(val) {
+    if (val === null || val === undefined || val === '') return '-';
+    var n = Number(val);
+    if (isNaN(n)) return val;
+    return n.toLocaleString('es-CO', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+  }
+
+  function fmtMoney(val) {
+    if (val === null || val === undefined || val === '') return '-';
+    var n = Number(val);
+    if (isNaN(n)) return val;
+    return '$ ' + n.toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+
+  // ---- KPIs ----
+  function loadKpis() {
+    var db = window.sessionStorage.getItem('database_name');
+    var fi = document.getElementById('IdtReporteIni').value;
+    var ff = document.getElementById('IdtReporteFin').value;
+    if (!db || !fi || !ff) return;
+
+    var url = '{% url "home_app:trazabilidad_kpis_ajax" %}' +
+      '?database_select=' + encodeURIComponent(db) +
+      '&IdtReporteIni=' + encodeURIComponent(fi) +
+      '&IdtReporteFin=' + encodeURIComponent(ff);
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success && data.kpis) {
+          var k = data.kpis;
+          document.getElementById('kpi_total_registros').textContent = fmtNum(k.total_registros);
+          document.getElementById('kpi_agotados_total').textContent = fmtNum(k.agotados_total);
+          document.getElementById('kpi_pct_agotamiento').textContent = (k.pct_agotamiento || 0) + '%';
+          document.getElementById('kpi_valor_brecha').textContent = fmtMoney(k.valor_brecha_total);
+          document.getElementById('kpiRow').style.display = 'flex';
+        }
+      })
+      .catch(function(err) { console.error('Error cargando KPIs:', err); });
+  }
+
+  // ---- DataTables ----
+  function showConsultaCard() {
+    document.getElementById('consultaCard').style.display = 'block';
+  }
+
+  function getColumns(agrupacion) {
+    if (agrupacion === 'cliente') {
+      return [
+        {data: 'establecimiento_id', title: 'ID Cliente'},
+        {data: 'nmPuntoVenta', title: 'Punto de Venta'},
+        {data: 'zona_id', title: 'Zona'},
+        {data: 'cant_pedida_campo', title: 'Cant. Pedida', render: fmtNum},
+        {data: 'cant_asignada_factura', title: 'Cant. Asignada', render: fmtNum},
+        {data: 'cant_faltante', title: 'Cant. Faltante', render: fmtNum},
+        {data: 'vl_brecha_total', title: 'Valor Brecha', render: fmtMoney},
+        {data: 'agotados_total', title: 'Agotados Total', render: fmtNum},
+        {data: 'agotados_parcial', title: 'Agotados Parcial', render: fmtNum},
+        {data: 'total_lineas', title: 'Lineas', render: fmtNum}
+      ];
+    } else if (agrupacion === 'zona' || agrupacion === 'macrozona') {
+      return [
+        {data: 'zona_id', title: 'Zona'},
+        {data: 'cant_pedida_campo', title: 'Cant. Pedida', render: fmtNum},
+        {data: 'cant_asignada_factura', title: 'Cant. Asignada', render: fmtNum},
+        {data: 'cant_faltante', title: 'Cant. Faltante', render: fmtNum},
+        {data: 'vl_brecha_total', title: 'Valor Brecha', render: fmtMoney},
+        {data: 'agotados_total', title: 'Agotados Total', render: fmtNum},
+        {data: 'agotados_parcial', title: 'Agotados Parcial', render: fmtNum},
+        {data: 'total_lineas', title: 'Lineas', render: fmtNum}
+      ];
+    } else if (agrupacion === 'producto') {
+      return [
+        {data: 'producto_id', title: 'ID Producto'},
+        {data: 'nmProducto', title: 'Producto'},
+        {data: 'cant_pedida_campo', title: 'Cant. Pedida', render: fmtNum},
+        {data: 'cant_asignada_factura', title: 'Cant. Asignada', render: fmtNum},
+        {data: 'cant_faltante', title: 'Cant. Faltante', render: fmtNum},
+        {data: 'vl_brecha_total', title: 'Valor Brecha', render: fmtMoney},
+        {data: 'agotados_total', title: 'Agotados Total', render: fmtNum},
+        {data: 'agotados_parcial', title: 'Agotados Parcial', render: fmtNum},
+        {data: 'total_lineas', title: 'Lineas', render: fmtNum}
+      ];
+    } else if (agrupacion === 'total') {
+      return [
+        {data: 'nivel', title: 'Nivel'},
+        {data: 'cant_pedida_campo', title: 'Cant. Pedida', render: fmtNum},
+        {data: 'cant_asignada_factura', title: 'Cant. Asignada', render: fmtNum},
+        {data: 'cant_faltante', title: 'Cant. Faltante', render: fmtNum},
+        {data: 'vl_brecha_total', title: 'Valor Brecha', render: fmtMoney},
+        {data: 'agotados_total', title: 'Agotados Total', render: fmtNum},
+        {data: 'agotados_parcial', title: 'Agotados Parcial', render: fmtNum},
+        {data: 'total_lineas', title: 'Lineas', render: fmtNum}
+      ];
+    }
+    // detalle
+    return [
+      {data: 'origen_registro', title: 'Origen'},
+      {data: 'zona_id', title: 'Zona'},
+      {data: 'establecimiento_id', title: 'ID Cliente'},
+      {data: 'nmPuntoVenta', title: 'Punto de Venta'},
+      {data: 'producto_id', title: 'ID Producto'},
+      {data: 'nmProducto', title: 'Producto'},
+      {data: 'dt_entrega', title: 'Fecha Entrega'},
+      {data: 'cant_pedida_campo', title: 'Cant. Pedida', render: fmtNum},
+      {data: 'cant_asignada_factura', title: 'Cant. Asignada', render: fmtNum},
+      {data: 'cant_faltante', title: 'Cant. Faltante', render: fmtNum},
+      {data: 'precio_campo', title: 'Precio Campo', render: fmtMoney},
+      {data: 'precio_factura', title: 'Precio Factura', render: fmtMoney},
+      {data: 'vl_brecha_total', title: 'Valor Brecha', render: fmtMoney},
+      {data: 'causa_brecha', title: 'Causa'},
+      {data: 'nm_estado_item', title: 'Estado Item'},
+      {data: 'bo_faltante_total', title: 'Agotado Total'},
+      {data: 'bo_faltante_parcial', title: 'Agotado Parcial'}
+    ];
+  }
+
+  function initOrReloadDataTable() {
+    var agrupacion = document.getElementById('agrupacion').value;
+    var db = window.sessionStorage.getItem('database_name');
+    var fi = document.getElementById('IdtReporteIni').value;
+    var ff = document.getElementById('IdtReporteFin').value;
+
+    if (!db || !fi || !ff) return;
+
+    // Destruir tabla anterior si existe
+    if (dataTable) {
+      dataTable.destroy();
+      document.getElementById('tablaTrazabilidadHead').innerHTML = '';
+      document.querySelector('#tablaTrazabilidad tbody').innerHTML = '';
+    }
+
+    var columns = getColumns(agrupacion);
+
+    // Crear headers
+    var headRow = document.getElementById('tablaTrazabilidadHead');
+    headRow.innerHTML = '';
+    columns.forEach(function(col) {
+      var th = document.createElement('th');
+      th.textContent = col.title;
+      headRow.appendChild(th);
+    });
+
+    dataTable = $('#tablaTrazabilidad').DataTable({
+      serverSide: true,
+      processing: true,
+      ajax: {
+        url: '{% url "home_app:trazabilidad_data_ajax" %}',
+        type: 'GET',
+        data: function(d) {
+          d.agrupacion = document.getElementById('agrupacion').value;
+          d.database_select = window.sessionStorage.getItem('database_name');
+          d.IdtReporteIni = document.getElementById('IdtReporteIni').value;
+          d.IdtReporteFin = document.getElementById('IdtReporteFin').value;
+        }
+      },
+      columns: columns,
+      pageLength: 25,
+      lengthMenu: [10, 25, 50, 100],
+      language: {
+        processing: 'Cargando...',
+        lengthMenu: 'Mostrar _MENU_ registros',
+        zeroRecords: 'No se encontraron registros',
+        info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+        infoEmpty: 'Sin registros',
+        infoFiltered: '(filtrado de _MAX_ total)',
+        search: 'Buscar:',
+        paginate: {first: 'Primero', last: 'Ultimo', next: 'Sig.', previous: 'Ant.'}
+      },
+      dom: 'Bfrtip',
+      buttons: [
+        {extend: 'copy', text: '<i class="fas fa-copy"></i> Copiar', className: 'btn btn-sm btn-outline-secondary'},
+        {extend: 'csv', text: '<i class="fas fa-file-csv"></i> CSV', className: 'btn btn-sm btn-outline-secondary'},
+        {extend: 'excel', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-sm btn-outline-secondary'}
+      ],
+      order: [],
+      scrollX: true
+    });
+  }
+
+  // ---- Eventos ----
+  document.getElementById('agrupacion').addEventListener('change', function() {
+    if (etlCompleted) {
+      initOrReloadDataTable();
+    }
+  });
+
+  document.getElementById('btnRefreshData').addEventListener('click', function() {
+    if (etlCompleted) {
+      loadKpis();
+      initOrReloadDataTable();
+    }
+  });
+
+})();
+</script>
+{% endblock script %}

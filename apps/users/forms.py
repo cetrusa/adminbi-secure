@@ -291,3 +291,55 @@ class UserVerificationForm(forms.Form):
             raise ValidationError(_("El código debe tener exactamente 6 dígitos."))
 
         return code
+
+
+class AdminSetPasswordForm(forms.Form):
+    """Formulario para que un administrador asigne una nueva contraseña a un usuario."""
+
+    password_new = forms.CharField(
+        label=_("Nueva contraseña"),
+        required=True,
+        widget=forms.PasswordInput(
+            attrs={
+                "placeholder": _("Nueva contraseña"),
+                "autocomplete": "new-password",
+            }
+        ),
+        help_text=_(
+            "La contraseña debe tener al menos 8 caracteres y contener letras y números."
+        ),
+    )
+    password_confirm = forms.CharField(
+        label=_("Confirmar contraseña"),
+        required=True,
+        widget=forms.PasswordInput(
+            attrs={
+                "placeholder": _("Confirmar contraseña"),
+                "autocomplete": "new-password",
+            }
+        ),
+    )
+
+    def clean_password_new(self):
+        password = self.cleaned_data.get("password_new")
+        if password:
+            if len(password) < 8:
+                raise ValidationError(
+                    _("La contraseña debe tener al menos 8 caracteres.")
+                )
+            if not any(char.isalpha() for char in password):
+                raise ValidationError(
+                    _("La contraseña debe contener al menos una letra.")
+                )
+            if not any(char.isdigit() for char in password):
+                raise ValidationError(
+                    _("La contraseña debe contener al menos un número.")
+                )
+        return password
+
+    def clean_password_confirm(self):
+        password_new = self.cleaned_data.get("password_new")
+        password_confirm = self.cleaned_data.get("password_confirm")
+        if password_new and password_confirm and password_new != password_confirm:
+            raise ValidationError(_("Las contraseñas no coinciden."))
+        return password_confirm

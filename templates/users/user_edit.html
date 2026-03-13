@@ -6,7 +6,12 @@
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0">Editar Usuario</h3>
-    <a class="btn btn-sm btn-outline-secondary" href="{% url 'users_app:user-list' %}">Volver</a>
+    <div>
+      <a class="btn btn-sm btn-outline-warning me-1" href="{% url 'users_app:set-password' object.pk %}">
+        <i class="fas fa-key me-1"></i>Cambiar contraseña
+      </a>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'users_app:user-list' %}">Volver</a>
+    </div>
   </div>
 
   <div class="card">

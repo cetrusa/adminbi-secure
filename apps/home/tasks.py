@@ -26,6 +26,7 @@ from scripts.extrae_bi.cargue_maestras import cargar_tablas_maestras, cargar_tab
 # from scripts.StaticPage import StaticPage # No parece usarse
 from scripts.extrae_bi.cargue_plano_tsol import CarguePlano
 from scripts.extrae_bi.extrae_bi_insert import ExtraeBiConfig, ExtraeBiExtractor
+from scripts.extrae_bi.trazabilidad import TrazabilidadExtractor
 from apps.home.utils import clean_old_media_files
 
 # Configuración de logging
@@ -1690,3 +1691,80 @@ def enviar_reportes_email_todas_empresas_task():
         "encoladas": encoladas,
         "total": total,
     }
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def trazabilidad_task(
+    database_name,
+    IdtReporteIni,
+    IdtReporteFin,
+    user_id,
+    report_id,
+    batch_size=DEFAULT_BATCH_SIZE,
+):
+    """
+    Tarea RQ para generar el reporte de Trazabilidad Preventa vs Facturación.
+    Extrae datos de SIDIS y los carga en trazabilidad_preventa (BD BI).
+    """
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    job = get_current_job()
+    job_id = job.id if job else None
+    logger.info(
+        f"Iniciando trazabilidad_task (RQ Job ID: {job_id}) para DB: {database_name}, "
+        f"Periodo: {IdtReporteIni}-{IdtReporteFin}"
+    )
+
+    def rq_update_progress(stage, progress_percent, current_rec=None, total_rec=None):
+        meta = {"stage": stage}
+        if current_rec is not None:
+            meta["records_processed"] = current_rec
+        if total_rec is not None:
+            meta["total_records_estimate"] = total_rec
+        update_job_progress(job_id, int(progress_percent), status="processing", meta=meta)
+
+    extractor = TrazabilidadExtractor(
+        database_name,
+        IdtReporteIni,
+        IdtReporteFin,
+        user_id,
+        progress_callback=rq_update_progress,
+    )
+
+    result_data = extractor.run()
+
+    # Asegurar progreso final
+    job = get_current_job()
+    job_id = job.id if job else None
+    if result_data.get("success"):
+        update_job_progress(
+            job_id, 100, status="completed",
+            meta={"stage": "Completado", "file_ready": True},
+        )
+    else:
+        update_job_progress(job_id, 100, status="failed", meta={"stage": "Fallido"})
+
+    # Preview para el frontend
+    if result_data.get("success"):
+        try:
+            preview = TrazabilidadExtractor.get_data(
+                database_name, IdtReporteIni, IdtReporteFin, user_id,
+                agrupacion="detalle", start=0, length=100,
+            )
+            result_data["preview_headers"] = preview.get("headers", [])
+            result_data["preview_sample"] = preview.get("rows", [])
+        except Exception as e:
+            logger.warning(f"No se pudo obtener previsualización de trazabilidad: {e}")
+            result_data["preview_headers"] = []
+            result_data["preview_sample"] = []
+
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    return result_data
