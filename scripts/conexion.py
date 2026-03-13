@@ -64,6 +64,26 @@ class Conexion:
         cls._connection_labels.pop(cache_key, None)
         cls._connection_timestamps.pop(cache_key, None)
 
+    @classmethod
+    def dispose_all(cls) -> None:
+        """Cierra todos los engines cacheados y sus pools de conexiones.
+
+        Debe llamarse al finalizar el proceso o ante cancelación (SIGTERM/SIGINT)
+        para garantizar que no queden conexiones abiertas en MySQL.
+        """
+        with cls._cache_lock:
+            keys = list(cls._connection_cache.keys())
+            for key in keys:
+                engine = cls._connection_cache.pop(key, None)
+                if engine is not None:
+                    with suppress(Exception):
+                        engine.dispose()
+                cls._connection_labels.pop(key, None)
+                cls._connection_timestamps.pop(key, None)
+            logging.info(
+                "Conexion.dispose_all: %d engine(s) cerrado(s).", len(keys)
+            )
+
     @staticmethod
     def ConexionMariadb3(user, password, host, port, database):
         """

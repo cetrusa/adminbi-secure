@@ -1,4 +1,6 @@
+import atexit
 import os, sys
+import signal
 
 import pandas
 import sqlalchemy
@@ -25,6 +27,21 @@ from scripts.config import ConfigBasic
 from scripts.conexion import Conexion as con
 import win32com.client
 import logging
+
+
+# -- Cleanup de conexiones al terminar (normal o por señal) --------------------
+atexit.register(con.dispose_all)
+
+
+def _signal_cleanup(signum, frame):
+    """Cierra conexiones y termina el proceso ante SIGTERM/SIGINT."""
+    logging.warning("Señal %s recibida. Cerrando conexiones...", signum)
+    con.dispose_all()
+    sys.exit(1)
+
+
+signal.signal(signal.SIGTERM, _signal_cleanup)
+signal.signal(signal.SIGINT, _signal_cleanup)
 
 
 def get_secret(secret_name, secrets_file="secret.json"):

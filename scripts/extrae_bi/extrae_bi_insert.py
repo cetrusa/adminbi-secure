@@ -88,6 +88,31 @@ class ExtraeBiExtractor:
         self.txSqlExtrae = None
         self._table_columns_cache = {}
         self._primary_keys_cache = {}
+        self._disposed = False
+
+    def _dispose_engines(self):
+        """Cierra los pools de conexiones para liberar conexiones MySQL.
+
+        Seguro de llamar múltiples veces (idempotente).
+        """
+        if self._disposed:
+            return
+        self._disposed = True
+        for engine in (self.engine_mysql_bi, self.engine_mysql_out, self.engine_sqlite):
+            if engine is not None:
+                try:
+                    engine.dispose()
+                except Exception:
+                    pass
+        logging.info("Engines dispuestos correctamente.")
+
+    def __del__(self):
+        """Safety net: si el extractor es destruido sin haber llamado _dispose_engines."""
+        if not getattr(self, "_disposed", True):
+            try:
+                self._dispose_engines()
+            except Exception:
+                pass
 
     def _resolve_chunk_size(self, fallback: int, minimum: int, maximum: int) -> int:
         raw_value = self.batch_size if self.batch_size is not None else fallback
@@ -848,6 +873,7 @@ class ExtraeBiExtractor:
                 "error": str(e),
             }
         finally:
+            self._dispose_engines()
             logging.info("Finalizado el procedimiento de ejecución SQL.")
 
     def procedimiento_a_sql(self):
@@ -1035,21 +1061,28 @@ class ExtraeBiExtractor:
                         stream_results=True,
                         max_row_buffer=10000,
                     )
-                    for chunk_num, chunk in enumerate(pd.read_sql_query(
+                    chunk_iterator = pd.read_sql_query(
                         sql=sqlout,
                         con=stream_connection,
                         params={"fi": self.IdtReporteIni, "ff": self.IdtReporteFin},
                         chunksize=chunksize
-                    ), start=1):
-                        chunk_rows = len(chunk)
-                        total_chunks = chunk_num
-                        total_rows += chunk_rows
-                        logging.info(f"Chunk {chunk_num}: {chunk_rows:,} registros leídos (Total acumulado: {total_rows:,})")
-                        if chunk_callback is not None:
-                            chunk_callback(chunk, chunk_num, total_rows)
-                            del chunk
-                        else:
-                            chunks.append(chunk)
+                    )
+                    try:
+                        for chunk_num, chunk in enumerate(chunk_iterator, start=1):
+                            chunk_rows = len(chunk)
+                            total_chunks = chunk_num
+                            total_rows += chunk_rows
+                            logging.info(f"Chunk {chunk_num}: {chunk_rows:,} registros leídos (Total acumulado: {total_rows:,})")
+                            if chunk_callback is not None:
+                                chunk_callback(chunk, chunk_num, total_rows)
+                                del chunk
+                            else:
+                                chunks.append(chunk)
+                    finally:
+                        # Cerrar el iterador para consumir/liberar el cursor SSCursor
+                        # antes de que la conexión se cierre. Evita los errores de
+                        # 'NoneType' has no attribute 'settimeout' al terminar.
+                        chunk_iterator.close()
 
                     elapsed = max(time.perf_counter() - read_start, 0.001)
                     rows_per_second = total_rows / elapsed
