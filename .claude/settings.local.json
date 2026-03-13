@@ -9,7 +9,9 @@
       "Bash(curl:*)",
       "Bash(docker compose:*)",
       "Bash(docker ps:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
