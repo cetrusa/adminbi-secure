@@ -47,13 +47,21 @@ class Command(BaseCommand):
             ('cargue_plano', 'Cargar archivo plano'),
             ('cargue_tsol', 'Cargue archivo plano TSOL'),
             ('informe_bi', 'Informe BI'),
+            ('informe_bi_embed', 'Informe BI Embed'),
             ('actualizar_base', 'Actualización de datos'),
             ('actualizacion_bi', 'Actualizar BI'),
             ('admin', 'Ir al Administrador'),
             ('amovildesk', 'Puede ver Informe Amovildesk'),
             ('reportes', 'Puede ver Reportes'),
+            ('reportes_bimbo', 'Puede ver Reportes Bimbo (Venta Cero, Ruteros)'),
+            ('reporte_preventa_bimbo', 'Puede ver Reporte Preventa Bimbo'),
             ('cargue_infoventas', 'Cargar Archivo Infoventas'),
-            ('cargue_maestras', 'Cargar Tablas Maestras'),  # NUEVO PERMISO
+            ('cargue_maestras', 'Cargar Tablas Maestras'),
+            ('cargue_infoproducto', 'Cargar Información de Producto'),
+            ('cargue_infoproveedor', 'Cargar Información de Proveedor'),
+            ('faltantes', 'Generar informe de Faltantes'),
+            ('preventa', 'Generar informe de Preventa'),
+            ('config_email_reportes', 'Configurar correos para reportes programados'),
         ]
 
         # Crear o actualizar permisos
@@ -96,19 +104,23 @@ class Command(BaseCommand):
 
         grupos_config = {
             'Administradores': [
-                'nav_bar', 'admin', 'panel_cubo', 'panel_bi', 'panel_actualizacion', 
+                'nav_bar', 'admin', 'panel_cubo', 'panel_bi', 'panel_actualizacion',
                 'panel_interface', 'cubo', 'proveedor', 'matrix', 'interface', 'interface_siigo',
-                'plano', 'cargue_plano', 'cargue_tsol', 'informe_bi', 
+                'plano', 'cargue_plano', 'cargue_tsol', 'informe_bi', 'informe_bi_embed',
                 'actualizar_base', 'actualizacion_bi', 'amovildesk', 'reportes',
-                'cargue_infoventas', 'cargue_maestras'
+                'reportes_bimbo', 'reporte_preventa_bimbo',
+                'cargue_infoventas', 'cargue_maestras', 'cargue_infoproducto', 'cargue_infoproveedor',
+                'faltantes', 'preventa', 'config_email_reportes'
             ],
             'Usuarios BI': [
-                'nav_bar', 'panel_bi', 'informe_bi', 'cubo', 'proveedor', 
-                'matrix', 'amovildesk', 'reportes'
+                'nav_bar', 'panel_cubo', 'panel_bi', 'informe_bi', 'informe_bi_embed',
+                'cubo', 'proveedor', 'matrix', 'amovildesk', 'reportes',
+                'faltantes', 'preventa'
             ],
             'Usuarios Cargue': [
                 'nav_bar', 'panel_actualizacion', 'cargue_plano', 'cargue_tsol',
-                'cargue_infoventas', 'cargue_maestras', 'actualizar_base'
+                'cargue_infoventas', 'cargue_maestras', 'cargue_infoproducto',
+                'cargue_infoproveedor', 'actualizar_base'
             ],
             'Usuarios Interface': [
                 'nav_bar', 'panel_interface', 'interface', 'interface_siigo', 'plano'
@@ -163,9 +175,11 @@ class Command(BaseCommand):
                 permisos_basicos = [
                     'nav_bar', 'admin', 'panel_cubo', 'panel_bi', 'panel_actualizacion',
                     'panel_interface', 'cubo', 'proveedor', 'matrix', 'interface', 'interface_siigo',
-                    'plano', 'cargue_plano', 'cargue_tsol', 'informe_bi',
+                    'plano', 'cargue_plano', 'cargue_tsol', 'informe_bi', 'informe_bi_embed',
                     'actualizar_base', 'actualizacion_bi', 'amovildesk', 'reportes',
-                    'cargue_infoventas', 'cargue_maestras'
+                    'reportes_bimbo', 'reporte_preventa_bimbo',
+                    'cargue_infoventas', 'cargue_maestras', 'cargue_infoproducto',
+                    'cargue_infoproveedor', 'faltantes', 'preventa', 'config_email_reportes'
                 ]
                 self.stdout.write(
                     self.style.SUCCESS(f'  🔑 Usuario {username} es superusuario - asignando todos los permisos')

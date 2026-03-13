@@ -41,6 +41,8 @@ class PermisosBarra(models.Model):
             ("reporte_preventa_bimbo", _("Puede ver Reporte Preventa Bimbo")),
             ("cargue_infoventas", _("Cargar Archivo Infoventas")),
             ("cargue_maestras", _("Cargar Tablas Maestras")),
+            ("cargue_infoproducto", _("Cargar Información de Producto")),
+            ("cargue_infoproveedor", _("Cargar Información de Proveedor")),
             ("faltantes", _("Generar informe de Faltantes")),
             ("preventa", _("Generar informe de Preventa")),
             ("config_email_reportes", _("Configurar correos para reportes programados")),

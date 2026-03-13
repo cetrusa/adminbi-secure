@@ -28,7 +28,7 @@
       </li>
       {% endif %}
 
-      {% if perms.permisos.actualizar_bi %}
+      {% if perms.permisos.actualizacion_bi %}
       <li class="nav-item">
         <a class="nav-link {% if request.resolver_match.url_name == 'actualizacion_bi' %}active{% endif %}"
           href="{% url 'bi_app:actualizacion_bi'%}">
