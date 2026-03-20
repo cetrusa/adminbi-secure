@@ -1,0 +1,200 @@
+{% extends 'black.html' %}
+{% load static %}
+
+{% block title %}
+Historial TSOL
+{% endblock title %}
+
+{% block barra_lateral %}
+{% include 'includes/left_sidebar_planos.html' %}
+{% endblock barra_lateral %}
+
+{% block window %}
+{% include 'includes/messages.html' %}
+
+<div class="container-fluid px-0">
+  <!-- Header -->
+  <div class="mb-4 d-flex justify-content-between align-items-center">
+    <div>
+      <h3 class="fw-bold mb-1">
+        <i class="fas fa-history text-info me-2"></i> Historial de Envios TSOL
+      </h3>
+      <p class="text-muted small mb-0">Consulta y descarga los planos TSOL enviados a proveedores.</p>
+    </div>
+    <a href="{% url 'home_app:tsol_planos' %}" class="btn btn-info btn-sm">
+      <i class="fas fa-plus me-1"></i> Nuevo Envio
+    </a>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold text-muted mb-1">Estado</label>
+          <select name="estado" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <option value="pendiente" {% if filtro_estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+            <option value="procesando" {% if filtro_estado == 'procesando' %}selected{% endif %}>Procesando</option>
+            <option value="enviado" {% if filtro_estado == 'enviado' %}selected{% endif %}>Enviado</option>
+            <option value="error" {% if filtro_estado == 'error' %}selected{% endif %}>Error</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+            <i class="fas fa-filter me-1"></i> Filtrar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tabla de envios -->
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th class="small">Fecha</th>
+              <th class="small">Empresa</th>
+              <th class="small">Periodo</th>
+              <th class="small text-center">Estado</th>
+              <th class="small text-end">Ventas</th>
+              <th class="small text-end">Clientes</th>
+              <th class="small text-end">Inventario</th>
+              <th class="small text-center">FTP</th>
+              <th class="small text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for envio in envios %}
+            <tr>
+              <td class="small">{{ envio.fecha_ejecucion|date:"d/m/Y H:i" }}</td>
+              <td class="small">{{ envio.empresa.nmEmpresa|default:envio.empresa.name }}</td>
+              <td class="small">{{ envio.fecha_inicio|date:"d/m/Y" }} - {{ envio.fecha_fin|date:"d/m/Y" }}</td>
+              <td class="small text-center">
+                {% if envio.estado == 'enviado' %}
+                <span class="badge bg-success">Enviado</span>
+                {% elif envio.estado == 'procesando' %}
+                <span class="badge bg-primary">Procesando</span>
+                {% elif envio.estado == 'error' %}
+                <span class="badge bg-danger">Error</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">Pendiente</span>
+                {% endif %}
+              </td>
+              <td class="small text-end">{{ envio.total_ventas|default:"0" }}</td>
+              <td class="small text-end">{{ envio.total_clientes|default:"0" }}</td>
+              <td class="small text-end">{{ envio.total_inventario|default:"0" }}</td>
+              <td class="small text-center">
+                {% if envio.enviado_ftp %}
+                <span class="text-success"><i class="fas fa-check-circle"></i></span>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td class="small text-center">
+                <div class="btn-group btn-group-sm">
+                  {% if envio.archivo_descarga %}
+                  <a href="{% url 'home_app:tsol_download' envio.id %}" class="btn btn-outline-success btn-sm"
+                    title="Descargar ZIP">
+                    <i class="fas fa-download"></i>
+                  </a>
+                  {% endif %}
+                  {% if not envio.enviado_ftp and envio.archivo_descarga %}
+                  <button type="button" class="btn btn-outline-info btn-sm btn-reenviar"
+                    data-envio-id="{{ envio.id }}" title="Re-enviar FTP">
+                    <i class="fas fa-upload"></i>
+                  </button>
+                  {% endif %}
+                  {% if envio.log_ejecucion %}
+                  <button type="button" class="btn btn-outline-secondary btn-sm btn-ver-log"
+                    data-log="{{ envio.log_ejecucion|escape }}" title="Ver log">
+                    <i class="fas fa-file-alt"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="text-center text-muted py-4">
+                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                No hay envios TSOL registrados.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Log -->
+<div class="modal fade" id="logModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-file-alt me-2"></i> Log de Ejecucion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="logContent" class="small"
+          style="max-height: 400px; overflow-y: auto; background: var(--bs-body-bg); padding: 1rem; border-radius: 4px;"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script>
+  $(function () {
+    // CSRF token desde cookie
+    function getCookie(name) {
+      var v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+      return v ? v.pop() : '';
+    }
+    var csrfToken = getCookie('csrftoken');
+
+    // Ver log
+    $(document).on('click', '.btn-ver-log', function () {
+      var log = $(this).data('log');
+      $('#logContent').text(log);
+      new bootstrap.Modal($('#logModal')[0]).show();
+    });
+
+    // Re-enviar FTP
+    $(document).on('click', '.btn-reenviar', function () {
+      var btn = $(this);
+      var envioId = btn.data('envio-id');
+      if (!confirm('Desea re-enviar este plano por FTP?')) return;
+
+      btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+      $.ajax({
+        url: '{% url "home_app:tsol_reenviar_ftp" 0 %}'.replace('0', envioId),
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken },
+        success: function (data) {
+          if (data.success) {
+            alert('Re-envio FTP completado exitosamente.');
+            location.reload();
+          } else {
+            alert('Error: ' + (data.message || 'Re-envio fallido'));
+            btn.prop('disabled', false).html('<i class="fas fa-upload"></i>');
+          }
+        },
+        error: function (xhr) {
+          alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Error desconocido'));
+          btn.prop('disabled', false).html('<i class="fas fa-upload"></i>');
+        }
+      });
+    });
+  });
+</script>
+{% endblock script %}

@@ -58,3 +58,31 @@ class HomeConfig(AppConfig):
             logger.info("Envio nocturno de reportes programado para %s UTC", next_run)
         except Exception as e:
             logger.error(f"No se pudo programar envio nocturno de reportes: {e}")
+
+        # Programar envio nocturno de planos CDT (11:00 PM Bogota = 04:00 UTC dia siguiente)
+        try:
+            from django_rq import get_scheduler
+            from datetime import datetime, timedelta
+            from apps.home.tasks import planos_cdt_todas_empresas_task
+
+            scheduler = get_scheduler('default')
+            func_name = 'apps.home.tasks.planos_cdt_todas_empresas_task'
+            for job in scheduler.get_jobs():
+                if job.func_name == func_name:
+                    scheduler.cancel(job)
+
+            # 23:00 Bogota (UTC-5) = 04:00 UTC dia siguiente
+            now_utc = datetime.utcnow()
+            next_run_cdt = now_utc.replace(hour=4, minute=0, second=0, microsecond=0)
+            if next_run_cdt <= now_utc:
+                next_run_cdt += timedelta(days=1)
+
+            scheduler.schedule(
+                scheduled_time=next_run_cdt,
+                func=planos_cdt_todas_empresas_task,
+                interval=86400,
+                repeat=None,
+            )
+            logger.info("Envio nocturno CDT programado para %s UTC (11 PM Bogota)", next_run_cdt)
+        except Exception as e:
+            logger.error(f"No se pudo programar envio nocturno CDT: {e}")

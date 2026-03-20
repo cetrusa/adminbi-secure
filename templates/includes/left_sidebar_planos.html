@@ -1,0 +1,76 @@
+{% load static %}
+<!-- Barra lateral Planos Proveedores -->
+<div class="h-100 d-flex flex-column rounded-3" style="min-height: calc(100vh - 80px);">
+  <div class="d-flex flex-column align-items-center align-items-sm-start px-2 pt-2 text-white flex-grow-1">
+
+    <!-- User Profile Minimal -->
+    <div class="d-flex align-items-center mb-4 mt-3 px-3 w-100">
+      <div class="symbol symbol-40px me-3">
+        <img src="{% static 'images/user-profile.png' %}" alt="profile" class="rounded-circle" width="45" height="45">
+      </div>
+      <div class="d-none d-sm-flex flex-column">
+        <span class="fw-bold fs-6 text-white">{{ user.username }}</span>
+        <span class="text-muted fs-7 small">{{ user.get_full_name|default:"Usuario" }}</span>
+      </div>
+    </div>
+
+    <!-- Enlaces de Navegación -->
+    <ul class="nav nav-pills flex-column w-100 mb-auto">
+
+      {% if perms.permisos.ejecutar_cdt %}
+      <h6 class="text-uppercase text-muted fw-bold fs-7 px-3 mb-2 w-100 d-none d-sm-block"
+        style="letter-spacing: 1px;">CDT Proveedores</h6>
+
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'cdt_planos' %}active{% endif %}"
+          href="{% url 'home_app:cdt_planos'%}">
+          <i class="fas fa-file-export"></i> <span class="ms-2 d-none d-sm-inline">Generar Planos</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'cdt_historial' %}active{% endif %}"
+          href="{% url 'home_app:cdt_historial'%}">
+          <i class="fas fa-history"></i> <span class="ms-2 d-none d-sm-inline">Historial Envios</span>
+        </a>
+      </li>
+      {% endif %}
+
+      {% if perms.permisos.ejecutar_tsol %}
+      <h6 class="text-uppercase text-muted fw-bold fs-7 px-3 mt-4 mb-2 w-100 d-none d-sm-block"
+        style="letter-spacing: 1px;">TSOL Proveedores</h6>
+
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'tsol_planos' %}active{% endif %}"
+          href="{% url 'home_app:tsol_planos'%}">
+          <i class="fas fa-file-export"></i> <span class="ms-2 d-none d-sm-inline">Generar Planos</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'tsol_historial' %}active{% endif %}"
+          href="{% url 'home_app:tsol_historial'%}">
+          <i class="fas fa-history"></i> <span class="ms-2 d-none d-sm-inline">Historial Envios</span>
+        </a>
+      </li>
+      {% endif %}
+
+      {% if perms.permisos.ejecutar_cosmos %}
+      <h6 class="text-uppercase text-muted fw-bold fs-7 px-3 mt-4 mb-2 w-100 d-none d-sm-block"
+        style="letter-spacing: 1px;">Cosmos</h6>
+
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'cosmos_planos' %}active{% endif %}"
+          href="{% url 'home_app:cosmos_planos'%}">
+          <i class="fas fa-satellite"></i> <span class="ms-2 d-none d-sm-inline">Generar Planos</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'cosmos_historial' %}active{% endif %}"
+          href="{% url 'home_app:cosmos_historial'%}">
+          <i class="fas fa-history"></i> <span class="ms-2 d-none d-sm-inline">Historial Envios</span>
+        </a>
+      </li>
+      {% endif %}
+
+    </ul>
+  </div>
+</div>

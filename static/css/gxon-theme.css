@@ -2627,6 +2627,58 @@ span.flatpickr-weekday {
     white-space: nowrap;
 }
 
+/* --- Select2 Dark Mode Overrides (Database Selector) --- */
+.database-selector-wrapper .select2-container--bootstrap-5 .select2-selection {
+    background-color: var(--bs-card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--bs-body-color);
+    font-size: 0.875rem;
+    min-height: 32px;
+}
+
+.database-selector-wrapper .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    color: var(--bs-body-color);
+}
+
+.database-selector-wrapper .select2-container--bootstrap-5 .select2-selection--single .select2-selection__placeholder {
+    color: #565674;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+    background-color: var(--bs-card-bg);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+    background-color: #1e1e2d;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--bs-body-color);
+    border-radius: 6px;
+}
+
+.select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.15);
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+    color: var(--bs-body-color);
+    padding: 0.5rem 0.75rem;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+    background-color: rgba(var(--bs-primary-rgb), 0.2);
+    color: #fff;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--selected {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.select2-container--bootstrap-5 .select2-results__message {
+    color: #565674;
+}
+
 /* --- Daterangepicker Dark Mode Overrides --- */
 .daterangepicker {
     background-color: var(--bs-card-bg) !important;

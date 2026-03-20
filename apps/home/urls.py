@@ -29,6 +29,11 @@ urlpatterns = [
         name="panel_interface",
     ),
     path(
+        "panel_planos/",
+        views.HomePanelPlanosPage.as_view(),
+        name="panel_planos",
+    ),
+    path(
         "panel_left_planos/",
         views.HomePanelCuboPage.as_view(),
         name="panel_left_planos",
@@ -120,4 +125,19 @@ urlpatterns = [
     path("trazabilidad/", views.TrazabilidadPage.as_view(), name="trazabilidad"),
     path("trazabilidad/data/", views.TrazabilidadDataAjaxView.as_view(), name="trazabilidad_data_ajax"),
     path("trazabilidad/kpis/", views.TrazabilidadKpisAjaxView.as_view(), name="trazabilidad_kpis_ajax"),
+    # --- CDT (Planos para proveedores) ---
+    path("cdt/", views.CdtPage.as_view(), name="cdt_planos"),
+    path("cdt/historial/", views.CdtHistorialPage.as_view(), name="cdt_historial"),
+    path("cdt/download/<int:envio_id>/", views.cdt_download, name="cdt_download"),
+    path("cdt/reenviar/<int:envio_id>/", views.cdt_reenviar_sftp, name="cdt_reenviar_sftp"),
+    # --- TSOL (Planos TrackSales para proveedores) ---
+    path("tsol/", views.TsolPage.as_view(), name="tsol_planos"),
+    path("tsol/historial/", views.TsolHistorialPage.as_view(), name="tsol_historial"),
+    path("tsol/download/<int:envio_id>/", views.tsol_download, name="tsol_download"),
+    path("tsol/reenviar/<int:envio_id>/", views.tsol_reenviar_ftp, name="tsol_reenviar_ftp"),
+    # --- Cosmos (Planos para envío FTPS) ---
+    path("cosmos/", views.CosmosPage.as_view(), name="cosmos_planos"),
+    path("cosmos/historial/", views.CosmosHistorialPage.as_view(), name="cosmos_historial"),
+    path("cosmos/download/<int:envio_id>/", views.cosmos_download, name="cosmos_download"),
+    path("cosmos/reenviar/<int:envio_id>/", views.cosmos_reenviar_ftps, name="cosmos_reenviar_ftps"),
 ]

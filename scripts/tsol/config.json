@@ -1,0 +1,132 @@
+{
+    "files": {
+        "providers": "proveedores.txt",
+        "catalogo_principal": "D://Distrijass//Sistema Info//Información//PROVEE-TSOL.xlsx"
+    },
+    "output_folder": "output_files",
+    "ftp": {
+        "host": "apps.grupobit.net",
+        "port": 21
+    },
+    "companies": {
+        "distrijass": {
+            "name": "Distrijass",
+            "codigo": "DISTRIJASS_211688",
+            "prefix": "DISTRIJASS_211688",
+            "output_subfolder": "Distrijass",
+            "ftp_enabled": false,
+            "ftp": {
+                "user": "DISTRIJASS_211688",
+                "password": "DIST688as"
+            },
+            "files": {
+                "ventas": "D://Distrijass//Sistema Info//Información//Impactos//Info proveedores.xlsx",
+                "ventas_2025": "D://Distrijass//Sistema Info//Información//Impactos//Info proveedores 2025//Info proveedores 2025-12.xlsx",
+                "inventario": "D://Distrijass//Sistema Info//Información//Inventarios//Consolidado.xlsx",
+                "rutero": "D://Desarrollo//Matrix//ruterojass.xlsx"
+            },
+            "paths": {
+                "intercliente": "D://Distrijass//Sistema Info//Información//Archivos planos//Distrijass//intercliente.txt",
+                "interciudad": "D://Distrijass//Sistema Info//Información//Archivos planos//Distrijass//interciudad.txt",
+                "interasesor": "D://Distrijass//Sistema Info//Información//Archivos planos//Distrijass//interasesor.txt",
+                "intersupervisor": "D://Distrijass//Sistema Info//Información//Archivos planos//Distrijass//intersupervisor.txt"
+            },
+            "filtros_productos": {
+                "hoja_excel": "PRODUCTO",
+                "columnas": {
+                    "codigo": "Codigo SAP",
+                    "nombre": "Nombre",
+                    "tipo_referencia": "Tipo referencia",
+                    "unidad": "Unidad",
+                    "codigo_barras": "Codigo de barras",
+                    "proveedor": "Proveedor",
+                    "provee_2": "PROVEE 2",
+                    "categoria": "Categoría",
+                    "tipo_producto": "Tipo Prod",
+                    "contenido": "Contenido"
+                }
+            },
+            "filtros_clientes": {
+                "hoja_excel": "CLIENTES",
+                "columnas": {
+                    "codigo": "Cod. Cliente",
+                    "nombre": "Nom. Cliente",
+                    "nit": "Nit",
+                    "tipo_negocio": "Tipo Negocio"
+                }
+            },
+            "tipologia_negocio": {
+                "hoja_excel": "TIPOLOGIA",
+                "columnas": {
+                    "codigo": "Cod. necesidad",
+                    "descripcion": "Nom. necesidad"
+                }
+            },
+            "filtro_proveedores": {
+                "tipo": "include",
+                "criterios": ["023-COLGATE", "024-PAPELES", "018-COLOMBIANA", "020-HENKEL", "021-HENKEL", "027-BAYER", "011-GLAXO", "012-BIC", "017-ABBOTT", "8-RECKITT", "052-JHONSON", "093-UPFIELD", "10000-SPECTRUM", "2008-RECKITT", "2754-ALIMENTOS POLAR", "2743-AJECOLOMBIA", "2779-GENOMMA", "3141-SOFTYS"]
+            },
+            "providers": [
+            ]
+        },
+        "eje_cafetero": {
+            "name": "Eje Cafetero",
+            "codigo": "DISTRIJASS_211697",
+            "prefix": "DISTRIJASS_211697",
+            "output_subfolder": "Eje",
+            "ftp_enabled": false,
+            "ftp": {
+                "user": "DISTRIJASS_211697",
+                "password": "EJE697cf"
+            },
+            "files": {
+                "ventas": "D://Distrijass//Sistema Info//Información//Impactos//Info proveedores.xlsx",
+                "inventario": "D://Distrijass//Sistema Info//Información//Inventarios//Consolidado.xlsx",
+                "rutero": "D://Desarrollo//Matrix//ruteroeje.xlsx"
+            },
+            "paths": {
+                "intercliente": "D://Distrijass//Sistema Info//Información//Envío TSOL//TSOL//Eje//intercliente.txt",
+                "interciudad": "D://Distrijass//Sistema Info//Información//Envío TSOL//TSOL//Eje//interciudad.txt",
+                "interasesor": "D://Distrijass//Sistema Info//Información//Envío TSOL//TSOL//Eje//interasesor.txt",
+                "intersupervisor": "D://Distrijass//Sistema Info//Información//Envío TSOL//TSOL//Eje//intersupervisor.txt"
+            },
+            "filtros_productos": {
+                "hoja_excel": "PRODUCTO",
+                "columnas": {
+                    "codigo": "Codigo SAP",
+                    "nombre": "Nombre",
+                    "tipo_referencia": "Tipo referencia",
+                    "unidad": "Unidad",
+                    "codigo_barras": "Codigo de barras",
+                    "proveedor": "Proveedor",
+                    "provee_2": "PROVEE 2",
+                    "categoria": "Categoría",
+                    "tipo_producto": "Tipo Prod",
+                    "contenido": "Contenido"
+                }
+            },
+            "filtros_clientes": {
+                "hoja_excel": "CLIENTES",
+                "columnas": {
+                    "codigo": "Cod. Cliente",
+                    "nombre": "Nom. Cliente",
+                    "nit": "Nit",
+                    "tipo_negocio": "Tipo Negocio"
+                }
+            },
+            "tipologia_negocio": {
+                "hoja_excel": "TIPOLOGIA",
+                "columnas": {
+                    "codigo": "Cod. necesidad",
+                    "descripcion": "Nom. necesidad"
+                }
+            },
+            "filtro_proveedores": {
+                "tipo": "include",
+                "criterios": []
+            },
+            "providers": [
+            ]
+        }
+    }
+}

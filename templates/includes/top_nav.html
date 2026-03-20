@@ -55,6 +55,14 @@
                         </a>
                     </li>
                     {% endif %}
+                    {% if perms.permisos.ejecutar_cdt or perms.permisos.ejecutar_tsol or perms.permisos.ejecutar_cosmos %}
+                    <li class="nav-item me-1">
+                        <a class="nav-link px-3 py-2 rounded-3 text-white d-flex align-items-center"
+                            href="{% url 'home_app:panel_planos' %}">
+                            <i class="fas fa-file-export text-cyan me-2"></i><span>Planos Proveedores</span>
+                        </a>
+                    </li>
+                    {% endif %}
                     {% if perms.permisos.reportes_bimbo %}
                     <li class="nav-item me-1">
                         <a class="nav-link px-3 py-2 rounded-3 text-white d-flex align-items-center"

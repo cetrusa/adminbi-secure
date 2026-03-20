@@ -91,20 +91,19 @@ class ExtraeBiExtractor:
         self._disposed = False
 
     def _dispose_engines(self):
-        """Cierra los pools de conexiones para liberar conexiones MySQL.
+        """Marca el extractor como finalizado.
+
+        Los engines son gestionados por el cache global de Conexion y NO
+        deben cerrarse aquí: otros extractores podrían estar reutilizándolos.
+        El TTLCache se encarga de expirarlos automáticamente.
 
         Seguro de llamar múltiples veces (idempotente).
         """
         if self._disposed:
             return
         self._disposed = True
-        for engine in (self.engine_mysql_bi, self.engine_mysql_out, self.engine_sqlite):
-            if engine is not None:
-                try:
-                    engine.dispose()
-                except Exception:
-                    pass
-        logging.info("Engines dispuestos correctamente.")
+        # No llamar engine.dispose() — los engines son compartidos via cache
+        logging.info("Extractor finalizado, engines permanecen en cache global.")
 
     def __del__(self):
         """Safety net: si el extractor es destruido sin haber llamado _dispose_engines."""
@@ -1027,7 +1026,14 @@ class ExtraeBiExtractor:
     ) -> Optional[Any]:
         """
         Ejecuta consulta SQL en la base de datos de salida con lectura en chunks.
-        
+
+        Estrategia two-phase (read-then-insert): cuando se usa chunk_callback,
+        primero se leen TODOS los chunks rápidamente desde la BD origen
+        (manteniendo la conexión activa sin pausas), y luego se procesan
+        (insertan) ya sin depender de la conexión origen.  Esto evita
+        el error "Lost connection to MySQL server during query" que ocurría
+        cuando la conexión origen quedaba inactiva durante las inserciones.
+
         Args:
             chunksize (int): Tamaño de cada chunk. Por defecto 10,000 registros.
         """
@@ -1041,19 +1047,22 @@ class ExtraeBiExtractor:
         else:
             logging.warning("La variable txSqlExtrae está vacía.")
             return None
-        
+
         for retry_count in range(max_retries):
             try:
+                # ── FASE 1: Lectura rápida de todos los chunks ──────────
+                # Se leen todos los datos del servidor origen sin pausas
+                # para inserción.  Esto mantiene la conexión activa y evita
+                # timeouts del servidor remoto (RDS).
+                buffered_chunks = []
+                total_rows = 0
+                total_chunks = 0
+                read_start = time.perf_counter()
+
                 with self.engine_mysql_out.connect().execution_options(
                     isolation_level=isolation_level
                 ) as connection:
                     sqlout = text(self.txSqlExtrae)
-
-                    # Leer datos en chunks para evitar timeouts
-                    chunks = [] if chunk_callback is None else None
-                    total_rows = 0
-                    total_chunks = 0
-                    read_start = time.perf_counter()
 
                     logging.info(f"Iniciando lectura de datos en chunks de {chunksize:,} registros...")
 
@@ -1073,47 +1082,59 @@ class ExtraeBiExtractor:
                             total_chunks = chunk_num
                             total_rows += chunk_rows
                             logging.info(f"Chunk {chunk_num}: {chunk_rows:,} registros leídos (Total acumulado: {total_rows:,})")
-                            if chunk_callback is not None:
-                                chunk_callback(chunk, chunk_num, total_rows)
-                                del chunk
-                            else:
-                                chunks.append(chunk)
+                            buffered_chunks.append(chunk)
                     finally:
-                        # Cerrar el iterador para consumir/liberar el cursor SSCursor
-                        # antes de que la conexión se cierre. Evita los errores de
-                        # 'NoneType' has no attribute 'settimeout' al terminar.
                         chunk_iterator.close()
+                # ── Conexión origen cerrada aquí ────────────────────────
+
+                read_elapsed = max(time.perf_counter() - read_start, 0.001)
+                logging.info(
+                    f"Lectura completada: {total_rows:,} registros en {total_chunks} chunks "
+                    f"({read_elapsed:.2f}s, {total_rows / read_elapsed:,.1f} filas/s). "
+                    f"Conexión origen liberada."
+                )
+
+                # ── FASE 2: Procesamiento (inserción) ──────────────────
+                # Los chunks ya están en memoria; no se depende de la
+                # conexión origen.
+                if chunk_callback is not None:
+                    cumulative_rows = 0
+                    for chunk_num, chunk in enumerate(buffered_chunks, start=1):
+                        cumulative_rows += len(chunk)
+                        chunk_callback(chunk, chunk_num, cumulative_rows)
+                        # Liberar memoria del chunk ya procesado
+                        buffered_chunks[chunk_num - 1] = None
+                        del chunk
 
                     elapsed = max(time.perf_counter() - read_start, 0.001)
-                    rows_per_second = total_rows / elapsed
-
-                    if chunk_callback is not None:
-                        if total_rows > 0:
-                            logging.info(
-                                f"Consulta ejecutada con éxito en {isolation_level}. Total: {total_rows:,} registros en {elapsed:.2f}s ({rows_per_second:,.1f} filas/s)."
-                            )
-                            return {
-                                "total_rows": total_rows,
-                                "total_chunks": total_chunks,
-                                "elapsed_seconds": elapsed,
-                            }
-                        logging.warning("No se obtuvieron datos de la consulta.")
+                    if total_rows > 0:
+                        logging.info(
+                            f"Consulta ejecutada con éxito en {isolation_level}. Total: {total_rows:,} registros en {elapsed:.2f}s ({total_rows / elapsed:,.1f} filas/s)."
+                        )
                         return {
-                            "total_rows": 0,
-                            "total_chunks": 0,
+                            "total_rows": total_rows,
+                            "total_chunks": total_chunks,
                             "elapsed_seconds": elapsed,
                         }
+                    logging.warning("No se obtuvieron datos de la consulta.")
+                    return {
+                        "total_rows": 0,
+                        "total_chunks": 0,
+                        "elapsed_seconds": elapsed,
+                    }
 
-                    if chunks:
-                        resultado = pd.concat(chunks, ignore_index=True)
-                        logging.info(
-                            f"Consulta ejecutada con éxito en {isolation_level}. Total: {total_rows:,} registros en {elapsed:.2f}s ({rows_per_second:,.1f} filas/s)."
-                        )
-                        return resultado
-                    else:
-                        logging.warning("No se obtuvieron datos de la consulta.")
-                        return pd.DataFrame()
-                        
+                # Sin callback: retornar DataFrame concatenado
+                if buffered_chunks:
+                    resultado = pd.concat(buffered_chunks, ignore_index=True)
+                    elapsed = max(time.perf_counter() - read_start, 0.001)
+                    logging.info(
+                        f"Consulta ejecutada con éxito en {isolation_level}. Total: {total_rows:,} registros en {elapsed:.2f}s ({total_rows / elapsed:,.1f} filas/s)."
+                    )
+                    return resultado
+                else:
+                    logging.warning("No se obtuvieron datos de la consulta.")
+                    return pd.DataFrame()
+
             except Exception as e:
                 logging.error(
                     f"Error en consulta_sql_out_extrae (Intento {retry_count + 1}/3): {e}"

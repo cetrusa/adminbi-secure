@@ -23,7 +23,7 @@ class Conexion:
     _cache_lock = Lock()
     _cache_ttl_seconds = 300
     _connection_cache: TTLCache[str, sqlalchemy.engine.Engine] = TTLCache(
-        maxsize=256, ttl=_cache_ttl_seconds
+        maxsize=32, ttl=_cache_ttl_seconds
     )
     _connection_labels: Dict[str, str] = {}
     _connection_timestamps: Dict[str, float] = {}
@@ -117,8 +117,8 @@ class Conexion:
                 return default
             return max(minimum, min(value, maximum))
 
-        pool_size = int(os.getenv("DB_POOL_SIZE", 20))
-        max_overflow = int(os.getenv("DB_MAX_OVERFLOW", 25))
+        pool_size = int(os.getenv("DB_POOL_SIZE", 5))
+        max_overflow = int(os.getenv("DB_MAX_OVERFLOW", 3))
         pool_timeout = int(os.getenv("DB_POOL_TIMEOUT", 120))
         pool_recycle = int(os.getenv("DB_POOL_RECYCLE", 28000))
 
@@ -132,23 +132,15 @@ class Conexion:
         with Conexion._cache_lock:
             engine = Conexion._get_cached_engine(cache_key)
             if engine is not None:
-                try:
-                    with engine.connect():
-                        pass
-                    Conexion._connection_timestamps[cache_key] = time.time()
-                    logging.debug(
-                        "Reutilizando conexión existente para %s (cache_key=%s)",
-                        connection_label,
-                        cache_key,
-                    )
-                    return engine
-                except Exception as exc:
-                    logging.warning(
-                        "Conexión en caché inválida para %s: %s. Regenerando...",
-                        connection_label,
-                        exc,
-                    )
-                    Conexion._evict_cached_engine(cache_key)
+                # pool_pre_ping=True ya valida conexiones al hacer engine.connect()
+                # No necesitamos validar aquí; evita abrir conexiones innecesarias
+                Conexion._connection_timestamps[cache_key] = time.time()
+                logging.debug(
+                    "Reutilizando conexión existente para %s (cache_key=%s)",
+                    connection_label,
+                    cache_key,
+                )
+                return engine
 
             logging.debug(
                 "Creando nueva conexión para %s (cache_key=%s)",
@@ -280,8 +272,8 @@ class Conexion:
                 return default
             return max(minimum, min(value, maximum))
 
-        pool_size = int(os.getenv("DB_POOL_SIZE", 20))
-        max_overflow = int(os.getenv("DB_MAX_OVERFLOW", 25))
+        pool_size = int(os.getenv("DB_POOL_SIZE", 5))
+        max_overflow = int(os.getenv("DB_MAX_OVERFLOW", 3))
         pool_timeout = int(os.getenv("DB_POOL_TIMEOUT", 300))  # Aumentamos a 5 minutos
         pool_recycle = int(os.getenv("DB_POOL_RECYCLE", 28000))
 
@@ -296,23 +288,13 @@ class Conexion:
         with Conexion._cache_lock:
             engine = Conexion._get_cached_engine(cache_key)
             if engine is not None:
-                try:
-                    with engine.connect():
-                        pass
-                    Conexion._connection_timestamps[cache_key] = time.time()
-                    logging.debug(
-                        "Reutilizando conexión extendida para %s (cache_key=%s)",
-                        connection_label,
-                        cache_key,
-                    )
-                    return engine
-                except Exception as exc:
-                    logging.warning(
-                        "Conexión extendida en caché inválida para %s: %s. Regenerando...",
-                        connection_label,
-                        exc,
-                    )
-                    Conexion._evict_cached_engine(cache_key)
+                Conexion._connection_timestamps[cache_key] = time.time()
+                logging.debug(
+                    "Reutilizando conexión extendida para %s (cache_key=%s)",
+                    connection_label,
+                    cache_key,
+                )
+                return engine
 
             logging.debug(
                 "Creando nueva conexión extendida para %s (cache_key=%s)",
@@ -452,23 +434,13 @@ class Conexion:
         with Conexion._cache_lock:
             engine = Conexion._get_cached_engine(cache_key)
             if engine is not None:
-                try:
-                    with engine.connect():
-                        pass
-                    Conexion._connection_timestamps[cache_key] = time.time()
-                    logging.debug(
-                        "Reutilizando conexión SQLite para %s (cache_key=%s)",
-                        connection_label,
-                        cache_key,
-                    )
-                    return engine
-                except Exception as exc:
-                    logging.warning(
-                        "Conexión SQLite en caché inválida (%s): %s",
-                        connection_label,
-                        exc,
-                    )
-                    Conexion._evict_cached_engine(cache_key)
+                Conexion._connection_timestamps[cache_key] = time.time()
+                logging.debug(
+                    "Reutilizando conexión SQLite para %s (cache_key=%s)",
+                    connection_label,
+                    cache_key,
+                )
+                return engine
 
             try:
                 engine = sqlalchemy.create_engine(

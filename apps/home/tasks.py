@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import logging
@@ -1458,6 +1459,78 @@ def _send_report_email(subject, recipients, file_path, body_html):
     msg.send(fail_silently=False)
 
 
+def _add_inventario_sheet(file_path, engine, proveedor_ids=None, macrozonas=None):
+    """
+    Agrega una hoja 'Inventario' a un archivo Excel existente.
+
+    Para proveedores: filtra por idProveedor (solo productos del proveedor).
+    Para supervisores: filtra por nbAlmacen inferido de macrozonas (todos los proveedores).
+    """
+    from openpyxl import load_workbook
+    from sqlalchemy import text as sa_text
+    from scripts.text_cleaner import TextCleaner
+
+    if not file_path or not os.path.exists(file_path):
+        return
+    if not file_path.endswith(".xlsx"):
+        logger.warning("No se puede agregar hoja Inventario a archivo no-xlsx: %s", file_path)
+        return
+
+    # Construir query de inventario
+    if proveedor_ids:
+        ids_int = [int(x) for x in proveedor_ids]
+        placeholders = ", ".join(str(x) for x in ids_int)
+        sql = (
+            "SELECT i.nbAlmacen, i.nbProducto, p.nmProducto, "
+            "p.nmProveedor, i.InvDisponible "
+            "FROM inventario i "
+            "JOIN productos p ON p.nbProducto = i.nbProducto "
+            f"WHERE p.idProveedor IN ({placeholders}) "
+            "ORDER BY i.nbAlmacen, p.nmProducto"
+        )
+    elif macrozonas:
+        macro_int = [int(x) for x in macrozonas]
+        macro_placeholders = ", ".join(str(x) for x in macro_int)
+        sql = (
+            "SELECT i.nbAlmacen, i.nbProducto, p.nmProducto, "
+            "p.nmProveedor, p.nmTpCategoria, i.InvDisponible "
+            "FROM inventario i "
+            "JOIN productos p ON p.nbProducto = i.nbProducto "
+            "WHERE i.nbAlmacen IN ("
+            "  SELECT DISTINCT nbAlmacen FROM zona "
+            f"  WHERE macrozona_id IN ({macro_placeholders}) "
+            "  AND nbAlmacen IS NOT NULL"
+            ") "
+            "ORDER BY i.nbAlmacen, p.nmProveedor, p.nmProducto"
+        )
+    else:
+        return  # Sin filtro, no agregar inventario
+
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(sa_text(sql))
+            columns = list(result.keys())
+            rows = result.fetchall()
+
+        if not rows:
+            logger.info("Inventario sin datos para el filtro aplicado, omitiendo hoja.")
+            return
+
+        wb = load_workbook(file_path)
+        ws = wb.create_sheet(title="Inventario")
+        ws.append(columns)
+        for row in rows:
+            cleaned = tuple(
+                TextCleaner.clean_for_excel(v) if isinstance(v, str) else v
+                for v in row
+            )
+            ws.append(cleaned)
+        wb.save(file_path)
+        logger.info("Hoja Inventario agregada: %d filas", len(rows))
+    except Exception as exc:
+        logger.error("Error agregando hoja Inventario: %s", exc, exc_info=True)
+
+
 def _log_envio(engine, tipo, dest_id, dest_nombre, correos, fecha_ini, fecha_fin,
                archivo, estado, error_detalle=None):
     """Registra un envio en log_envio_reportes de la base BI."""
@@ -1488,9 +1561,10 @@ def _log_envio(engine, tipo, dest_id, dest_nombre, correos, fecha_ini, fecha_fin
 def enviar_reportes_email_task(database_name):
     """
     Genera y envia reportes por correo para UNA empresa.
-    - Por cada proveedor activo: CuboVentas filtrado por proveedor_ids
-    - Por cada supervisor activo: CuboVentas filtrado por macrozonas
-    Rango: 1ro del mes actual hasta hoy.
+    - Por cada proveedor activo: CuboVentas filtrado por proveedor_ids + Inventario filtrado por idProveedor
+    - Por cada supervisor activo: CuboVentas filtrado por macrozonas + Inventario de todos los proveedores filtrado por bodegas
+    El Excel resultante tiene dos hojas: Ventas e Inventario.
+    Rango de ventas: 1ro del mes actual hasta hoy.
     """
     from sqlalchemy import text as sa_text
     from scripts.conexion import Conexion as Cnx
@@ -1568,7 +1642,7 @@ def enviar_reportes_email_task(database_name):
             # Generar reporte filtrado por proveedor_ids
             cubo = CuboVentas(
                 database_name, fecha_ini, fecha_fin,
-                user_id=None, id_reporte=2,
+                user_id=None, reporte_id=2,
             )
             # Inyectar filtro de proveedor
             if prov["proveedor_ids"]:
@@ -1576,12 +1650,17 @@ def enviar_reportes_email_task(database_name):
             result = cubo.run()
 
             if result.get("success") and result.get("file_path"):
+                # Agregar hoja de inventario filtrada por proveedor
+                if prov["proveedor_ids"]:
+                    prov_id_list = [int(x.strip()) for x in prov["proveedor_ids"].split(",") if x.strip()]
+                    _add_inventario_sheet(result["file_path"], engine, proveedor_ids=prov_id_list)
+
                 subject = f"Reporte {database_name} - {prov['nombre']} ({fecha_ini} a {fecha_fin})"
                 body = (
-                    f"<h3>Reporte de Ventas - {prov['nombre']}</h3>"
+                    f"<h3>Reporte de Ventas e Inventario - {prov['nombre']}</h3>"
                     f"<p>Periodo: {fecha_ini} a {fecha_fin}</p>"
                     f"<p>Empresa: {database_name}</p>"
-                    f"<p>Adjunto encontrara el archivo Excel con el detalle.</p>"
+                    f"<p>Adjunto encontrara el archivo Excel con el detalle de ventas e inventario.</p>"
                     f"<hr><small>Generado automaticamente por DataZenith.</small>"
                 )
                 _send_report_email(subject, correos_list, result["file_path"], body)
@@ -1613,7 +1692,7 @@ def enviar_reportes_email_task(database_name):
         try:
             cubo = CuboVentas(
                 database_name, fecha_ini, fecha_fin,
-                user_id=None, id_reporte=2,
+                user_id=None, reporte_id=2,
             )
             # Inyectar filtro de macrozonas
             if sup["macrozonas"]:
@@ -1621,12 +1700,17 @@ def enviar_reportes_email_task(database_name):
             result = cubo.run()
 
             if result.get("success") and result.get("file_path"):
+                # Agregar hoja de inventario filtrada por bodegas de las macrozonas
+                if sup["macrozonas"]:
+                    macro_list = [int(x.strip()) for x in sup["macrozonas"].split(",") if x.strip()]
+                    _add_inventario_sheet(result["file_path"], engine, macrozonas=macro_list)
+
                 subject = f"Reporte {database_name} - {sup['nombre']} ({fecha_ini} a {fecha_fin})"
                 body = (
-                    f"<h3>Reporte de Ventas - {sup['nombre']}</h3>"
+                    f"<h3>Reporte de Ventas e Inventario - {sup['nombre']}</h3>"
                     f"<p>Periodo: {fecha_ini} a {fecha_fin}</p>"
                     f"<p>Empresa: {database_name}</p>"
-                    f"<p>Adjunto encontrara el archivo Excel con el detalle.</p>"
+                    f"<p>Adjunto encontrara el archivo Excel con el detalle de ventas e inventario.</p>"
                     f"<hr><small>Generado automaticamente por DataZenith.</small>"
                 )
                 _send_report_email(subject, correos_list, result["file_path"], body)
@@ -1768,3 +1852,731 @@ def trazabilidad_task(
         pass
 
     return result_data
+
+
+# ══════════════════════════════════════════════════════════════════
+# Tareas CDT (Planos para proveedores: MasterFoods, etc.)
+# ══════════════════════════════════════════════════════════════════
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def planos_cdt_task(
+    empresa_id,
+    fecha_ini,
+    fecha_fin,
+    user_id=None,
+    enviar_sftp=True,
+):
+    """
+    Tarea RQ: Genera y envia planos CDT para una empresa.
+    Extrae datos desde BD BI, genera archivos pipe-delimited y envia por SFTP.
+    """
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    from apps.permisos.models import CdtEnvio, ConfEmpresas
+
+    job_obj = get_current_job()
+    job_id = job_obj.id if job_obj else None
+
+    logger.info(
+        f"Iniciando planos_cdt_task (Job ID: {job_id}) "
+        f"empresa={empresa_id}, periodo={fecha_ini} a {fecha_fin}"
+    )
+
+    update_job_progress(
+        job_id, 5, "processing", meta={"stage": "Inicializando CDT"}
+    )
+
+    # Crear registro CdtEnvio
+    empresa = ConfEmpresas.objects.get(id=empresa_id)
+
+    envio = CdtEnvio.objects.create(
+        empresa=empresa,
+        fecha_inicio=fecha_ini,
+        fecha_fin=fecha_fin,
+        estado=CdtEnvio.Estado.PROCESANDO,
+        usuario_id=user_id,
+    )
+
+    try:
+        from scripts.cdt.PlanosCDT import PlanosCDT
+
+        update_job_progress(
+            job_id, 10, "processing", meta={"stage": "Extrayendo datos"}
+        )
+
+        processor = PlanosCDT(
+            empresa_id=empresa_id,
+            fecha_ini=fecha_ini,
+            fecha_fin=fecha_fin,
+            user_id=user_id,
+            enviar_sftp=enviar_sftp,
+        )
+
+        update_job_progress(
+            job_id, 30, "processing", meta={"stage": "Procesando planos"}
+        )
+
+        resultado = processor.procesar()
+
+        # Actualizar registro CdtEnvio
+        envio.estado = (
+            CdtEnvio.Estado.ENVIADO
+            if resultado.get("enviado_sftp")
+            else CdtEnvio.Estado.PENDIENTE
+        )
+        envio.total_ventas = resultado.get("total_ventas", 0)
+        envio.total_clientes = resultado.get("total_clientes", 0)
+        envio.total_inventario = resultado.get("total_inventario", 0)
+        envio.archivos_generados = json.dumps(
+            resultado.get("archivos", []), ensure_ascii=False
+        )
+        envio.archivo_descarga = resultado.get("zip_path", "")
+        envio.enviado_sftp = resultado.get("enviado_sftp", False)
+        envio.log_ejecucion = resultado.get("log", "")
+        envio.save()
+
+        update_job_progress(
+            job_id,
+            100,
+            "completed",
+            meta={
+                "stage": "Completado",
+                "file_ready": bool(resultado.get("zip_path")),
+            },
+        )
+
+        return {
+            "success": True,
+            "message": (
+                f"Planos CDT generados: {len(resultado.get('archivos', []))} archivos"
+            ),
+            "file_path": resultado.get("zip_path"),
+            "metadata": {
+                "envio_id": envio.id,
+                "total_ventas": resultado.get("total_ventas", 0),
+                "total_clientes": resultado.get("total_clientes", 0),
+                "total_inventario": resultado.get("total_inventario", 0),
+                "archivos": resultado.get("archivos", []),
+                "enviado_sftp": resultado.get("enviado_sftp", False),
+                "stage": "Completado",
+            },
+        }
+
+    except Exception as e:
+        envio.estado = CdtEnvio.Estado.ERROR
+        envio.log_ejecucion = str(e)
+        envio.save()
+        raise
+
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def planos_cdt_todas_empresas_task():
+    """
+    Tarea nocturna: Ejecuta planos CDT para cada empresa con envio_cdt_activo=True.
+    Cada empresa se procesa de forma independiente con su propio registro CdtEnvio.
+    Se programa via django-rq-scheduler a las 11:00 PM Bogota.
+    """
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    from apps.permisos.models import ConfEmpresas, CdtEnvio
+    from datetime import date, timedelta
+
+    logger.info("Iniciando envio nocturno de planos CDT")
+
+    # Periodo: ayer (un dia completo de ventas)
+    hoy = date.today()
+    fecha_ini = (hoy - timedelta(days=1)).isoformat()
+    fecha_fin = hoy.isoformat()
+
+    # Buscar empresas con CDT activo y configuracion CDT
+    empresas = ConfEmpresas.objects.filter(
+        envio_cdt_activo=True,
+        estado=True,
+        cdt_codigo_proveedor__isnull=False,
+    ).exclude(cdt_codigo_proveedor="")
+
+    resultados = []
+
+    for empresa in empresas:
+        logger.info(f"Procesando CDT: {empresa.name}")
+
+        try:
+            from scripts.cdt.PlanosCDT import PlanosCDT
+
+            processor = PlanosCDT(
+                empresa_id=empresa.id,
+                fecha_ini=fecha_ini,
+                fecha_fin=fecha_fin,
+                enviar_sftp=True,
+            )
+            resultado = processor.procesar()
+
+            CdtEnvio.objects.create(
+                empresa=empresa,
+                fecha_inicio=fecha_ini,
+                fecha_fin=fecha_fin,
+                estado=(
+                    CdtEnvio.Estado.ENVIADO
+                    if resultado.get("enviado_sftp")
+                    else CdtEnvio.Estado.ERROR
+                ),
+                total_ventas=resultado.get("total_ventas", 0),
+                total_clientes=resultado.get("total_clientes", 0),
+                total_inventario=resultado.get("total_inventario", 0),
+                archivos_generados=json.dumps(
+                    resultado.get("archivos", []), ensure_ascii=False
+                ),
+                archivo_descarga=resultado.get("zip_path", ""),
+                enviado_sftp=resultado.get("enviado_sftp", False),
+                log_ejecucion=resultado.get("log", ""),
+            )
+
+            resultados.append({
+                "empresa": empresa.name,
+                "status": "ok",
+                "archivos": len(resultado.get("archivos", [])),
+            })
+
+        except Exception as e:
+            logger.error(
+                f"Error procesando CDT para {empresa.name}: {e}"
+            )
+            resultados.append({
+                "empresa": empresa.name,
+                "status": "error",
+                "error": str(e),
+            })
+
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "message": f"CDT nocturno: {len(resultados)} empresas procesadas",
+        "metadata": {"resultados": resultados},
+    }
+
+
+# ══════════════════════════════════════════════════════════════════
+# Tareas TSOL (Planos TrackSales para distribuidores)
+# ══════════════════════════════════════════════════════════════════
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def planos_tsol_task(
+    empresa_id,
+    fecha_ini,
+    fecha_fin,
+    user_id=None,
+    enviar_ftp=False,
+):
+    """
+    Tarea RQ: Genera y envía planos TSOL para una empresa.
+    Extrae datos desde BD BI, genera 11 archivos '{'-delimited y envía por FTP.
+    """
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    from apps.permisos.models import ConfEmpresas, TsolEnvio
+
+    job_obj = get_current_job()
+    job_id = job_obj.id if job_obj else None
+
+    logger.info(
+        f"Iniciando planos_tsol_task (Job ID: {job_id}) "
+        f"empresa={empresa_id}, periodo={fecha_ini} a {fecha_fin}"
+    )
+
+    update_job_progress(
+        job_id, 5, "processing", meta={"stage": "Inicializando TSOL"}
+    )
+
+    # Crear registro TsolEnvio
+    empresa = ConfEmpresas.objects.get(id=empresa_id)
+
+    envio = TsolEnvio.objects.create(
+        empresa=empresa,
+        fecha_inicio=fecha_ini,
+        fecha_fin=fecha_fin,
+        estado=TsolEnvio.Estado.PROCESANDO,
+        usuario_id=user_id,
+    )
+
+    try:
+        from scripts.tsol.PlanosTSOL import PlanosTSOL
+
+        update_job_progress(
+            job_id, 10, "processing", meta={"stage": "Extrayendo datos"}
+        )
+
+        processor = PlanosTSOL(
+            empresa_id=empresa_id,
+            fecha_ini=fecha_ini,
+            fecha_fin=fecha_fin,
+            user_id=user_id,
+            enviar_ftp=enviar_ftp,
+        )
+
+        update_job_progress(
+            job_id, 30, "processing", meta={"stage": "Procesando planos"}
+        )
+
+        resultado = processor.procesar()
+
+        # Actualizar registro TsolEnvio
+        totales = resultado.get("totales", {})
+        envio.estado = (
+            TsolEnvio.Estado.ENVIADO
+            if resultado.get("enviado_ftp")
+            else TsolEnvio.Estado.PENDIENTE
+        )
+        envio.total_ventas = totales.get("ventas", 0)
+        envio.total_clientes = totales.get("clientes", 0)
+        envio.total_productos = totales.get("productos", 0)
+        envio.total_vendedores = totales.get("vendedores", 0)
+        envio.total_inventario = totales.get("inventario", 0)
+        envio.archivos_generados = json.dumps(
+            resultado.get("archivos", []), ensure_ascii=False
+        )
+        envio.archivo_descarga = resultado.get("zip_path", "")
+        envio.enviado_ftp = resultado.get("enviado_ftp", False)
+        envio.log_ejecucion = resultado.get("log", "")
+        envio.save()
+
+        update_job_progress(
+            job_id,
+            100,
+            "completed",
+            meta={
+                "stage": "Completado",
+                "file_ready": bool(resultado.get("zip_path")),
+            },
+        )
+
+        return {
+            "success": True,
+            "message": (
+                f"Planos TSOL generados: {len(resultado.get('archivos', []))} archivos"
+            ),
+            "file_path": resultado.get("zip_path"),
+            "metadata": {
+                "envio_id": envio.id,
+                "total_ventas": totales.get("ventas", 0),
+                "total_clientes": totales.get("clientes", 0),
+                "total_productos": totales.get("productos", 0),
+                "total_vendedores": totales.get("vendedores", 0),
+                "total_inventario": totales.get("inventario", 0),
+                "archivos": resultado.get("archivos", []),
+                "enviado_ftp": resultado.get("enviado_ftp", False),
+                "stage": "Completado",
+            },
+        }
+
+    except Exception as e:
+        envio.estado = TsolEnvio.Estado.ERROR
+        envio.log_ejecucion = str(e)
+        envio.save()
+        raise
+
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def planos_tsol_todas_empresas_task():
+    """
+    Tarea nocturna: Ejecuta planos TSOL para cada empresa con envio_tsol_activo=True.
+    Se programa via django-rq-scheduler.
+    """
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    from apps.permisos.models import ConfEmpresas, TsolEnvio
+    from datetime import date, timedelta
+
+    logger.info("Iniciando envío nocturno de planos TSOL")
+
+    # Periodo: mes anterior completo
+    hoy = date.today()
+    primer_dia_mes = hoy.replace(day=1)
+    ultimo_dia_mes_ant = primer_dia_mes - timedelta(days=1)
+    primer_dia_mes_ant = ultimo_dia_mes_ant.replace(day=1)
+    fecha_ini = primer_dia_mes_ant.isoformat()
+    fecha_fin = ultimo_dia_mes_ant.isoformat()
+
+    # Buscar empresas con TSOL activo y codigo configurado
+    empresas = ConfEmpresas.objects.filter(
+        envio_tsol_activo=True,
+        estado=1,
+        tsol_codigo__isnull=False,
+    ).exclude(tsol_codigo="")
+
+    resultados = []
+
+    for empresa in empresas:
+        logger.info(f"Procesando TSOL: {empresa.name} -> {empresa.tsol_nombre}")
+
+        try:
+            from scripts.tsol.PlanosTSOL import PlanosTSOL
+
+            processor = PlanosTSOL(
+                empresa_id=empresa.id,
+                fecha_ini=fecha_ini,
+                fecha_fin=fecha_fin,
+                enviar_ftp=True,
+            )
+            resultado = processor.procesar()
+
+            totales = resultado.get("totales", {})
+            TsolEnvio.objects.create(
+                empresa=empresa,
+                fecha_inicio=fecha_ini,
+                fecha_fin=fecha_fin,
+                estado=(
+                    TsolEnvio.Estado.ENVIADO
+                    if resultado.get("enviado_ftp")
+                    else TsolEnvio.Estado.ERROR
+                ),
+                total_ventas=totales.get("ventas", 0),
+                total_clientes=totales.get("clientes", 0),
+                total_productos=totales.get("productos", 0),
+                total_vendedores=totales.get("vendedores", 0),
+                total_inventario=totales.get("inventario", 0),
+                archivos_generados=json.dumps(
+                    resultado.get("archivos", []), ensure_ascii=False
+                ),
+                archivo_descarga=resultado.get("zip_path", ""),
+                enviado_ftp=resultado.get("enviado_ftp", False),
+                log_ejecucion=resultado.get("log", ""),
+            )
+
+            resultados.append({
+                "empresa": empresa.name,
+                "status": "ok",
+                "archivos": len(resultado.get("archivos", [])),
+            })
+
+        except Exception as e:
+            logger.error(
+                f"Error procesando TSOL para {empresa.name}: {e}"
+            )
+            resultados.append({
+                "empresa": empresa.name,
+                "status": "error",
+                "error": str(e),
+            })
+
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "message": f"TSOL nocturno: {len(resultados)} empresas procesadas",
+        "metadata": {"resultados": resultados},
+    }
+
+
+# ══════════════════════════════════════════════════════════════════
+# Tareas Cosmos (Planos para envío FTPS)
+# ══════════════════════════════════════════════════════════════════
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def planos_cosmos_task(
+    empresa_id,
+    fecha_ini,
+    fecha_fin,
+    user_id=None,
+    enviar_ftps=True,
+):
+    """
+    Tarea RQ: Genera y envía planos Cosmos para una empresa.
+    Extrae datos desde BD, genera archivos CSV pipe-delimited,
+    comprime en ZIP y envía por FTPS.
+    """
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    from apps.permisos.models import CosmosEnvio, ConfEmpresas
+
+    job_obj = get_current_job()
+    job_id = job_obj.id if job_obj else None
+
+    logger.info(
+        f"Iniciando planos_cosmos_task (Job ID: {job_id}) "
+        f"empresa={empresa_id}, periodo={fecha_ini} a {fecha_fin}"
+    )
+
+    update_job_progress(
+        job_id, 5, "processing", meta={"stage": "Inicializando Cosmos"}
+    )
+
+    # Obtener empresa
+    empresa = ConfEmpresas.objects.get(id=empresa_id)
+
+    # Crear registro CosmosEnvio
+    envio = CosmosEnvio.objects.create(
+        empresa=empresa,
+        fecha_inicio=fecha_ini,
+        fecha_fin=fecha_fin,
+        estado=CosmosEnvio.Estado.PROCESANDO,
+        usuario_id=user_id,
+    )
+
+    try:
+        import ast as ast_module
+        from scripts.cosmos.planoscosmos import PlanosCosmos
+
+        update_job_progress(
+            job_id, 10, "processing", meta={"stage": "Extrayendo datos"}
+        )
+
+        # Parsear lista de IDs SQL Cosmos
+        tx_cosmos = empresa.planos_cosmos
+        if isinstance(tx_cosmos, str):
+            try:
+                tx_cosmos = ast_module.literal_eval(tx_cosmos)
+            except (ValueError, SyntaxError):
+                tx_cosmos = []
+
+        # Configurar FTPS desde JSON
+        cosmos_conn = empresa.cosmos_conexion or {}
+        ftps_config = None
+        if cosmos_conn.get("host"):
+            ftps_config = {
+                "host": cosmos_conn["host"],
+                "port": cosmos_conn.get("port", 990),
+                "user": cosmos_conn.get("user", ""),
+                "pass": cosmos_conn.get("pass", ""),
+                "remote_dir": cosmos_conn.get("ruta_remota", "/"),
+                "certificate": cosmos_conn.get("certificate", ""),
+            }
+
+        # Directorio de salida bajo media/
+        base_output_dir = os.path.join(
+            "media", "cosmos", empresa.name.replace(" ", "_"),
+        )
+
+        processor = PlanosCosmos(
+            database_name=empresa.name,
+            empresa_id_cosmos=empresa.cosmos_empresa_id,
+            fecha_ini=fecha_ini,
+            fecha_fin=fecha_fin,
+            tx_cosmos=tx_cosmos,
+            ftps_config=ftps_config,
+            enviar_ftps=enviar_ftps,
+            base_output_dir=base_output_dir,
+        )
+
+        update_job_progress(
+            job_id, 30, "processing", meta={"stage": "Generando archivos"}
+        )
+
+        resultado = processor.procesar_datos()
+
+        update_job_progress(
+            job_id, 80, "processing", meta={"stage": "Finalizando"}
+        )
+
+        # Actualizar registro CosmosEnvio
+        envio.estado = (
+            CosmosEnvio.Estado.ENVIADO
+            if resultado.get("enviado_ftps")
+            else CosmosEnvio.Estado.PENDIENTE
+        )
+        if not resultado.get("success"):
+            envio.estado = CosmosEnvio.Estado.ERROR
+        envio.total_registros = resultado.get("total_registros", 0)
+        envio.archivos_generados = json.dumps(
+            resultado.get("archivos", []), ensure_ascii=False
+        )
+        envio.archivo_descarga = resultado.get("zip_path", "")
+        envio.enviado_ftps = resultado.get("enviado_ftps", False)
+        envio.log_ejecucion = resultado.get("log", "")
+        envio.save()
+
+        update_job_progress(
+            job_id,
+            100,
+            "completed",
+            meta={
+                "stage": "Completado",
+                "file_ready": bool(resultado.get("zip_path")),
+            },
+        )
+
+        return {
+            "success": True,
+            "message": (
+                f"Planos Cosmos generados: {len(resultado.get('archivos', []))} archivos"
+            ),
+            "file_path": resultado.get("zip_path"),
+            "metadata": {
+                "envio_id": envio.id,
+                "total_registros": resultado.get("total_registros", 0),
+                "archivos": resultado.get("archivos", []),
+                "enviado_ftps": resultado.get("enviado_ftps", False),
+                "stage": "Completado",
+            },
+        }
+
+    except Exception as e:
+        envio.estado = CosmosEnvio.Estado.ERROR
+        envio.log_ejecucion = str(e)
+        envio.save()
+        raise
+
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def planos_cosmos_todas_empresas_task():
+    """
+    Tarea nocturna: Ejecuta planos Cosmos para cada empresa con envio_cosmos_activo=True.
+    """
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    from apps.permisos.models import ConfEmpresas, CosmosEnvio
+    from datetime import date, timedelta
+    import ast as ast_module
+
+    logger.info("Iniciando envío nocturno de planos Cosmos")
+
+    # Periodo: 45 días atrás hasta hoy
+    hoy = date.today()
+    fecha_ini = (hoy - timedelta(days=45)).isoformat()
+    fecha_fin = hoy.isoformat()
+
+    empresas = ConfEmpresas.objects.filter(
+        envio_cosmos_activo=True,
+        estado=True,
+        cosmos_empresa_id__isnull=False,
+    ).exclude(cosmos_empresa_id="")
+
+    resultados = []
+
+    for empresa in empresas:
+        logger.info(f"Procesando Cosmos: {empresa.name}")
+
+        try:
+            from scripts.cosmos.planoscosmos import PlanosCosmos
+
+            tx_cosmos = empresa.planos_cosmos
+            if isinstance(tx_cosmos, str):
+                try:
+                    tx_cosmos = ast_module.literal_eval(tx_cosmos)
+                except (ValueError, SyntaxError):
+                    tx_cosmos = []
+
+            cosmos_conn = empresa.cosmos_conexion or {}
+            ftps_config = None
+            if cosmos_conn.get("host"):
+                ftps_config = {
+                    "host": cosmos_conn["host"],
+                    "port": cosmos_conn.get("port", 990),
+                    "user": cosmos_conn.get("user", ""),
+                    "pass": cosmos_conn.get("pass", ""),
+                    "remote_dir": cosmos_conn.get("ruta_remota", "/"),
+                    "certificate": cosmos_conn.get("certificate", ""),
+                }
+
+            base_output_dir = os.path.join(
+                "media", "cosmos", empresa.name.replace(" ", "_"),
+            )
+
+            processor = PlanosCosmos(
+                database_name=empresa.name,
+                empresa_id_cosmos=empresa.cosmos_empresa_id,
+                fecha_ini=fecha_ini,
+                fecha_fin=fecha_fin,
+                tx_cosmos=tx_cosmos,
+                ftps_config=ftps_config,
+                enviar_ftps=True,
+                base_output_dir=base_output_dir,
+            )
+
+            resultado = processor.procesar_datos()
+
+            CosmosEnvio.objects.create(
+                empresa=empresa,
+                fecha_inicio=fecha_ini,
+                fecha_fin=fecha_fin,
+                estado=(
+                    CosmosEnvio.Estado.ENVIADO
+                    if resultado.get("enviado_ftps")
+                    else CosmosEnvio.Estado.ERROR
+                ),
+                total_registros=resultado.get("total_registros", 0),
+                archivos_generados=json.dumps(
+                    resultado.get("archivos", []), ensure_ascii=False
+                ),
+                archivo_descarga=resultado.get("zip_path", ""),
+                enviado_ftps=resultado.get("enviado_ftps", False),
+                log_ejecucion=resultado.get("log", ""),
+            )
+
+            resultados.append({
+                "empresa": empresa.name,
+                "status": "ok",
+                "archivos": len(resultado.get("archivos", [])),
+            })
+
+        except Exception as e:
+            logger.error(
+                f"Error procesando Cosmos para {empresa.name}: {e}"
+            )
+            resultados.append({
+                "empresa": empresa.name,
+                "status": "error",
+                "error": str(e),
+            })
+
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "message": f"Cosmos nocturno: {len(resultados)} empresas procesadas",
+        "metadata": {"resultados": resultados},
+    }

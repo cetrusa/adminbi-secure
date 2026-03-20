@@ -12,7 +12,9 @@
       "Bash(python:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(pip show:*)",
+      "Bash(DJANGO_SETTINGS_MODULE=adminbi.settings.local python manage.py makemigrations:*)"
     ]
   }
 }

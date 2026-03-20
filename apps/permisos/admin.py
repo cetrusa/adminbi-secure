@@ -2,7 +2,12 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
-from .models import ConfDt, ConfEmpresas, ConfServer, ConfSql, ConfTipo
+from .models import (
+    ConfDt, ConfEmpresas, ConfServer, ConfSql, ConfTipo,
+    ConfSqlCdt, CdtEnvio,
+    ConfSqlTsol, TsolEnvio,
+    ConfSqlCosmos, CosmosEnvio,
+)
 
 
 @admin.register(ConfDt)
@@ -141,6 +146,45 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
             _("PowerBI"),
             {
                 "fields": ("report_id_powerbi", "dataset_id_powerbi", "url_powerbi"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Configuración CDT"),
+            {
+                "fields": (
+                    "envio_cdt_activo", "planos_cdt",
+                    "cdt_nombre_proveedor", "cdt_codigo_proveedor",
+                    "cdt_codigos_distribuidor", "cdt_vendedores_especiales",
+                    "cdt_bodega_especial", "cdt_conexion",
+                ),
+                "description": _("Configuración para generación de planos CDT: reglas de negocio y credenciales SFTP (JSON)."),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Configuración TSOL"),
+            {
+                "fields": (
+                    "envio_tsol_activo", "planos_tsol",
+                    "tsol_nombre", "tsol_codigo",
+                    "tsol_filtro_proveedores", "tsol_bodega_to_code",
+                    "tsol_code_to_sede", "tsol_sedes_permitidas",
+                    "tsol_sede_default_code", "tsol_sede_default_name",
+                    "tsol_conexion",
+                ),
+                "description": _("Configuración para generación de planos TSOL (TrackSales): mapeos y credenciales FTP (JSON)."),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Configuración Cosmos"),
+            {
+                "fields": (
+                    "envio_cosmos_activo", "cosmos_empresa_id", "planos_cosmos",
+                    "cosmos_conexion",
+                ),
+                "description": _("Configuración para generación de planos Cosmos y credenciales FTPS (JSON)."),
                 "classes": ("collapse",),
             },
         ),
@@ -291,12 +335,312 @@ class ConfTipoAdmin(admin.ModelAdmin):
     get_description.short_description = _("Descripción")
 
 
-# Registros de modelos (Ya no son necesarios porque usamos decoradores)
-# admin.site.register(ConfDt, ConfDtAdmin)
-# admin.site.register(ConfEmpresas, ConfEmpresasAdmin)
-# admin.site.register(ConfServer, ConfServerAdmin)
-# admin.site.register(ConfSql, ConfSqlAdmin)
-# admin.site.register(ConfTipo, ConfTipoAdmin)
+# ══════════════════════════════════════════════════════════════════
+# Admin CDT
+# ══════════════════════════════════════════════════════════════════
+
+
+@admin.register(ConfSqlCdt)
+class ConfSqlCdtAdmin(admin.ModelAdmin):
+    """Administrador para configuración de SQL CDT."""
+
+    list_display = ("nbSql", "nmReporte", "txTabla", "get_sql_preview")
+    search_fields = ("nmReporte", "txDescripcion", "txTabla")
+    list_per_page = 20
+
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": ("nbSql", "nmReporte", "txTabla", "txDescripcion"),
+            },
+        ),
+        (
+            _("SQL de Extracción"),
+            {
+                "fields": ("txSqlExtrae",),
+                "description": _(
+                    "Query SQL con parámetros :fi (fecha inicio), :ff (fecha fin). "
+                    "Los datos se extraen de la BD BI de la empresa."
+                ),
+            },
+        ),
+    )
+
+    def get_sql_preview(self, obj):
+        if obj.txSqlExtrae:
+            preview = obj.txSqlExtrae[:80]
+            return format_html("<code>{}</code>…", preview) if len(obj.txSqlExtrae) > 80 else format_html("<code>{}</code>", preview)
+        return "-"
+
+    get_sql_preview.short_description = _("Vista previa SQL")
+
+
+@admin.register(CdtEnvio)
+class CdtEnvioAdmin(admin.ModelAdmin):
+    """Administrador para historial de envíos CDT (solo lectura)."""
+
+    list_display = (
+        "fecha_ejecucion",
+        "empresa",
+        "periodo_display",
+        "estado_badge",
+        "total_ventas",
+        "total_clientes",
+        "total_inventario",
+        "enviado_sftp_badge",
+    )
+    list_filter = ("estado", "enviado_sftp", "empresa")
+    search_fields = ("empresa__name", "empresa__nmEmpresa")
+    date_hierarchy = "fecha_ejecucion"
+    list_per_page = 25
+    readonly_fields = (
+        "empresa", "fecha_inicio", "fecha_fin",
+        "estado", "total_ventas", "total_clientes", "total_inventario",
+        "archivos_generados", "archivo_descarga", "enviado_sftp",
+        "log_ejecucion", "usuario", "fecha_ejecucion", "fecha_actualizacion",
+    )
+
+    def periodo_display(self, obj):
+        return f"{obj.fecha_inicio} → {obj.fecha_fin}"
+
+    periodo_display.short_description = _("Periodo")
+
+    def estado_badge(self, obj):
+        colors = {
+            "pendiente": "#ffa800",
+            "procesando": "#3699ff",
+            "enviado": "#28a745",
+            "error": "#f64e60",
+        }
+        color = colors.get(obj.estado, "#666")
+        return format_html(
+            '<span style="color:white;background:{};padding:3px 8px;border-radius:4px;">{}</span>',
+            color, obj.get_estado_display(),
+        )
+
+    estado_badge.short_description = _("Estado")
+    estado_badge.admin_order_field = "estado"
+
+    def enviado_sftp_badge(self, obj):
+        if obj.enviado_sftp:
+            return format_html('<span style="color:green;">✓</span>')
+        return format_html('<span style="color:#ccc;">—</span>')
+
+    enviado_sftp_badge.short_description = _("SFTP")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+# ══════════════════════════════════════════════════════════════════
+# Admin TSOL
+# ══════════════════════════════════════════════════════════════════
+
+
+@admin.register(ConfSqlTsol)
+class ConfSqlTsolAdmin(admin.ModelAdmin):
+    """Administrador para configuración de SQL TSOL."""
+
+    list_display = ("nbSql", "nmReporte", "txTabla", "get_sql_preview")
+    search_fields = ("nmReporte", "txDescripcion", "txTabla")
+    list_per_page = 20
+
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": ("nbSql", "nmReporte", "txTabla", "txDescripcion"),
+            },
+        ),
+        (
+            _("SQL de Extracción"),
+            {
+                "fields": ("txSqlExtrae",),
+                "description": _(
+                    "Query SQL con parámetros :fi (fecha inicio), :ff (fecha fin). "
+                    "Los datos se extraen de la BD BI de la empresa."
+                ),
+            },
+        ),
+    )
+
+    def get_sql_preview(self, obj):
+        if obj.txSqlExtrae:
+            preview = obj.txSqlExtrae[:80]
+            if len(obj.txSqlExtrae) > 80:
+                return format_html("<code>{}</code>…", preview)
+            return format_html("<code>{}</code>", preview)
+        return "-"
+
+    get_sql_preview.short_description = _("Vista previa SQL")
+
+
+@admin.register(TsolEnvio)
+class TsolEnvioAdmin(admin.ModelAdmin):
+    """Administrador para historial de envíos TSOL (solo lectura)."""
+
+    list_display = (
+        "fecha_ejecucion",
+        "empresa",
+        "periodo_display",
+        "estado_badge",
+        "total_ventas",
+        "total_clientes",
+        "total_productos",
+        "total_vendedores",
+        "total_inventario",
+        "enviado_ftp_badge",
+    )
+    list_filter = ("estado", "enviado_ftp", "empresa")
+    search_fields = ("empresa__name", "empresa__nmEmpresa")
+    date_hierarchy = "fecha_ejecucion"
+    list_per_page = 25
+    readonly_fields = (
+        "empresa", "fecha_inicio", "fecha_fin",
+        "estado", "total_ventas", "total_clientes", "total_productos",
+        "total_vendedores", "total_inventario",
+        "archivos_generados", "archivo_descarga", "enviado_ftp",
+        "log_ejecucion", "usuario", "fecha_ejecucion", "fecha_actualizacion",
+    )
+
+    def periodo_display(self, obj):
+        return f"{obj.fecha_inicio} → {obj.fecha_fin}"
+
+    periodo_display.short_description = _("Periodo")
+
+    def estado_badge(self, obj):
+        colors = {
+            "pendiente": "#ffa800",
+            "procesando": "#3699ff",
+            "enviado": "#28a745",
+            "error": "#f64e60",
+        }
+        color = colors.get(obj.estado, "#666")
+        return format_html(
+            '<span style="color:white;background:{};padding:3px 8px;border-radius:4px;">{}</span>',
+            color, obj.get_estado_display(),
+        )
+
+    estado_badge.short_description = _("Estado")
+    estado_badge.admin_order_field = "estado"
+
+    def enviado_ftp_badge(self, obj):
+        if obj.enviado_ftp:
+            return format_html('<span style="color:green;">✓</span>')
+        return format_html('<span style="color:#ccc;">—</span>')
+
+    enviado_ftp_badge.short_description = _("FTP")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+# ══════════════════════════════════════════════════════════════════
+# Admin Cosmos
+# ══════════════════════════════════════════════════════════════════
+
+
+@admin.register(ConfSqlCosmos)
+class ConfSqlCosmosAdmin(admin.ModelAdmin):
+    """Administrador para configuración de SQL Cosmos."""
+
+    list_display = ("nbSql", "nmReporte", "txTabla", "get_sql_preview")
+    search_fields = ("nmReporte", "txDescripcion", "txTabla")
+    list_per_page = 20
+
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": ("nbSql", "nmReporte", "txTabla", "txDescripcion"),
+            },
+        ),
+        (
+            _("SQL de Extracción"),
+            {
+                "fields": ("txSqlExtrae",),
+                "description": _(
+                    "Query SQL con parámetros :fi (fecha inicio), :ff (fecha fin), "
+                    ":IdDs (ID empresa Cosmos)."
+                ),
+            },
+        ),
+    )
+
+    def get_sql_preview(self, obj):
+        if obj.txSqlExtrae:
+            preview = obj.txSqlExtrae[:80]
+            if len(obj.txSqlExtrae) > 80:
+                return format_html("<code>{}</code>…", preview)
+            return format_html("<code>{}</code>", preview)
+        return "-"
+
+    get_sql_preview.short_description = _("Vista previa SQL")
+
+
+@admin.register(CosmosEnvio)
+class CosmosEnvioAdmin(admin.ModelAdmin):
+    """Administrador para historial de envíos Cosmos (solo lectura)."""
+
+    list_display = (
+        "fecha_ejecucion",
+        "empresa",
+        "periodo_display",
+        "estado_badge",
+        "total_registros",
+        "enviado_ftps_badge",
+    )
+    list_filter = ("estado", "enviado_ftps", "empresa")
+    search_fields = ("empresa__name", "empresa__nmEmpresa")
+    date_hierarchy = "fecha_ejecucion"
+    list_per_page = 25
+    readonly_fields = (
+        "empresa", "fecha_inicio", "fecha_fin",
+        "estado", "total_registros",
+        "archivos_generados", "archivo_descarga", "enviado_ftps",
+        "log_ejecucion", "usuario", "fecha_ejecucion", "fecha_actualizacion",
+    )
+
+    def periodo_display(self, obj):
+        return f"{obj.fecha_inicio} → {obj.fecha_fin}"
+
+    periodo_display.short_description = _("Periodo")
+
+    def estado_badge(self, obj):
+        colors = {
+            "pendiente": "#ffa800",
+            "procesando": "#3699ff",
+            "enviado": "#28a745",
+            "error": "#f64e60",
+        }
+        color = colors.get(obj.estado, "#666")
+        return format_html(
+            '<span style="color:white;background:{};padding:3px 8px;border-radius:4px;">{}</span>',
+            color, obj.get_estado_display(),
+        )
+
+    estado_badge.short_description = _("Estado")
+    estado_badge.admin_order_field = "estado"
+
+    def enviado_ftps_badge(self, obj):
+        if obj.enviado_ftps:
+            return format_html('<span style="color:green;">✓</span>')
+        return format_html('<span style="color:#ccc;">—</span>')
+
+    enviado_ftps_badge.short_description = _("FTPS")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
 
 # Personalización del sitio de administración
 admin.site.site_header = _("DataZenith BI - Administración")

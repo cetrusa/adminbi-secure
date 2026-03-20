@@ -1,0 +1,11 @@
+{
+    "ventas_path": "D://Distrijass//Sistema Info//Información//Impactos//Info proveedores.xlsx",
+    "clientes_path": "D://Distrijass//Sistema Info//Información//PROVEE-TSOL.xlsx",
+    "inventario_path": "D://Distrijass//Sistema Info//Información//Inventarios//Consolidado.xlsx",
+    "output_folder": "output_masterfoods",
+    "sftp_host": "mars.cdtbigdata.com",
+    "sftp_port": 22,
+    "sftp_user": "mars.distrijass",
+    "sftp_pass": "faGTmw",
+    "enviar_sftp": true
+}

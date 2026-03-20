@@ -35,6 +35,9 @@ from .tasks import (
     plano_task,
     extrae_bi_task,
     trazabilidad_task,
+    planos_cdt_task,
+    planos_tsol_task,
+    planos_cosmos_task,
 )
 from apps.users.models import UserPermission
 from django.views.decorators.cache import cache_page
@@ -933,6 +936,30 @@ class HomePanelInterfacePage(BaseView):
             logger.error(f"Error al obtener interfaces disponibles: {e}")
 
         return interfaces
+
+
+class HomePanelPlanosPage(BaseView):
+    """
+    Vista para el panel principal de Planos Proveedores.
+    Punto de entrada independiente para CDT, TSOL y Cosmos.
+    """
+
+    template_name = "home/panel_planos.html"
+    login_url = reverse_lazy("users_app:user-login")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_url"] = "home_app:panel_planos"
+        return context
+
+    def post(self, request, *args, **kwargs):
+        request.session["template_name"] = self.template_name
+        database_name = request.POST.get("database_select")
+        if not database_name:
+            return redirect("home_app:panel_planos")
+        request.session["database_name"] = database_name
+        StaticPage.name = database_name
+        return redirect("home_app:panel_planos")
 
 
 class DownloadFileView(LoginRequiredMixin, View):
@@ -2369,4 +2396,642 @@ class TrazabilidadKpisAjaxView(View):
         except Exception as e:
             logger.error(f"[TrazabilidadKpisAjaxView] Error: {e}", exc_info=True)
             return JsonResponse({"success": False, "error_message": str(e)}, status=500)
+
+
+# ══════════════════════════════════════════════════════════════════
+# Vistas CDT (Planos para proveedores: MasterFoods, etc.)
+# ══════════════════════════════════════════════════════════════════
+
+
+class CdtPage(BaseView):
+    """Vista principal para generacion manual de planos CDT."""
+
+    template_name = "home/cdt_planos.html"
+    login_url = reverse_lazy("users_app:user-login")
+
+    @method_decorator(permission_required("permisos.ejecutar_cdt", raise_exception=True))
+    @method_decorator(registrar_auditoria)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_url"] = "home_app:cdt_planos"
+
+        # Verificar si la empresa de sesion tiene CDT configurado
+        database_name = self.request.session.get("database_name")
+        if database_name:
+            from apps.permisos.models import ConfEmpresas
+            try:
+                empresa = ConfEmpresas.objects.get(name=database_name)
+                context["empresa_cdt"] = empresa
+                context["cdt_configurado"] = bool(
+                    empresa.cdt_codigo_proveedor and empresa.planos_cdt
+                )
+            except ConfEmpresas.DoesNotExist:
+                context["cdt_configurado"] = False
+        else:
+            context["cdt_configurado"] = False
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        database_name = request.POST.get("database_select")
+
+        fecha_ini = request.POST.get("IdtReporteIni")
+        fecha_fin = request.POST.get("IdtReporteFin")
+
+        # Solo cambio de empresa (selector)
+        if database_name and not (fecha_ini and fecha_fin):
+            request.session["database_name"] = database_name
+            return JsonResponse({"success": True, "message": "Base de datos actualizada."})
+
+        # Obtener empresa de la sesion
+        db_name = request.session.get("database_name")
+        if not db_name:
+            return JsonResponse(
+                {"success": False, "error_message": "No hay empresa seleccionada en la sesion."},
+                status=400,
+            )
+
+        if not all([fecha_ini, fecha_fin]):
+            return JsonResponse(
+                {"success": False, "error_message": "Debe seleccionar un rango de fechas."},
+                status=400,
+            )
+
+        from apps.permisos.models import ConfEmpresas
+        try:
+            empresa = ConfEmpresas.objects.get(name=db_name)
+        except ConfEmpresas.DoesNotExist:
+            return JsonResponse(
+                {"success": False, "error_message": f"Empresa '{db_name}' no encontrada."},
+                status=400,
+            )
+
+        if not empresa.cdt_codigo_proveedor or not empresa.planos_cdt:
+            return JsonResponse(
+                {"success": False, "error_message": "La empresa no tiene CDT configurado."},
+                status=400,
+            )
+
+        enviar_sftp = request.POST.get("enviar_sftp", "off") == "on"
+
+        try:
+            task = planos_cdt_task.delay(
+                empresa_id=empresa.id,
+                fecha_ini=fecha_ini,
+                fecha_fin=fecha_fin,
+                user_id=request.user.id,
+                enviar_sftp=enviar_sftp,
+            )
+            return JsonResponse({"success": True, "task_id": task.id})
+        except Exception as e:
+            logger.error(f"Error al iniciar tarea CDT: {e}")
+            return JsonResponse(
+                {"success": False, "error_message": f"Error: {str(e)}"},
+                status=500,
+            )
+
+
+class CdtHistorialPage(BaseView):
+    """Vista de historial de envios CDT."""
+
+    template_name = "home/cdt_historial.html"
+    login_url = reverse_lazy("users_app:user-login")
+
+    @method_decorator(permission_required("permisos.ejecutar_cdt", raise_exception=True))
+    @method_decorator(registrar_auditoria)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from apps.permisos.models import CdtEnvio
+
+        # Filtros
+        estado = self.request.GET.get("estado", "")
+
+        envios = CdtEnvio.objects.select_related("empresa", "usuario").all()
+
+        if estado:
+            envios = envios.filter(estado=estado)
+
+        context["envios"] = envios[:100]
+        context["filtro_estado"] = estado
+        context["form_url"] = "home_app:cdt_historial"
+        return context
+
+    def post(self, request, *args, **kwargs):
+        database_name = request.POST.get("database_select")
+        if database_name:
+            request.session["database_name"] = database_name
+            return JsonResponse({"success": True, "message": "Base de datos actualizada."})
+        return JsonResponse({"success": False}, status=400)
+
+
+@login_required
+@permission_required("permisos.ejecutar_cdt", raise_exception=True)
+def cdt_download(request, envio_id):
+    """Descarga el ZIP de archivos de un envio CDT."""
+    from apps.permisos.models import CdtEnvio
+
+    try:
+        envio = CdtEnvio.objects.get(id=envio_id)
+    except CdtEnvio.DoesNotExist:
+        return JsonResponse({"error": "Envio no encontrado."}, status=404)
+
+    if not envio.archivo_descarga or not os.path.exists(envio.archivo_descarga):
+        return JsonResponse({"error": "Archivo no disponible."}, status=404)
+
+    return FileResponse(
+        open(envio.archivo_descarga, "rb"),
+        as_attachment=True,
+        filename=os.path.basename(envio.archivo_descarga),
+    )
+
+
+@login_required
+@permission_required("permisos.reenviar_cdt", raise_exception=True)
+def cdt_reenviar_sftp(request, envio_id):
+    """Re-envia un envio CDT por SFTP."""
+    import json as json_lib
+    from apps.permisos.models import CdtEnvio
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Metodo no permitido."}, status=405)
+
+    try:
+        envio = CdtEnvio.objects.select_related("empresa").get(id=envio_id)
+    except CdtEnvio.DoesNotExist:
+        return JsonResponse({"error": "Envio no encontrado."}, status=404)
+
+    if not envio.archivo_descarga or not os.path.exists(envio.archivo_descarga):
+        return JsonResponse({"error": "Archivo ZIP no disponible."}, status=404)
+
+    try:
+        import zipfile
+
+        # Extraer archivos del ZIP a un directorio temporal
+        extract_dir = envio.archivo_descarga.replace(".zip", "_reenvio")
+        os.makedirs(extract_dir, exist_ok=True)
+
+        with zipfile.ZipFile(envio.archivo_descarga, "r") as zf:
+            zf.extractall(extract_dir)
+
+        archivos = [
+            os.path.join(extract_dir, f) for f in os.listdir(extract_dir)
+            if not f.startswith(".")
+        ]
+
+        from scripts.cdt.PlanosCDT import PlanosCDT
+
+        processor = PlanosCDT.__new__(PlanosCDT)
+        processor.empresa = envio.empresa
+        processor._log = lambda msg: logger.info(msg)
+
+        sftp_ok = processor.enviar_por_sftp(archivos, empresa=envio.empresa)
+
+        envio.enviado_sftp = sftp_ok
+        if sftp_ok:
+            envio.estado = CdtEnvio.Estado.ENVIADO
+        envio.save()
+
+        return JsonResponse({
+            "success": sftp_ok,
+            "message": "Re-envio SFTP completado." if sftp_ok else "Re-envio SFTP fallido.",
+        })
+
+    except Exception as e:
+        logger.error(f"Error re-enviando CDT {envio_id}: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ══════════════════════════════════════════════════════════════════
+# Vistas TSOL (Planos TrackSales para proveedores)
+# ══════════════════════════════════════════════════════════════════
+
+
+class TsolPage(BaseView):
+    """Vista principal para generacion manual de planos TSOL."""
+
+    template_name = "home/tsol_planos.html"
+    login_url = reverse_lazy("users_app:user-login")
+
+    @method_decorator(permission_required("permisos.ejecutar_tsol", raise_exception=True))
+    @method_decorator(registrar_auditoria)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_url"] = "home_app:tsol_planos"
+
+        # Verificar si la empresa de sesion tiene TSOL configurado
+        database_name = self.request.session.get("database_name")
+        if database_name:
+            from apps.permisos.models import ConfEmpresas
+            try:
+                empresa = ConfEmpresas.objects.get(name=database_name)
+                context["empresa_tsol"] = empresa
+                context["tsol_configurado"] = bool(
+                    empresa.tsol_codigo and empresa.planos_tsol
+                )
+            except ConfEmpresas.DoesNotExist:
+                context["tsol_configurado"] = False
+        else:
+            context["tsol_configurado"] = False
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        database_name = request.POST.get("database_select")
+
+        fecha_ini = request.POST.get("IdtReporteIni")
+        fecha_fin = request.POST.get("IdtReporteFin")
+
+        # Solo cambio de empresa (selector)
+        if database_name and not (fecha_ini and fecha_fin):
+            request.session["database_name"] = database_name
+            return JsonResponse({"success": True, "message": "Base de datos actualizada."})
+
+        # Obtener empresa de la sesion
+        db_name = request.session.get("database_name")
+        if not db_name:
+            return JsonResponse(
+                {"success": False, "error_message": "No hay empresa seleccionada en la sesion."},
+                status=400,
+            )
+
+        if not all([fecha_ini, fecha_fin]):
+            return JsonResponse(
+                {"success": False, "error_message": "Debe seleccionar un rango de fechas."},
+                status=400,
+            )
+
+        from apps.permisos.models import ConfEmpresas
+        try:
+            empresa = ConfEmpresas.objects.get(name=db_name)
+        except ConfEmpresas.DoesNotExist:
+            return JsonResponse(
+                {"success": False, "error_message": f"Empresa '{db_name}' no encontrada."},
+                status=400,
+            )
+
+        if not empresa.tsol_codigo or not empresa.planos_tsol:
+            return JsonResponse(
+                {"success": False, "error_message": "La empresa no tiene TSOL configurado."},
+                status=400,
+            )
+
+        enviar_ftp = request.POST.get("enviar_ftp", "off") == "on"
+
+        try:
+            task = planos_tsol_task.delay(
+                empresa_id=empresa.id,
+                fecha_ini=fecha_ini,
+                fecha_fin=fecha_fin,
+                user_id=request.user.id,
+                enviar_ftp=enviar_ftp,
+            )
+            return JsonResponse({"success": True, "task_id": task.id})
+        except Exception as e:
+            logger.error(f"Error al iniciar tarea TSOL: {e}")
+            return JsonResponse(
+                {"success": False, "error_message": f"Error: {str(e)}"},
+                status=500,
+            )
+
+
+class TsolHistorialPage(BaseView):
+    """Vista de historial de envios TSOL."""
+
+    template_name = "home/tsol_historial.html"
+    login_url = reverse_lazy("users_app:user-login")
+
+    @method_decorator(permission_required("permisos.ejecutar_tsol", raise_exception=True))
+    @method_decorator(registrar_auditoria)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from apps.permisos.models import TsolEnvio
+
+        # Filtros
+        estado = self.request.GET.get("estado", "")
+
+        envios = TsolEnvio.objects.select_related("empresa", "usuario").all()
+
+        if estado:
+            envios = envios.filter(estado=estado)
+
+        context["envios"] = envios[:100]
+        context["filtro_estado"] = estado
+        context["form_url"] = "home_app:tsol_historial"
+        return context
+
+    def post(self, request, *args, **kwargs):
+        database_name = request.POST.get("database_select")
+        if database_name:
+            request.session["database_name"] = database_name
+            return JsonResponse({"success": True, "message": "Base de datos actualizada."})
+        return JsonResponse({"success": False}, status=400)
+
+
+@login_required
+@permission_required("permisos.ejecutar_tsol", raise_exception=True)
+def tsol_download(request, envio_id):
+    """Descarga el ZIP de archivos de un envio TSOL."""
+    from apps.permisos.models import TsolEnvio
+
+    try:
+        envio = TsolEnvio.objects.get(id=envio_id)
+    except TsolEnvio.DoesNotExist:
+        return JsonResponse({"error": "Envio no encontrado."}, status=404)
+
+    if not envio.archivo_descarga or not os.path.exists(envio.archivo_descarga):
+        return JsonResponse({"error": "Archivo no disponible."}, status=404)
+
+    return FileResponse(
+        open(envio.archivo_descarga, "rb"),
+        as_attachment=True,
+        filename=os.path.basename(envio.archivo_descarga),
+    )
+
+
+@login_required
+@permission_required("permisos.reenviar_tsol", raise_exception=True)
+def tsol_reenviar_ftp(request, envio_id):
+    """Re-envia un envio TSOL por FTP."""
+    from apps.permisos.models import TsolEnvio
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Metodo no permitido."}, status=405)
+
+    try:
+        envio = TsolEnvio.objects.select_related("empresa").get(id=envio_id)
+    except TsolEnvio.DoesNotExist:
+        return JsonResponse({"error": "Envio no encontrado."}, status=404)
+
+    if not envio.archivo_descarga or not os.path.exists(envio.archivo_descarga):
+        return JsonResponse({"error": "Archivo ZIP no disponible."}, status=404)
+
+    try:
+        import zipfile
+
+        # Extraer archivos del ZIP a un directorio temporal
+        extract_dir = envio.archivo_descarga.replace(".zip", "_reenvio")
+        os.makedirs(extract_dir, exist_ok=True)
+
+        with zipfile.ZipFile(envio.archivo_descarga, "r") as zf:
+            zf.extractall(extract_dir)
+
+        archivos = [
+            os.path.join(extract_dir, f) for f in os.listdir(extract_dir)
+            if not f.startswith(".")
+        ]
+
+        from scripts.tsol.PlanosTSOL import PlanosTSOL
+
+        processor = PlanosTSOL.__new__(PlanosTSOL)
+        processor.empresa = envio.empresa
+        processor._log = lambda msg: logger.info(msg)
+
+        ftp_ok = processor.enviar_por_ftp(archivos)
+
+        envio.enviado_ftp = ftp_ok
+        if ftp_ok:
+            envio.estado = "enviado"
+        envio.save()
+
+        return JsonResponse({
+            "success": ftp_ok,
+            "message": "Re-envio FTP completado." if ftp_ok else "Re-envio FTP fallido.",
+        })
+
+    except Exception as e:
+        logger.error(f"Error re-enviando TSOL {envio_id}: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ══════════════════════════════════════════════════════════════════
+# Vistas Cosmos (Planos para envío FTPS)
+# ══════════════════════════════════════════════════════════════════
+
+
+class CosmosPage(BaseView):
+    """Vista principal para generación manual de planos Cosmos."""
+
+    template_name = "home/cosmos_planos.html"
+    login_url = reverse_lazy("users_app:user-login")
+
+    @method_decorator(permission_required("permisos.ejecutar_cosmos", raise_exception=True))
+    @method_decorator(registrar_auditoria)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_url"] = "home_app:cosmos_planos"
+
+        # Verificar si la empresa de sesión tiene Cosmos configurado
+        database_name = self.request.session.get("database_name")
+        if database_name:
+            from apps.permisos.models import ConfEmpresas
+            try:
+                empresa = ConfEmpresas.objects.get(name=database_name)
+                context["empresa_cosmos"] = empresa
+                context["cosmos_configurado"] = bool(
+                    empresa.cosmos_empresa_id and empresa.planos_cosmos
+                )
+            except ConfEmpresas.DoesNotExist:
+                context["cosmos_configurado"] = False
+        else:
+            context["cosmos_configurado"] = False
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        database_name = request.POST.get("database_select")
+
+        fecha_ini = request.POST.get("IdtReporteIni")
+        fecha_fin = request.POST.get("IdtReporteFin")
+
+        if database_name and not (fecha_ini and fecha_fin):
+            request.session["database_name"] = database_name
+            return JsonResponse({"success": True, "message": "Base de datos actualizada."})
+
+        # Obtener empresa de la sesión
+        db_name = request.session.get("database_name")
+        if not db_name:
+            return JsonResponse(
+                {"success": False, "error_message": "No hay empresa seleccionada en la sesión."},
+                status=400,
+            )
+
+        if not all([fecha_ini, fecha_fin]):
+            return JsonResponse(
+                {"success": False, "error_message": "Debe seleccionar un rango de fechas."},
+                status=400,
+            )
+
+        from apps.permisos.models import ConfEmpresas
+        try:
+            empresa = ConfEmpresas.objects.get(name=db_name)
+        except ConfEmpresas.DoesNotExist:
+            return JsonResponse(
+                {"success": False, "error_message": f"Empresa '{db_name}' no encontrada."},
+                status=400,
+            )
+
+        if not empresa.cosmos_empresa_id or not empresa.planos_cosmos:
+            return JsonResponse(
+                {"success": False, "error_message": "La empresa no tiene Cosmos configurado."},
+                status=400,
+            )
+
+        enviar_ftps = request.POST.get("enviar_ftps", "off") == "on"
+
+        try:
+            task = planos_cosmos_task.delay(
+                empresa_id=empresa.id,
+                fecha_ini=fecha_ini,
+                fecha_fin=fecha_fin,
+                user_id=request.user.id,
+                enviar_ftps=enviar_ftps,
+            )
+            return JsonResponse({"success": True, "task_id": task.id})
+        except Exception as e:
+            logger.error(f"Error al iniciar tarea Cosmos: {e}")
+            return JsonResponse(
+                {"success": False, "error_message": f"Error: {str(e)}"},
+                status=500,
+            )
+
+
+class CosmosHistorialPage(BaseView):
+    """Vista de historial de envíos Cosmos."""
+
+    template_name = "home/cosmos_historial.html"
+    login_url = reverse_lazy("users_app:user-login")
+
+    @method_decorator(permission_required("permisos.ejecutar_cosmos", raise_exception=True))
+    @method_decorator(registrar_auditoria)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from apps.permisos.models import CosmosEnvio
+
+        estado = self.request.GET.get("estado", "")
+
+        envios = CosmosEnvio.objects.select_related("empresa", "usuario").all()
+
+        if estado:
+            envios = envios.filter(estado=estado)
+
+        context["envios"] = envios[:100]
+        context["filtro_estado"] = estado
+        context["form_url"] = "home_app:cosmos_historial"
+        return context
+
+    def post(self, request, *args, **kwargs):
+        database_name = request.POST.get("database_select")
+        if database_name:
+            request.session["database_name"] = database_name
+            return JsonResponse({"success": True, "message": "Base de datos actualizada."})
+        return JsonResponse({"success": False}, status=400)
+
+
+@login_required
+@permission_required("permisos.ejecutar_cosmos", raise_exception=True)
+def cosmos_download(request, envio_id):
+    """Descarga el ZIP de archivos de un envío Cosmos."""
+    from apps.permisos.models import CosmosEnvio
+
+    try:
+        envio = CosmosEnvio.objects.get(id=envio_id)
+    except CosmosEnvio.DoesNotExist:
+        return JsonResponse({"error": "Envío no encontrado."}, status=404)
+
+    if not envio.archivo_descarga or not os.path.exists(envio.archivo_descarga):
+        return JsonResponse({"error": "Archivo no disponible."}, status=404)
+
+    return FileResponse(
+        open(envio.archivo_descarga, "rb"),
+        as_attachment=True,
+        filename=os.path.basename(envio.archivo_descarga),
+    )
+
+
+@login_required
+@permission_required("permisos.reenviar_cosmos", raise_exception=True)
+def cosmos_reenviar_ftps(request, envio_id):
+    """Re-envía un envío Cosmos por FTPS."""
+    from apps.permisos.models import CosmosEnvio
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Método no permitido."}, status=405)
+
+    try:
+        envio = CosmosEnvio.objects.select_related("empresa").get(id=envio_id)
+    except CosmosEnvio.DoesNotExist:
+        return JsonResponse({"error": "Envío no encontrado."}, status=404)
+
+    if not envio.archivo_descarga or not os.path.exists(envio.archivo_descarga):
+        return JsonResponse({"error": "Archivo ZIP no disponible."}, status=404)
+
+    try:
+        from scripts.cosmos.planoscosmos import PlanosCosmos
+
+        empresa = envio.empresa
+
+        # Construir config FTPS desde JSON
+        cosmos_conn = empresa.cosmos_conexion or {}
+        ftps_config = None
+        if cosmos_conn.get("host"):
+            ftps_config = {
+                "host": cosmos_conn["host"],
+                "port": cosmos_conn.get("port", 990),
+                "user": cosmos_conn.get("user", ""),
+                "pass": cosmos_conn.get("pass", ""),
+                "remote_dir": cosmos_conn.get("ruta_remota", "/"),
+                "certificate": cosmos_conn.get("certificate", ""),
+            }
+
+        if not ftps_config:
+            return JsonResponse(
+                {"error": "No hay credenciales FTPS configuradas para esta empresa."},
+                status=400,
+            )
+
+        # Crear instancia mínima para usar send_files_via_ftps
+        processor = PlanosCosmos.__new__(PlanosCosmos)
+        processor._log_buffer = []
+        processor._log = lambda msg: logger.info(msg)
+
+        processor.send_files_via_ftps(
+            envio.archivo_descarga,
+            ftps_config["host"],
+            ftps_config["port"],
+            ftps_config["user"],
+            ftps_config["pass"],
+            ftps_config["certificate"],
+            ftps_config["remote_dir"],
+        )
+
+        envio.enviado_ftps = True
+        envio.estado = CosmosEnvio.Estado.ENVIADO
+        envio.save()
+
+        return JsonResponse({
+            "success": True,
+            "message": "Re-envío FTPS completado.",
+        })
+
+    except Exception as e:
+        logger.error(f"Error re-enviando Cosmos {envio_id}: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 

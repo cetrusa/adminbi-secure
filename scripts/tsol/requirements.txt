@@ -1,0 +1,16 @@
+# Dependencias para PlanosTsol_Distrijass
+# Sistema de generación de archivos TSOL multi-empresa
+
+# Análisis de datos (versiones estables)
+pandas==2.1.4
+numpy==1.26.4
+
+# Manejo de archivos Excel
+openpyxl==3.1.2
+xlrd==2.0.1
+
+# Utilidades básicas
+python-dateutil==2.8.2
+
+# Para pandas con archivos remotos
+fsspec==2025.10.0

@@ -118,6 +118,9 @@ Trazabilidad Preventa
         <button id="submitBtnTrazabilidad" type="submit" class="btn btn-info w-100" data-submitted="false">
           <i class="fas fa-play me-2"></i> Extraer y Generar Trazabilidad
         </button>
+        <button id="btnConsultar" type="button" class="btn btn-outline-info w-100 mt-2">
+          <i class="fas fa-search me-2"></i> Consultar Datos Existentes
+        </button>
       </form>
 
       <div class="mt-3">
@@ -401,6 +404,19 @@ Trazabilidad Preventa
       loadKpis();
       initOrReloadDataTable();
     }
+  });
+
+  document.getElementById('btnConsultar').addEventListener('click', function() {
+    var fi = document.getElementById('IdtReporteIni').value;
+    var ff = document.getElementById('IdtReporteFin').value;
+    if (!fi || !ff) {
+      alert('Seleccione un rango de fechas');
+      return;
+    }
+    etlCompleted = true;
+    loadKpis();
+    showConsultaCard();
+    initOrReloadDataTable();
   });
 
 })();
