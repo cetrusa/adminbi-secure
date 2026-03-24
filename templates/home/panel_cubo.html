@@ -15,7 +15,7 @@
     <h2 class="fw-bold mb-1">
       <i class="fas fa-chart-bar text-primary me-2"></i> Cubos de Ventas
     </h2>
-    <p class="text-muted mb-0">Panel principal del módulo de ventas y reportes analíticos.</p>
+    <p class="text-muted mb-0">Panel principal del modulo de ventas y reportes analiticos.</p>
   </div>
   <button id="btnRefreshKpis" class="btn btn-outline-primary btn-sm" title="Actualizar datos de la empresa seleccionada">
     <i class="fas fa-sync-alt me-1" id="refreshIcon"></i> Actualizar datos
@@ -25,7 +25,84 @@
 <!-- Contenedor KPIs (se llena via servidor o AJAX) -->
 <div id="kpis-container">
 {% if kpis %}
-<!-- Fila 1: KPIs principales -->
+<!-- Fila 1: Ventas del mes -->
+<div class="row mb-4 g-3">
+  <div class="col-lg-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Venta Neta</div>
+            <div class="h4 mb-0 fw-bold text-success" id="kpi-venta-neta">{{ kpis.venta_neta|formato_moneda }}</div>
+            <small class="text-muted">
+              <i class="fas fa-chart-line"></i> FV - (FD + NC) mes actual
+            </small>
+          </div>
+          <div class="fs-1 text-success opacity-25">
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Venta Bruta (FV)</div>
+            <div class="h4 mb-0 fw-bold text-info" id="kpi-venta-bruta">{{ kpis.venta_bruta|formato_moneda }}</div>
+            <small class="text-muted">
+              <i class="fas fa-file-invoice-dollar"></i> Facturas de venta mes actual
+            </small>
+          </div>
+          <div class="fs-1 text-info opacity-25">
+            <i class="fas fa-receipt"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Devoluciones (FD+NC)</div>
+            <div class="h4 mb-0 fw-bold text-danger" id="kpi-devoluciones">{{ kpis.devoluciones|formato_moneda }}</div>
+            <small class="text-muted">
+              <i class="fas fa-undo"></i> Devoluciones y notas credito
+            </small>
+          </div>
+          <div class="fs-1 text-danger opacity-25">
+            <i class="fas fa-exchange-alt"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Proyectado</div>
+            <div class="h4 mb-0 fw-bold text-warning" id="kpi-proyectado">{{ kpis.proyectado|formato_moneda }}</div>
+            <small class="text-muted">
+              <i class="fas fa-calendar-alt"></i>
+              <span id="kpi-dias-info">{{ kpis.dias_transcurridos }}/{{ kpis.dias_habiles }} dias habiles</span>
+            </small>
+          </div>
+          <div class="fs-1 text-warning opacity-25">
+            <i class="fas fa-bullseye"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fila 2: Info operativa -->
 <div class="row mb-4 g-3">
   <div class="col-lg-3 col-md-6">
     <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
@@ -68,26 +145,26 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
           <div>
-            <div class="text-secondary small fw-bold text-uppercase mb-1">Ventas Ultimo Mes</div>
-            <div class="h4 mb-0 fw-bold text-info" id="kpi-ventas-mes">{{ kpis.ventas_ultimo_mes|formato_moneda }}</div>
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Impactos</div>
+            <div class="h4 mb-0 fw-bold text-info" id="kpi-impactos">{{ kpis.impactos|default:"0" }}</div>
             <small class="text-muted">
-              <i class="fas fa-chart-line"></i> Ultimos 30 dias
+              <i class="fas fa-users"></i> Clientes con venta neta &gt; 0
             </small>
           </div>
           <div class="fs-1 text-info opacity-25">
-            <i class="fas fa-dollar-sign"></i>
+            <i class="fas fa-crosshairs"></i>
           </div>
         </div>
       </div>
     </div>
   </div>
   <div class="col-lg-3 col-md-6">
-    <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-secondary">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <div class="text-secondary small fw-bold text-uppercase mb-1">Productos / P. Venta</div>
-            <div class="h4 mb-0 fw-bold text-warning">
+            <div class="h4 mb-0 fw-bold text-secondary">
               <span id="kpi-productos">{{ kpis.productos_unicos|default:"0" }}</span>
               <span class="text-muted fs-6">/</span>
               <span id="kpi-puntos-venta">{{ kpis.puntos_venta|default:"0" }}</span>
@@ -96,7 +173,7 @@
               <i class="fas fa-box"></i> Productos unicos / <i class="fas fa-store"></i> Clientes
             </small>
           </div>
-          <div class="fs-1 text-warning opacity-25">
+          <div class="fs-1 text-secondary opacity-25">
             <i class="fas fa-boxes-stacked"></i>
           </div>
         </div>
@@ -105,20 +182,20 @@
   </div>
 </div>
 
-<!-- Fila 2: Reportes, registros y estado de tablas -->
+<!-- Fila 3: Reportes, registros y estado de tablas -->
 <div class="row mb-4 g-3">
   <div class="col-lg-3 col-md-6">
-    <div class="card border-0 shadow-sm h-100 border-start border-4 border-secondary">
+    <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <div class="text-secondary small fw-bold text-uppercase mb-1">Reportes Activos</div>
-            <div class="h4 mb-0 fw-bold text-secondary" id="kpi-reportes">{{ kpis.reportes_activos|default:"0" }}</div>
+            <div class="h4 mb-0 fw-bold text-warning" id="kpi-reportes">{{ kpis.reportes_activos|default:"0" }}</div>
             <small class="text-muted">
               <i class="fas fa-check-circle text-success"></i> Disponibles para generar
             </small>
           </div>
-          <div class="fs-1 text-secondary opacity-25">
+          <div class="fs-1 text-warning opacity-25">
             <i class="fas fa-file-alt"></i>
           </div>
         </div>
@@ -176,7 +253,7 @@
 {% endif %}
 </div>
 
-<!-- Cards de acceso rápido -->
+<!-- Cards de acceso rapido -->
 <div class="row g-3">
   {% if perms.permisos.cubo %}
   <div class="col-md-6 col-lg-4">
@@ -191,7 +268,7 @@
           </div>
           <div>
             <h6 class="fw-bold mb-1">Cubo de Ventas</h6>
-            <p class="text-muted small mb-0">Genera informes consolidados de ventas por período con procesamiento por
+            <p class="text-muted small mb-0">Genera informes consolidados de ventas por periodo con procesamiento por
               lotes.</p>
           </div>
         </div>
@@ -213,7 +290,7 @@
           </div>
           <div>
             <h6 class="fw-bold mb-1">Inf. Proveedor</h6>
-            <p class="text-muted small mb-0">Reportes detallados de movimientos y análisis por proveedor.</p>
+            <p class="text-muted small mb-0">Reportes detallados de movimientos y analisis por proveedor.</p>
           </div>
         </div>
       </div>
@@ -339,7 +416,7 @@
           </div>
           <div>
             <h6 class="fw-bold mb-1">Matrix Ventas</h6>
-            <p class="text-muted small mb-0">Matriz cruzada de ventas para análisis multidimensional.</p>
+            <p class="text-muted small mb-0">Matriz cruzada de ventas para analisis multidimensional.</p>
           </div>
         </div>
       </div>
@@ -411,7 +488,49 @@
       }
     }
 
+    var diasInfo = (k.dias_transcurridos || 0) + '/' + (k.dias_habiles || 0) + ' dias habiles';
+
     container.innerHTML =
+      /* ── Fila 1: Ventas del mes ── */
+      '<div class="row mb-4 g-3">' +
+        '<div class="col-lg-3 col-md-6">' +
+          '<div class="card border-0 shadow-sm h-100 border-start border-4 border-success">' +
+            '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
+              '<div class="text-secondary small fw-bold text-uppercase mb-1">Venta Neta</div>' +
+              '<div class="h4 mb-0 fw-bold text-success">' + formatCurrency(k.venta_neta) + '</div>' +
+              '<small class="text-muted"><i class="fas fa-chart-line"></i> FV - (FD + NC) mes actual</small>' +
+            '</div><div class="fs-1 text-success opacity-25"><i class="fas fa-dollar-sign"></i></div></div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="col-lg-3 col-md-6">' +
+          '<div class="card border-0 shadow-sm h-100 border-start border-4 border-info">' +
+            '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
+              '<div class="text-secondary small fw-bold text-uppercase mb-1">Venta Bruta (FV)</div>' +
+              '<div class="h4 mb-0 fw-bold text-info">' + formatCurrency(k.venta_bruta) + '</div>' +
+              '<small class="text-muted"><i class="fas fa-file-invoice-dollar"></i> Facturas de venta mes actual</small>' +
+            '</div><div class="fs-1 text-info opacity-25"><i class="fas fa-receipt"></i></div></div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="col-lg-3 col-md-6">' +
+          '<div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">' +
+            '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
+              '<div class="text-secondary small fw-bold text-uppercase mb-1">Devoluciones (FD+NC)</div>' +
+              '<div class="h4 mb-0 fw-bold text-danger">' + formatCurrency(k.devoluciones) + '</div>' +
+              '<small class="text-muted"><i class="fas fa-undo"></i> Devoluciones y notas credito</small>' +
+            '</div><div class="fs-1 text-danger opacity-25"><i class="fas fa-exchange-alt"></i></div></div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="col-lg-3 col-md-6">' +
+          '<div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">' +
+            '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
+              '<div class="text-secondary small fw-bold text-uppercase mb-1">Proyectado</div>' +
+              '<div class="h4 mb-0 fw-bold text-warning">' + formatCurrency(k.proyectado) + '</div>' +
+              '<small class="text-muted"><i class="fas fa-calendar-alt"></i> ' + diasInfo + '</small>' +
+            '</div><div class="fs-1 text-warning opacity-25"><i class="fas fa-bullseye"></i></div></div></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      /* ── Fila 2: Info operativa ── */
       '<div class="row mb-4 g-3">' +
         '<div class="col-lg-3 col-md-6">' +
           '<div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">' +
@@ -434,30 +553,31 @@
         '<div class="col-lg-3 col-md-6">' +
           '<div class="card border-0 shadow-sm h-100 border-start border-4 border-info">' +
             '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
-              '<div class="text-secondary small fw-bold text-uppercase mb-1">Ventas Ultimo Mes</div>' +
-              '<div class="h4 mb-0 fw-bold text-info">' + formatCurrency(k.ventas_ultimo_mes) + '</div>' +
-              '<small class="text-muted"><i class="fas fa-chart-line"></i> Ultimos 30 dias</small>' +
-            '</div><div class="fs-1 text-info opacity-25"><i class="fas fa-dollar-sign"></i></div></div></div>' +
+              '<div class="text-secondary small fw-bold text-uppercase mb-1">Impactos</div>' +
+              '<div class="h4 mb-0 fw-bold text-info">' + formatNumber(k.impactos) + '</div>' +
+              '<small class="text-muted"><i class="fas fa-users"></i> Clientes con venta neta &gt; 0</small>' +
+            '</div><div class="fs-1 text-info opacity-25"><i class="fas fa-crosshairs"></i></div></div></div>' +
           '</div>' +
         '</div>' +
-        '<div class="col-lg-3 col-md-6">' +
-          '<div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">' +
-            '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
-              '<div class="text-secondary small fw-bold text-uppercase mb-1">Productos / P. Venta</div>' +
-              '<div class="h4 mb-0 fw-bold text-warning">' + formatNumber(k.productos_unicos) + ' <span class="text-muted fs-6">/</span> ' + formatNumber(k.puntos_venta) + '</div>' +
-              '<small class="text-muted"><i class="fas fa-box"></i> Productos unicos / <i class="fas fa-store"></i> Clientes</small>' +
-            '</div><div class="fs-1 text-warning opacity-25"><i class="fas fa-boxes-stacked"></i></div></div></div>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="row mb-4 g-3">' +
         '<div class="col-lg-3 col-md-6">' +
           '<div class="card border-0 shadow-sm h-100 border-start border-4 border-secondary">' +
             '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
+              '<div class="text-secondary small fw-bold text-uppercase mb-1">Productos / P. Venta</div>' +
+              '<div class="h4 mb-0 fw-bold text-secondary">' + formatNumber(k.productos_unicos) + ' <span class="text-muted fs-6">/</span> ' + formatNumber(k.puntos_venta) + '</div>' +
+              '<small class="text-muted"><i class="fas fa-box"></i> Productos unicos / <i class="fas fa-store"></i> Clientes</small>' +
+            '</div><div class="fs-1 text-secondary opacity-25"><i class="fas fa-boxes-stacked"></i></div></div></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      /* ── Fila 3: Reportes, registros y tablas ── */
+      '<div class="row mb-4 g-3">' +
+        '<div class="col-lg-3 col-md-6">' +
+          '<div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">' +
+            '<div class="card-body"><div class="d-flex justify-content-between align-items-center"><div>' +
               '<div class="text-secondary small fw-bold text-uppercase mb-1">Reportes Activos</div>' +
-              '<div class="h4 mb-0 fw-bold text-secondary">' + (k.reportes_activos || 0) + '</div>' +
+              '<div class="h4 mb-0 fw-bold text-warning">' + (k.reportes_activos || 0) + '</div>' +
               '<small class="text-muted"><i class="fas fa-check-circle text-success"></i> Disponibles para generar</small>' +
-            '</div><div class="fs-1 text-secondary opacity-25"><i class="fas fa-file-alt"></i></div></div></div>' +
+            '</div><div class="fs-1 text-warning opacity-25"><i class="fas fa-file-alt"></i></div></div></div>' +
           '</div>' +
         '</div>' +
         '<div class="col-lg-3 col-md-6">' +

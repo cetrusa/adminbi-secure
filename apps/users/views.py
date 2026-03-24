@@ -147,7 +147,7 @@ class UserRegisterView(FormView):
                         "No se pudo enviar el correo de verificación. El administrador ha sido notificado."
                     ),
                 )
-                print(f"Error al enviar correo: {e}")
+                logger.error("Error al enviar correo de verificación: %s", e)
 
         # Redirigir a la pantalla de validación
         return HttpResponseRedirect(
@@ -158,11 +158,18 @@ class UserRegisterView(FormView):
 class LoginUser(FormView):
     """
     Vista para el inicio de sesión de usuarios.
+    Incluye proteccion contra fuerza bruta via rate limiting con Redis cache.
     """
 
     template_name = "users/login.html"
     form_class = LoginForm
     success_url = reverse_lazy("home_app:panel_cubo")
+
+    # Rate limiting: max intentos por ventana de tiempo
+    MAX_ATTEMPTS_PER_IP = 5
+    IP_LOCKOUT_SECONDS = 900  # 15 minutos
+    MAX_ATTEMPTS_PER_USER = 10
+    USER_LOCKOUT_SECONDS = 1800  # 30 minutos
 
     @method_decorator(csrf_protect)
     @method_decorator(never_cache)
@@ -171,13 +178,69 @@ class LoginUser(FormView):
             return HttpResponseRedirect(self.get_success_url())
         return super(LoginUser, self).dispatch(request, *args, **kwargs)
 
+    def _get_client_ip(self):
+        x_forwarded_for = self.request.META.get("HTTP_X_FORWARDED_FOR")
+        if x_forwarded_for:
+            return x_forwarded_for.split(",")[0].strip()
+        return self.request.META.get("REMOTE_ADDR", "0.0.0.0")
+
+    def _is_rate_limited(self, username):
+        """Verifica si el IP o usuario estan bloqueados por demasiados intentos."""
+        ip = self._get_client_ip()
+        ip_key = f"login_attempts_ip:{ip}"
+        user_key = f"login_attempts_user:{username}"
+
+        ip_attempts = cache.get(ip_key, 0)
+        if ip_attempts >= self.MAX_ATTEMPTS_PER_IP:
+            return True, _("Demasiados intentos desde esta direccion IP. Intente en 15 minutos.")
+
+        user_attempts = cache.get(user_key, 0)
+        if user_attempts >= self.MAX_ATTEMPTS_PER_USER:
+            return True, _("Demasiados intentos para este usuario. Intente en 30 minutos.")
+
+        return False, ""
+
+    def _record_failed_attempt(self, username):
+        """Registra un intento fallido para IP y usuario."""
+        ip = self._get_client_ip()
+        ip_key = f"login_attempts_ip:{ip}"
+        user_key = f"login_attempts_user:{username}"
+
+        ip_attempts = cache.get(ip_key, 0)
+        cache.set(ip_key, ip_attempts + 1, self.IP_LOCKOUT_SECONDS)
+
+        user_attempts = cache.get(user_key, 0)
+        cache.set(user_key, user_attempts + 1, self.USER_LOCKOUT_SECONDS)
+
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "Login fallido: user=%s ip=%s intentos_ip=%d intentos_user=%d",
+            username, ip, ip_attempts + 1, user_attempts + 1,
+        )
+
+    def _clear_attempts(self, username):
+        """Limpia contadores tras login exitoso."""
+        ip = self._get_client_ip()
+        cache.delete(f"login_attempts_ip:{ip}")
+        cache.delete(f"login_attempts_user:{username}")
+
     def form_valid(self, form):
+        username = form.cleaned_data["username"]
+
+        # Verificar rate limiting
+        is_limited, limit_msg = self._is_rate_limited(username)
+        if is_limited:
+            messages.error(self.request, limit_msg)
+            return self.form_invalid(form)
+
         user = authenticate(
-            username=form.cleaned_data["username"],
+            username=username,
             password=form.cleaned_data["password"],
         )
 
         if user is not None:
+            self._clear_attempts(username)
+
             # Verifica si el usuario tiene 2FA habilitado
             if user.two_factor_enabled:
                 # Almacenar temporalmente los datos de autenticación en la sesión
@@ -188,7 +251,7 @@ class LoginUser(FormView):
                 return redirect("users_app:two_factor_verify")
 
             # Registro de la dirección IP
-            user.last_login_ip = self.request.META.get("REMOTE_ADDR", "")
+            user.last_login_ip = self._get_client_ip()
             user.save()
 
             login(self.request, user)
@@ -203,6 +266,7 @@ class LoginUser(FormView):
 
             return super(LoginUser, self).form_valid(form)
         else:
+            self._record_failed_attempt(username)
             messages.error(
                 self.request,
                 _("No se pudo iniciar sesión con las credenciales proporcionadas."),
@@ -283,8 +347,8 @@ class BaseView(LoginRequiredMixin, TemplateView):
 
             if not databases:
                 databases = (
-                    self.request.user.conf_empresas.all()
-                    .select_related()
+                    self.request.user.conf_empresas
+                    .only("id", "name", "nmEmpresa")
                     .order_by("nmEmpresa")
                 )
                 # Guardamos en caché por 5 minutos (ajustar según necesidad)
@@ -561,7 +625,7 @@ def database_list(request):
         ]
         return JsonResponse({"status": "success", "databases_list": databases_list})
     except Exception as e:
-        print(f"Error en database_list: {e}")
+        logger.error("Error en database_list: %s", e)
         return JsonResponse(
             {
                 "status": "error",

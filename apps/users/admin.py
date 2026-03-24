@@ -232,6 +232,7 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin):
         queryset = (
             super()
             .get_queryset(request)
+            .prefetch_related("conf_empresas")
             .annotate(empresas_count=Count("conf_empresas", distinct=True))
         )
         self._total_empresas = ConfEmpresas.objects.count()

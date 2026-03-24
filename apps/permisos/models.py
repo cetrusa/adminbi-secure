@@ -1198,3 +1198,79 @@ class CosmosEnvio(models.Model):
             ("ejecutar_cosmos", _("Puede ejecutar generación de planos Cosmos")),
             ("reenviar_cosmos", _("Puede re-enviar planos Cosmos por FTPS")),
         ]
+
+
+# ══════════════════════════════════════════════════════════════════
+# Programación de Tareas (RQ Scheduler)
+# ══════════════════════════════════════════════════════════════════
+
+
+class ProgramacionTarea(models.Model):
+    """Configuración de horarios para tareas programadas (RQ Scheduler).
+    Con empresa=NULL es global (ej: limpieza media).
+    Con empresa=FK es per-empresa (CDT, TSOL, Cosmos, Email).
+    """
+
+    empresa = models.ForeignKey(
+        ConfEmpresas, null=True, blank=True,
+        on_delete=models.CASCADE, related_name="tareas_programadas",
+        verbose_name=_("Empresa"),
+        help_text=_("NULL = tarea global (ej: limpieza media)"),
+    )
+    nombre = models.CharField(
+        max_length=100, verbose_name=_("Nombre"),
+    )
+    descripcion = models.CharField(
+        max_length=255, blank=True, default="", verbose_name=_("Descripción"),
+    )
+    hora_local = models.TimeField(
+        verbose_name=_("Hora (Colombia)"),
+        help_text=_("Hora local Colombia (UTC-5) para ejecutar la tarea"),
+    )
+    activo = models.BooleanField(default=True, verbose_name=_("Activo"))
+    func_path = models.CharField(
+        max_length=255,
+        verbose_name=_("Ruta de la función"),
+        help_text=_("Ruta Python completa de la función a ejecutar"),
+    )
+    intervalo_segundos = models.IntegerField(
+        default=86400,
+        verbose_name=_("Intervalo (segundos)"),
+        help_text=_("Intervalo entre ejecuciones. 86400=diario, 3600=cada hora"),
+    )
+    icono = models.CharField(max_length=50, default="fas fa-clock", blank=True)
+    ultima_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "programacion_tarea"
+        verbose_name = _("Programación de Tarea")
+        verbose_name_plural = _("Programación de Tareas")
+        unique_together = [("empresa", "nombre")]
+        ordering = ["empresa", "nombre"]
+
+    def __str__(self):
+        prefix = self.empresa.name if self.empresa else "Global"
+        return f"[{prefix}] {self.nombre} ({self.hora_local})"
+
+    @property
+    def hora_utc(self):
+        """Convierte hora local Colombia (UTC-5) a UTC."""
+        from datetime import timedelta, datetime as dt_cls
+        combined = dt_cls.combine(dt_cls.today(), self.hora_local)
+        combined_utc = combined + timedelta(hours=5)
+        return combined_utc.time()
+
+    @property
+    def frecuencia_label(self):
+        """Etiqueta legible de la frecuencia."""
+        if self.intervalo_segundos == 86400:
+            return "Diaria"
+        elif self.intervalo_segundos == 3600:
+            return "Cada hora"
+        elif self.intervalo_segundos == 43200:
+            return "Cada 12 horas"
+        else:
+            horas = self.intervalo_segundos / 3600
+            if horas >= 1:
+                return f"Cada {int(horas)} horas"
+            return f"Cada {self.intervalo_segundos // 60} min"

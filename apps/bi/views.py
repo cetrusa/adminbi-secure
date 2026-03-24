@@ -40,7 +40,7 @@ with open("secret.json") as f:
     def get_secret(secret_name, secrets=secret):
         try:
             return secrets[secret_name]
-        except:
+        except KeyError:
             msg = "la variable %s no existe" % secret_name
             raise ImproperlyConfigured(msg)
 

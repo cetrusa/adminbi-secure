@@ -170,7 +170,7 @@ class RuteroPage(BaseView):
             try:
                 is_valid = self._validate_database_name(database_name)
             except Exception:
-                is_valid = True
+                is_valid = False
             if not database_name or not is_valid:
                 return JsonResponse(
                     {"success": False, "error_message": "Nombre de base invalido"},
@@ -197,7 +197,7 @@ class RuteroPage(BaseView):
                 status=400,
             )
 
-        print(f"[rutero][POST] Launching task for CEVE={ceves_code}", flush=True)
+        logger.debug("[rutero][POST] Launching task for CEVE=%s", ceves_code)
 
         job = rutero_task.delay(
             database_name=database_name,
@@ -280,7 +280,7 @@ class InventariosPage(RuteroPage):
                 status=400,
             )
 
-        print(f"[inventarios][POST] Launching task for CEVE={ceves_code}", flush=True)
+        logger.debug("[inventarios][POST] Launching task for CEVE=%s", ceves_code)
 
         job = inventarios_task.delay(
             database_name=database_name,
@@ -824,7 +824,7 @@ class VentaCeroPage(BaseView):
             try:
                 is_valid = self._validate_database_name(database_name)
             except Exception:
-                is_valid = True
+                is_valid = False
 
             if not database_name or not is_valid:
                 return JsonResponse(
@@ -858,24 +858,11 @@ class VentaCeroPage(BaseView):
         request.session["template_name"] = self.template_name
         procedures_catalog = self._get_procedures()
 
-        try:
-            print(
-                "[venta_cero][POST] database_name=%s ceves_code=%s fechas=%s..%s procedure=%s filter_type=%s filter_value=%s category_value=%s batch_size=%s"
-                % (
-                    database_name,
-                    ceves_code,
-                    fecha_ini,
-                    fecha_fin,
-                    procedure_name,
-                    filter_type,
-                    filter_value,
-                    category_value,
-                    batch_size,
-                ),
-                flush=True,
-            )
-        except Exception:
-            pass
+        logger.debug(
+            "[venta_cero][POST] database_name=%s ceves_code=%s fechas=%s..%s procedure=%s filter_type=%s filter_value=%s category_value=%s batch_size=%s",
+            database_name, ceves_code, fecha_ini, fecha_fin,
+            procedure_name, filter_type, filter_value, category_value, batch_size,
+        )
 
         proc_def = next((p for p in procedures_catalog if p.get("id") == procedure_name), None)
         if not proc_def:

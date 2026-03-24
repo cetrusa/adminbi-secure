@@ -6,7 +6,11 @@
             <div class="d-flex align-items-center">
                 <a class="navbar-brand d-flex align-items-center me-4" href="{% url 'home_app:panel_cubo' %}">
                     <!-- Podemos cambiar por la versión de logo blanco o principal -->
-                    <img src="{% static 'images/Logo-Blanco.png' %}" alt="Logo" style="height: 35px;">
+                    <img id="navbarLogo"
+                         src="{% static 'images/Logo-Blanco.png' %}"
+                         data-logo-dark="{% static 'images/Logo-Blanco.png' %}"
+                         data-logo-light="{% static 'images/Logo-DataZenith.png' %}"
+                         alt="Logo" style="height: 35px;">
                     <span class="ms-2 fw-bolder text-white d-none d-sm-inline">DataZenith</span>
                 </a>
             </div>
@@ -83,6 +87,25 @@
                         </a>
                     </li>
                     {% endif %}
+
+                    <li class="nav-item me-2">
+                        <button type="button" id="themeToggleBtn" onclick="toggleTheme()"
+                            class="btn nav-link rounded-circle p-2 d-flex align-items-center justify-content-center"
+                            style="width: 40px; height: 40px; border: none;"
+                            title="Cambiar tema">
+                            <i id="themeToggleIcon" class="fas fa-sun"></i>
+                        </button>
+                    </li>
+
+                    <li class="nav-item me-2">
+                        <button type="button"
+                            class="btn nav-link text-white rounded-circle p-2 d-flex align-items-center justify-content-center"
+                            style="width: 40px; height: 40px; border: none;"
+                            data-bs-toggle="offcanvas" data-bs-target="#helpOffcanvas"
+                            title="Ayuda">
+                            <i class="fas fa-circle-question"></i>
+                        </button>
+                    </li>
 
                     {% if perms.permisos.admin %}
                     <li class="nav-item ms-lg-2 me-2">

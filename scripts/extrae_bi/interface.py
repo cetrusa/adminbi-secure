@@ -138,7 +138,8 @@ class InterfaceContable:
                 ]
                 df_all = pd.DataFrame(all_rows)
                 if not df_all.empty:
-                    df_all = df_all.astype(str)
+                    df_all = df_all.fillna("").astype(str)
+                    df_all.replace({"None": "", "nan": "", "NaT": ""}, inplace=True)
                     df_all.to_excel(
                         writer,
                         sheet_name=hoja,
@@ -183,14 +184,24 @@ class InterfaceContable:
             )
             if isinstance(txProcedureInterface_str, str):
                 try:
-                    self.config["txProcedureInterface"] = ast.literal_eval(
-                        txProcedureInterface_str
+                    parsed = ast.literal_eval(txProcedureInterface_str)
+                    # Asegurar que sea iterable (lista o tupla)
+                    if isinstance(parsed, (list, tuple)):
+                        self.config["txProcedureInterface"] = list(parsed)
+                    else:
+                        self.config["txProcedureInterface"] = [str(parsed)]
+                except (ValueError, SyntaxError) as e:
+                    logger.warning(
+                        "[InterfaceContable] txProcedureInterface no es un literal Python válido ('%s'), "
+                        "intentando parse por comas: %s",
+                        txProcedureInterface_str, e,
                     )
-                except ValueError as e:
-                    logger.error(
-                        f"[InterfaceContable] Error al convertir txProcedureInterface a lista: {e}"
-                    )
-                    self.config["txProcedureInterface"] = []
+                    # Fallback: tratar como cadena separada por comas
+                    self.config["txProcedureInterface"] = [
+                        h.strip()
+                        for h in txProcedureInterface_str.split(",")
+                        if h.strip()
+                    ]
             logger.info(
                 f"[InterfaceContable] txProcedureInterface (list): {self.config['txProcedureInterface']}"
             )
@@ -214,6 +225,7 @@ class InterfaceContable:
             os.makedirs(output_dir, exist_ok=True)
 
             # Usar openpyxl como engine para ExcelWriter
+            sheet_errors = []
             with pd.ExcelWriter(self.file_path, engine="openpyxl") as writer:
                 total_global_records = 0
                 any_sheet_written = False
@@ -233,9 +245,11 @@ class InterfaceContable:
                         any_sheet_written = True
                         total_global_records += self.total_records_processed
                     except Exception as e:
+                        error_detail = f"Hoja '{hoja}': {type(e).__name__} - {e}"
+                        sheet_errors.append(error_detail)
                         logger.error(
-                            f"[InterfaceContable] Error al procesar hoja {hoja}: {str(e)}",
-                            exc_info=True,
+                            "[InterfaceContable] Error al procesar hoja %s: %s",
+                            hoja, e, exc_info=True,
                         )
                         continue
                     # Progreso global por hoja
@@ -271,13 +285,18 @@ class InterfaceContable:
                             "[InterfaceContable] No se pudo eliminar archivo sin datos: %s",
                             self.file_path,
                         )
+                # Construir mensaje descriptivo con errores reales si los hay
+                if sheet_errors:
+                    error_msg = "Error al generar interface: " + "; ".join(sheet_errors)
+                else:
+                    error_msg = "No hay datos para mostrar en ninguna hoja."
                 return {
                     "success": False,
-                    "error_message": "No hay datos para mostrar en ninguna hoja.",
+                    "error_message": error_msg,
                     "file_path": None,
                     "file_name": None,
                     "execution_time": execution_time,
-                    "metadata": {"total_records": 0},
+                    "metadata": {"total_records": 0, "sheet_errors": sheet_errors},
                 }
             logger.info(f"[InterfaceContable] Archivo generado en: {self.file_path}")
             logger.info(

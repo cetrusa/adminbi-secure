@@ -245,17 +245,19 @@ class InterfaceContable:
             )
             if isinstance(txProcedureInterface_str, str):
                 try:
-                    self.config["txProcedureInterface"] = ast.literal_eval(
-                        txProcedureInterface_str
+                    parsed = ast.literal_eval(txProcedureInterface_str)
+                    if isinstance(parsed, (list, tuple)):
+                        self.config["txProcedureInterface"] = list(parsed)
+                    else:
+                        self.config["txProcedureInterface"] = [str(parsed)]
+                except (ValueError, SyntaxError) as e:
+                    logger.warning(
+                        "[InterfaceContable] txProcedureInterface no es literal válido ('%s'), "
+                        "parse por comas: %s", txProcedureInterface_str, e,
                     )
-                except ValueError as e:
-                    print(
-                        f"[InterfaceContable] Error al convertir txProcedureInterface a lista: {e}"
-                    )
-                    logger.error(
-                        f"[InterfaceContable] Error al convertir txProcedureInterface a lista: {e}"
-                    )
-                    self.config["txProcedureInterface"] = []
+                    self.config["txProcedureInterface"] = [
+                        h.strip() for h in txProcedureInterface_str.split(",") if h.strip()
+                    ]
             print(
                 f"[InterfaceContable] txProcedureInterface (list): {self.config['txProcedureInterface']}"
             )

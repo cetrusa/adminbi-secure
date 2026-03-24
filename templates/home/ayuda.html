@@ -1,0 +1,561 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manual de Usuario{% endblock %}
+
+{% block barra_superior %}
+{% include "includes/top_nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-lg-5" style="max-width: 1100px;">
+
+    <!-- Header -->
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1">
+            <i class="fas fa-book-open text-primary me-2"></i>Manual de Usuario
+        </h3>
+        <p class="text-muted mb-3">
+            Guía de referencia de los módulos e informes disponibles en DataZenith.
+            Solo se muestran los módulos a los que tienes acceso.
+        </p>
+        <div class="input-group" style="max-width: 400px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control" id="helpPageSearch"
+                   placeholder="Buscar en el manual..." autocomplete="off">
+        </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- CUBOS DE VENTAS -->
+    <!-- ================================================================ -->
+    {% if perms.permisos.panel_cubo %}
+    <div class="card mb-4 help-module-card" data-module="cubos">
+        <div class="card-header d-flex align-items-center">
+            <div class="symbol-light-primary rounded-circle d-flex align-items-center justify-content-center me-3"
+                 style="width: 42px; height: 42px;">
+                <i class="fas fa-chart-bar fs-5"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold">Cubos de Ventas</h5>
+                <small class="text-muted">Análisis comercial, reportes y trazabilidad</small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Informe</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if perms.permisos.cubo %}
+                        <tr class="help-row">
+                            <td>
+                                <span class="fw-semibold"><i class="fas fa-cube text-primary me-2"></i>Cubo de Ventas</span>
+                            </td>
+                            <td>
+                                Genera el cubo de ventas consolidado a partir de la base de datos SIDIS. Permite seleccionar rango de fechas, empresa y base de datos para generar archivos descargables con el análisis de ventas por producto, cliente y territorio.
+                                <br><small class="text-muted"><i class="fas fa-download me-1"></i>Genera archivo Excel descargable</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.proveedor %}
+                        <tr class="help-row">
+                            <td>
+                                <span class="fw-semibold"><i class="fas fa-handshake text-success me-2"></i>Inf. Proveedor</span>
+                            </td>
+                            <td>
+                                Genera informes de ventas segmentados por proveedor. Útil para compartir información de desempeño comercial con proveedores específicos, incluyendo volúmenes, tendencias y distribución por zona.
+                                <br><small class="text-muted"><i class="fas fa-download me-1"></i>Genera archivo Excel descargable</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.faltantes %}
+                        <tr class="help-row">
+                            <td>
+                                <span class="fw-semibold"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Faltantes</span>
+                            </td>
+                            <td>
+                                Identifica productos con quiebre de stock o faltantes en el inventario. Muestra productos que no se han vendido o que tienen disponibilidad cero, comparando contra el catálogo activo. Permite filtrar por proveedor, categoría y período.
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.preventa %}
+                        <tr class="help-row">
+                            <td>
+                                <span class="fw-semibold"><i class="fas fa-clipboard-list text-info me-2"></i>Preventa</span>
+                            </td>
+                            <td>
+                                Reporte de pedidos preventa capturados por la fuerza de ventas. Permite analizar la conversión de preventa a facturación y el cumplimiento de metas por vendedor, zona y período.
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.trazabilidad %}
+                        <tr class="help-row">
+                            <td>
+                                <span class="fw-semibold"><i class="fas fa-route text-primary me-2"></i>Trazabilidad</span>
+                            </td>
+                            <td>
+                                Compara pedidos de preventa contra facturación real. Muestra KPIs de efectividad: porcentaje de conversión, diferencias entre lo pedido y lo facturado, motivos de rechazo y cumplimiento por vendedor. Incluye vista detallada con drill-down.
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.amovildesk %}
+                        <tr class="help-row">
+                            <td>
+                                <span class="fw-semibold"><i class="fas fa-mobile-alt text-danger me-2"></i>Inf. Amovildesk</span>
+                            </td>
+                            <td>
+                                Dashboard integrado con información de la plataforma Amovildesk para seguimiento de gestión comercial y logística de campo. Visualiza métricas de operación móvil.
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.reportes %}
+                        <tr class="help-row">
+                            <td>
+                                <span class="fw-semibold"><i class="fas fa-table text-success me-2"></i>Reporteador</span>
+                            </td>
+                            <td>
+                                Generador de reportes personalizados. Selecciona una plantilla de reporte predefinida, aplica filtros de fecha y base de datos, y descarga los resultados en formato Excel. Las plantillas disponibles se configuran desde el administrador.
+                                <br><small class="text-muted"><i class="fas fa-download me-1"></i>Genera archivo Excel descargable</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.matrix %}
+                        <tr class="help-row">
+                            <td>
+                                <span class="fw-semibold"><i class="fas fa-th text-warning me-2"></i>Matrix Ventas</span>
+                            </td>
+                            <td>
+                                Genera una matriz cruzada de ventas (productos vs clientes/territorios). Ideal para análisis de cobertura y penetración de mercado por categoría de producto y zona geográfica.
+                                <br><small class="text-muted"><i class="fas fa-download me-1"></i>Genera archivo Excel descargable</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.config_email_reportes %}
+                        <tr class="help-row">
+                            <td>
+                                <span class="fw-semibold"><i class="fas fa-envelope text-info me-2"></i>Config. Correos</span>
+                            </td>
+                            <td>
+                                Administra las listas de distribución de correo electrónico. Gestiona contactos de proveedores y supervisores para el envío programado de reportes. Permite agregar individualmente o carga masiva desde Excel.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ================================================================ -->
+    <!-- INTERFACE CONTABLE -->
+    <!-- ================================================================ -->
+    {% if perms.permisos.panel_interface %}
+    <div class="card mb-4 help-module-card" data-module="interface">
+        <div class="card-header d-flex align-items-center">
+            <div class="symbol-light-success rounded-circle d-flex align-items-center justify-content-center me-3"
+                 style="width: 42px; height: 42px;">
+                <i class="fas fa-calculator fs-5"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold">Interface Contable</h5>
+                <small class="text-muted">Interfaces de integración contable y archivos planos</small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Informe</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if perms.permisos.interface %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-file-invoice text-success me-2"></i>Int. Contables</span></td>
+                            <td>
+                                Genera interfaces contables para integración con el sistema ERP. Extrae movimientos de ventas, devoluciones y ajustes del período seleccionado en formato compatible con el software contable de la empresa.
+                                <br><small class="text-muted"><i class="fas fa-download me-1"></i>Genera archivo descargable</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.interface_siigo %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-file-code text-primary me-2"></i>Int. Siigo</span></td>
+                            <td>
+                                Genera la interface contable en formato específico para el software SIIGO. Incluye el mapeo de cuentas contables, centros de costo y terceros según la parametrización de la empresa.
+                                <br><small class="text-muted"><i class="fas fa-download me-1"></i>Genera archivo descargable</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.plano %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-file-csv text-warning me-2"></i>Archivos Planos</span></td>
+                            <td>
+                                Genera archivos planos (CSV/TXT) con datos de ventas, clientes o productos para integración con sistemas externos o análisis en herramientas de terceros.
+                                <br><small class="text-muted"><i class="fas fa-download me-1"></i>Genera archivo descargable</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ================================================================ -->
+    <!-- BI -->
+    <!-- ================================================================ -->
+    {% if perms.permisos.panel_bi %}
+    <div class="card mb-4 help-module-card" data-module="bi">
+        <div class="card-header d-flex align-items-center">
+            <div class="symbol-light-warning rounded-circle d-flex align-items-center justify-content-center me-3"
+                 style="width: 42px; height: 42px;">
+                <i class="fas fa-chart-pie fs-5"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold">BI - Inteligencia de Negocios</h5>
+                <small class="text-muted">Dashboards interactivos de Power BI</small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Informe</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if perms.permisos.informe_bi %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-tachometer-alt text-warning me-2"></i>Dashboard BI</span></td>
+                            <td>
+                                Panel interactivo de Power BI embebido con indicadores clave de desempeño comercial. Incluye gráficos de ventas, tendencias, comparativos período a período y segmentación por múltiples dimensiones (producto, cliente, territorio, vendedor).
+                                <br><small class="text-muted"><i class="fas fa-mouse-pointer me-1"></i>Interactivo - filtros y drill-down disponibles</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.informe_bi_embed %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-expand-arrows-alt text-info me-2"></i>BI Embed</span></td>
+                            <td>
+                                Vista alternativa del dashboard BI con integración embebida directa. Ofrece la misma información analítica en un formato optimizado para visualización en pantalla completa o presentaciones.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ================================================================ -->
+    <!-- ACTUALIZACIÓN -->
+    <!-- ================================================================ -->
+    {% if perms.permisos.panel_actualizacion %}
+    <div class="card mb-4 help-module-card" data-module="actualizacion">
+        <div class="card-header d-flex align-items-center">
+            <div class="symbol-light-info rounded-circle d-flex align-items-center justify-content-center me-3"
+                 style="width: 42px; height: 42px;">
+                <i class="fas fa-sync-alt fs-5"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold">Actualización</h5>
+                <small class="text-muted">Procesos de sincronización de datos y cargues manuales</small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Proceso</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if perms.permisos.actualizar_base %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-database text-info me-2"></i>Actualización BD</span></td>
+                            <td>
+                                Ejecuta el proceso ETL de extracción e inserción de datos desde la base origen (SIDIS) hacia la base BI. Actualiza tablas de ventas, clientes, productos, bodegas y catálogos para el rango de fechas seleccionado. El proceso corre en segundo plano y notifica al completar.
+                                <br><small class="text-muted"><i class="fas fa-clock me-1"></i>Proceso en segundo plano - puede tardar varios minutos</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.actualizacion_bi %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-chart-line text-primary me-2"></i>Actualización BI</span></td>
+                            <td>
+                                Refresca el modelo de datos BI después de una actualización de base de datos. Recalcula indicadores, agrega nuevos períodos y sincroniza los dashboards de Power BI con los datos más recientes.
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.cargue_infoventas %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-upload text-success me-2"></i>Cargue Info Ventas</span></td>
+                            <td>
+                                Permite cargar manualmente archivos de información de ventas cuando la extracción automática no está disponible. Acepta archivos Excel con el formato estándar de ventas definido por el sistema.
+                                <br><small class="text-muted"><i class="fas fa-file-excel me-1"></i>Formato: Excel (.xlsx)</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.cargue_maestras or perms.permisos.cargue_infoproducto %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-boxes text-warning me-2"></i>Archivos Maestros</span></td>
+                            <td>
+                                Carga y actualiza las tablas maestras del sistema: productos, proveedores, categorías y otros catálogos base. Permite importar desde archivos Excel para mantener los datos de referencia actualizados.
+                                <br><small class="text-muted"><i class="fas fa-file-excel me-1"></i>Formato: Excel (.xlsx)</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ================================================================ -->
+    <!-- PLANOS PROVEEDORES -->
+    <!-- ================================================================ -->
+    {% if perms.permisos.ejecutar_cdt or perms.permisos.ejecutar_tsol or perms.permisos.ejecutar_cosmos %}
+    <div class="card mb-4 help-module-card" data-module="planos">
+        <div class="card-header d-flex align-items-center">
+            <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
+                 style="width: 42px; height: 42px; background-color: rgba(0, 188, 212, 0.1); color: #00bcd4;">
+                <i class="fas fa-file-export fs-5"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold">Planos Proveedores</h5>
+                <small class="text-muted">Generación y envío de archivos planos a proveedores</small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Proveedor</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if perms.permisos.ejecutar_cdt %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-paper-plane text-primary me-2"></i>CDT - MasterFoods</span></td>
+                            <td>
+                                Genera y envía archivos planos en formato CDT para el proveedor MasterFoods. Incluye datos de ventas e inventario en el formato requerido. Los archivos se transmiten automáticamente por SFTP.
+                                <br><small class="text-muted"><i class="fas fa-history me-1"></i>Historial de envíos disponible | <i class="fas fa-redo me-1"></i>Opción de reenvío</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.ejecutar_tsol %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-paper-plane text-success me-2"></i>TSOL - TrackSales</span></td>
+                            <td>
+                                Genera archivos planos en formato TSOL para integración con la plataforma TrackSales. Los archivos se envían automáticamente por FTP al servidor del proveedor.
+                                <br><small class="text-muted"><i class="fas fa-history me-1"></i>Historial de envíos disponible | <i class="fas fa-redo me-1"></i>Opción de reenvío</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if perms.permisos.ejecutar_cosmos %}
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-paper-plane text-warning me-2"></i>Cosmos</span></td>
+                            <td>
+                                Genera y transmite archivos planos en formato Cosmos vía FTPS (FTP seguro). Incluye generación automática, envío, historial de transmisiones y opción de descarga de archivos generados.
+                                <br><small class="text-muted"><i class="fas fa-history me-1"></i>Historial de envíos disponible | <i class="fas fa-redo me-1"></i>Opción de reenvío</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ================================================================ -->
+    <!-- BIMBO -->
+    <!-- ================================================================ -->
+    {% if perms.permisos.reportes_bimbo %}
+    <div class="card mb-4 help-module-card" data-module="bimbo">
+        <div class="card-header d-flex align-items-center">
+            <div class="symbol-light-danger rounded-circle d-flex align-items-center justify-content-center me-3"
+                 style="width: 42px; height: 42px;">
+                <i class="fas fa-truck fs-5"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold">Bimbo</h5>
+                <small class="text-muted">Reportes y herramientas para la operación Bimbo</small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Informe</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-ban text-danger me-2"></i>Venta Cero</span></td>
+                            <td>
+                                Analiza productos Bimbo con venta cero en el período seleccionado. Identifica SKUs sin movimiento por agencia (CEVE), permitiendo detectar problemas de distribución, disponibilidad o discontinuación de productos.
+                            </td>
+                        </tr>
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-map-marked-alt text-primary me-2"></i>Rutero</span></td>
+                            <td>
+                                Reporte de cobertura de rutas por territorio y agencia. Muestra la asignación de clientes a rutas de visita y el nivel de cobertura de la fuerza de ventas Bimbo en cada zona.
+                            </td>
+                        </tr>
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-warehouse text-info me-2"></i>Inventarios</span></td>
+                            <td>
+                                Control de niveles de inventario de productos Bimbo por agencia. Muestra existencias actuales, indica rotación y genera alertas de sobre-stock o desabastecimiento.
+                            </td>
+                        </tr>
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-clipboard-check text-success me-2"></i>Preventa</span></td>
+                            <td>
+                                Seguimiento de pedidos preventa para agencias Bimbo. Compara lo solicitado contra lo despachado y calcula indicadores de cumplimiento y efectividad por ruta.
+                            </td>
+                        </tr>
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-exclamation-circle text-warning me-2"></i>Faltantes</span></td>
+                            <td>
+                                Detalla productos Bimbo faltantes o con quiebre de inventario por agencia. Prioriza productos para reabastecimiento y mide niveles de servicio por CEVE.
+                            </td>
+                        </tr>
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-file-alt text-primary me-2"></i>Planos Bimbo</span></td>
+                            <td>
+                                Genera archivos planos específicos para integración con los sistemas Bimbo. Incluye formatos de ventas, inventarios y catálogos en las estructuras requeridas por la operación.
+                                <br><small class="text-muted"><i class="fas fa-download me-1"></i>Genera archivos descargables</small>
+                            </td>
+                        </tr>
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-exchange-alt text-success me-2"></i>Equivalencias</span></td>
+                            <td>
+                                Gestiona la tabla de equivalencias entre códigos de producto internos y códigos Bimbo. Permite crear y editar mapeos de productos manualmente para asegurar la correcta correspondencia en reportes cruzados.
+                            </td>
+                        </tr>
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-magic text-info me-2"></i>Homologación</span></td>
+                            <td>
+                                Proceso automático y manual de homologación de productos. El sistema sugiere equivalencias por similitud de nombre y código (Discovery + Snapshot), y permite ajustar manualmente los mapeos cuando la coincidencia automática no es exacta.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ================================================================ -->
+    <!-- MONITOR -->
+    <!-- ================================================================ -->
+    {% if perms.monitor.panel_monitor %}
+    <div class="card mb-4 help-module-card" data-module="monitor">
+        <div class="card-header d-flex align-items-center">
+            <div class="symbol-light-danger rounded-circle d-flex align-items-center justify-content-center me-3"
+                 style="width: 42px; height: 42px;">
+                <i class="fas fa-heartbeat fs-5"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold">Monitor del Sistema</h5>
+                <small class="text-muted">Estado de salud y procesos del sistema</small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Panel</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="help-row">
+                            <td><span class="fw-semibold"><i class="fas fa-server text-danger me-2"></i>Dashboard</span></td>
+                            <td>
+                                Panel de salud del sistema en tiempo real. Muestra el estado de las conexiones a bases de datos, procesos en cola de trabajo (RQ), tareas en ejecución, uso de recursos y alertas del sistema. Permite verificar rápidamente si todos los servicios están operando correctamente.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- No modules message -->
+    <div id="noResultsMsg" class="text-center py-5" style="display: none;">
+        <i class="fas fa-search fa-3x text-muted mb-3 d-block"></i>
+        <p class="text-muted">No se encontraron resultados para tu búsqueda.</p>
+    </div>
+
+</div>
+{% endblock content %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var search = document.getElementById('helpPageSearch');
+    if (!search) return;
+
+    search.addEventListener('input', function() {
+        var query = this.value.toLowerCase().trim();
+        var cards = document.querySelectorAll('.help-module-card');
+        var noResults = document.getElementById('noResultsMsg');
+        var anyVisible = false;
+
+        if (!query) {
+            cards.forEach(function(c) { c.style.display = ''; });
+            cards.forEach(function(c) {
+                c.querySelectorAll('.help-row').forEach(function(r) { r.style.display = ''; });
+            });
+            noResults.style.display = 'none';
+            return;
+        }
+
+        cards.forEach(function(card) {
+            var hasVisible = false;
+            card.querySelectorAll('.help-row').forEach(function(row) {
+                var text = row.textContent.toLowerCase();
+                if (text.indexOf(query) !== -1) {
+                    row.style.display = '';
+                    hasVisible = true;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            // Also check card header text
+            var headerText = card.querySelector('.card-header').textContent.toLowerCase();
+            if (headerText.indexOf(query) !== -1) hasVisible = true;
+
+            card.style.display = hasVisible ? '' : 'none';
+            if (hasVisible) anyVisible = true;
+        });
+
+        noResults.style.display = anyVisible ? 'none' : '';
+    });
+});
+</script>
+{% endblock script %}

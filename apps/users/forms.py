@@ -88,10 +88,12 @@ class UserRegisterForm(forms.ModelForm):
         return password2
 
     def clean_email(self):
-        """Verifica que el email no esté ya registrado."""
+        """Verifica que el email no esté ya registrado (mensaje generico para evitar enumeracion)."""
         email = self.cleaned_data.get("email")
         if User.objects.filter(email=email).exists():
-            raise ValidationError(_("Este correo electrónico ya está registrado."))
+            raise ValidationError(
+                _("No se puede completar el registro con los datos proporcionados.")
+            )
         return email
 
     def save(self, commit=True):

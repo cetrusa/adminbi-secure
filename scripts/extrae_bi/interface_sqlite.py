@@ -253,7 +253,7 @@ class InterfaceContable:
             try:
                 with self.engine_sqlite.connect() as conn:
                     conn.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
-            except:
+            except Exception:
                 pass
             raise
         except Exception as e:
@@ -267,7 +267,7 @@ class InterfaceContable:
             try:
                 with self.engine_sqlite.connect() as conn:
                     conn.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
-            except:
+            except Exception:
                 pass
             raise
         except SQLAlchemyError as e:
@@ -520,7 +520,7 @@ class InterfaceContable:
                         # Intentar limpiar tabla en caso de error
                         try:
                             self._cleanup_table(f"{self.sqlite_table_name}_{hoja}")
-                        except:
+                        except Exception:
                             pass
                         # Continuar con la siguiente hoja
                         continue

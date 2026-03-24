@@ -110,6 +110,12 @@
           <i class="fas fa-user-tie"></i> <span class="ms-2 d-none d-sm-inline">Correos Supervisores</span>
         </a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'programacion_list' %}active{% endif %}"
+          href="{% url 'home_app:programacion_list' %}">
+          <i class="fas fa-clock"></i> <span class="ms-2 d-none d-sm-inline">Tareas Programadas</span>
+        </a>
+      </li>
       {% endif %}
     </ul>
   </div>

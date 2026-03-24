@@ -1,13 +1,16 @@
 import logging
-from datetime import datetime
-from django.views import View
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.urls import reverse_lazy
-import zipfile
 import os
-from django.contrib.auth.mixins import LoginRequiredMixin
-import sqlalchemy
+import re
+from datetime import datetime
+
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import permission_required
+from django.http import JsonResponse
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+
 from apps.home.tasks import (
     cargue_zip_task,
     cargue_plano_task,
@@ -16,23 +19,12 @@ from apps.home.tasks import (
     cargue_tabla_individual_task,
     cargue_infoproducto_task,
 )
-from scripts.config import ConfigBasic
-from scripts.StaticPage import StaticPage, DinamicPage
-import re
-from django.conf import settings
-from sqlalchemy import create_engine, text
-from apps.users.views import BaseView
-from django.utils.decorators import method_decorator
 from apps.users.decorators import registrar_auditoria
-from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from django.contrib.auth.decorators import user_passes_test
-from django.contrib.auth.decorators import login_required, permission_required
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from django.http import request
-from scripts.extrae_bi.cargue_zip import CargueZip
+from apps.users.views import BaseView
+from scripts.config import ConfigBasic
 from .forms import CargueInfoVentasForm
-from scripts.cargue.cargue_infoproveedor import CargueInfoVentas
-from django_rq import get_queue
+
+logger = logging.getLogger(__name__)
 
 
 class UploadZipView(BaseView):
@@ -40,7 +32,7 @@ class UploadZipView(BaseView):
     login_url = reverse_lazy("users_app:user-login")
 
     @method_decorator(registrar_auditoria)
-    # @method_decorator(permission_required("permisos.cubo", raise_exception=True))
+    @method_decorator(permission_required("permisos.cubo", raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -82,7 +74,7 @@ class UploadZipView(BaseView):
         try:
             # cargue_zip = CargueZip(database_name)
             # cargue_zip.procesar_zip()
-            print("aqui estoy listo para iniciar la tarea asicrona")
+            logger.info("Iniciando tarea asincrona cargue_zip para db=%s", database_name)
             task = cargue_zip_task.delay(database_name, zip_file_path)
 
             # Guardamos el ID de la tarea en la sesión del usuario
@@ -96,8 +88,19 @@ class UploadZipView(BaseView):
         except Exception as e:
             return JsonResponse({"success": False, "error_message": f"Error: {str(e)}"})
 
+    def _sanitize_filename(self, filename):
+        """Sanitiza un nombre de archivo para prevenir path traversal."""
+        # Tomar solo el nombre base (sin directorios)
+        safe_name = os.path.basename(filename)
+        # Eliminar caracteres peligrosos
+        safe_name = safe_name.replace("..", "").replace("/", "").replace("\\", "")
+        if not safe_name:
+            safe_name = "archivo_sin_nombre"
+        return safe_name
+
     def save_zip_file(self, zip_file):
-        media_path = os.path.join("media", zip_file.name)
+        safe_name = self._sanitize_filename(zip_file.name)
+        media_path = os.path.join("media", safe_name)
         with open(media_path, "wb+") as destination:
             for chunk in zip_file.chunks():
                 destination.write(chunk)
@@ -142,6 +145,7 @@ class UploadPlanoFilesView(BaseView):
     login_url = reverse_lazy("users_app:user-login")
 
     @method_decorator(registrar_auditoria)
+    @method_decorator(permission_required("permisos.cubo", raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -179,7 +183,7 @@ class UploadPlanoFilesView(BaseView):
         request.session["database_name"] = database_name
 
         try:
-            print("aqui estoy listo para iniciar la tarea asicrona")
+            logger.info("Iniciando tarea asincrona cargue_plano para db=%s", database_name)
             task = cargue_plano_task.delay(database_name)
             # Guardamos el ID de la tarea en la sesión del usuario
             request.session["task_id"] = task.id
@@ -193,19 +197,16 @@ class UploadPlanoFilesView(BaseView):
             return JsonResponse({"success": False, "error_message": f"Error: {str(e)}"})
 
     def save_plano_file(self, database_name, file):
-        # Construir la ruta del archivo. Se crea una carpeta dentro de 'media' con el nombre de la base de datos
-        # y una subcarpeta 'plano_files' para almacenar los archivos.
-        media_path = os.path.join("media", database_name, file.name)
+        safe_db = self._sanitize_filename(database_name)
+        safe_name = self._sanitize_filename(file.name)
+        media_path = os.path.join("media", safe_db, safe_name)
 
-        # Asegurarse de que las carpetas existan o crearlas
         os.makedirs(os.path.dirname(media_path), exist_ok=True)
 
-        # Escribir el archivo en el sistema de archivos
         with open(media_path, "wb+") as destination:
             for chunk in file.chunks():
                 destination.write(chunk)
 
-        # Devolver la ruta del archivo guardado
         return media_path
 
     def get(self, request, *args, **kwargs):
@@ -278,22 +279,15 @@ class ReporteGenericoCarguePage(BaseView):
             or request.content_type.startswith("application/json")
             or "application/json" in request.headers.get("Accept", "")
         )
-        print("[CARGUE] POST recibido en ReporteGenericoCarguePage.post")
-        print(f"[CARGUE] Usuario: {request.user} (ID: {request.user.id})")
-        print(f"[CARGUE] is_ajax: {is_ajax}")
-        print(f"[CARGUE] POST: {request.POST}")
-        print(f"[CARGUE] FILES: {request.FILES}")
-        print(f"[CARGUE] request.FILES keys: {list(request.FILES.keys())}")
-        print(f"[CARGUE] request.POST keys: {list(request.POST.keys())}")
-        print(f"[CARGUE] request.POST items: {dict(request.POST)}")
-        print(f"[CARGUE] request.content_type: {request.content_type}")
-        print(f"[CARGUE] Headers: {dict(request.headers)}")
+        logger.debug(
+            "[CARGUE] POST recibido. Usuario=%s (ID=%s), is_ajax=%s, FILES=%s",
+            request.user, request.user.id, is_ajax, list(request.FILES.keys()),
+        )
 
         # Manejar peticiones del database_selector
         if "database_select" in request.POST and "excel_file" not in request.FILES:
-            print("[CARGUE] Petición del database_selector detectada")
             database_name = request.POST.get("database_select")
-            print(f"[CARGUE] Actualizando database_name en sesión: {database_name}")
+            logger.debug("[CARGUE] database_selector: actualizando sesion a %s", database_name)
 
             # Actualizar la sesión con la nueva base de datos
             request.session["database_name"] = database_name
@@ -310,13 +304,9 @@ class ReporteGenericoCarguePage(BaseView):
                 # Para peticiones no-AJAX, redirigir a la misma página
                 return redirect(request.path)
 
-        # Debug adicional para multipart
-        if hasattr(request, "_body") and request._body:
-            print(f"[CARGUE] Request body length: {len(request._body)}")
-            print(f"[CARGUE] Request body preview: {str(request._body[:200])}")
         form = CargueInfoVentasForm(request.POST, request.FILES)
         if not form.is_valid():
-            print("[CARGUE][ERROR] Formulario inválido. Errores:", form.errors)
+            logger.warning("[CARGUE] Formulario invalido: %s", form.errors)
             error_message = form.errors.as_text()
             if is_ajax:
                 return JsonResponse(
@@ -334,8 +324,9 @@ class ReporteGenericoCarguePage(BaseView):
         IdtReporteIni = request.POST.get("IdtReporteIni")
         IdtReporteFin = request.POST.get("IdtReporteFin")
 
-        print(
-            f"[CARGUE] Formulario válido. database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}"
+        logger.debug(
+            "[CARGUE] Formulario valido. database_name=%s, fechas=%s..%s",
+            database_name, IdtReporteIni, IdtReporteFin,
         )
 
         # Validaciones adicionales
@@ -359,15 +350,18 @@ class ReporteGenericoCarguePage(BaseView):
             context = self.get_context_data(form=form, resultado=None, job_id=None)
             return self.render_to_response(context)
 
-        # Guardar archivo temporal
-        temp_path = os.path.join("media", "temp", excel_file.name)
+        # Guardar archivo temporal (sanitizar nombre para prevenir path traversal)
+        safe_name = os.path.basename(excel_file.name).replace("..", "").replace("/", "").replace("\\", "")
+        if not safe_name:
+            safe_name = "archivo_sin_nombre.xlsx"
+        temp_path = os.path.join("media", "temp", safe_name)
         os.makedirs(os.path.dirname(temp_path), exist_ok=True)
 
         try:
             with open(temp_path, "wb+") as dest:
                 for chunk in excel_file.chunks():
                     dest.write(chunk)
-            print(f"[CARGUE] Archivo guardado temporalmente en: {temp_path}")
+            logger.debug("[CARGUE] Archivo guardado en: %s", temp_path)
             del excel_file  # Eliminar referencia para evitar problemas de pickle
 
             # Lanzar tarea asíncrona
@@ -379,7 +373,7 @@ class ReporteGenericoCarguePage(BaseView):
                 request.user.id,
             )
             job_id = task.id
-            print(f"[CARGUE] Tarea encolada with job_id={job_id}")
+            logger.info("[CARGUE] Tarea encolada job_id=%s", job_id)
 
             success_message = f"Carga en proceso. ID de tarea: {job_id}"
 
@@ -395,14 +389,14 @@ class ReporteGenericoCarguePage(BaseView):
             return self.render_to_response(context)
 
         except Exception as e:
-            print(f"[CARGUE][ERROR] Error al procesar el cargue: {e}")
+            logger.error("[CARGUE] Error al procesar el cargue: %s", e)
             error_message = f"Error al procesar el cargue: {str(e)}"
 
             # Limpiar archivo temporal si existe
             if os.path.exists(temp_path):
                 try:
                     os.remove(temp_path)
-                except:
+                except OSError:
                     pass
 
             if is_ajax:
@@ -463,7 +457,7 @@ class UploadMaestrasView(ReporteGenericoCarguePage):
 
     def post(self, request, *args, **kwargs):
         """Procesar carga de archivos Excel para tablas maestras"""
-        print("[MAESTRAS] POST recibido en UploadMaestrasView.post")
+        logger.debug("[MAESTRAS] POST recibido en UploadMaestrasView")
         
         # Manejar peticiones del database_selector (delegar a la clase padre)
         if "database_select" in request.POST and len([k for k in request.FILES.keys() if k.endswith('.xlsx') or k in ['productos', 'colgate', 'rutero']]) == 0:
@@ -560,7 +554,7 @@ class UploadMaestrasView(ReporteGenericoCarguePage):
             return self.get(request, *args, **kwargs)
             
         except Exception as e:
-            print(f"[MAESTRAS] Error en UploadMaestrasView.post: {e}")
+            logger.error("[MAESTRAS] Error en UploadMaestrasView.post: %s", e)
             error_msg = f'Error al procesar archivos: {str(e)}'
             if is_ajax:
                 return JsonResponse({'success': False, 'error': error_msg}, status=500)

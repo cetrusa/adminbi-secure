@@ -71,4 +71,4 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 sys.path.append(BASE_DIR.child("scripts"))
-sys.path.append(BASE_DIR.child("scritps", "extrae_bi"))
+sys.path.append(BASE_DIR.child("scripts", "extrae_bi"))

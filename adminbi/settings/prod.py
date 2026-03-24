@@ -14,8 +14,6 @@ ALLOWED_HOSTS = [
     "interface.amovil.co",
     "datazenith.online",
     "www.datazenith.online",
-    "datazenith.online",
-    "www.datazenith.online",
     "10.0.61.101",
 ]
 
@@ -30,7 +28,9 @@ if RENDER_EXTERNAL_HOSTNAME:
 
 
 DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes")
-SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
 
 CSRF_COOKIE_SECURE = True
 
@@ -174,6 +174,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 FILE_UPLOAD_MAX_MEMORY_SIZE = 200 * 1024 * 1024  # 200 MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 200 * 1024 * 1024  # 200 MB
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Headers de seguridad HTTPS
+SECURE_HSTS_SECONDS = 31536000  # 1 ano
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 # Desactivar X-Accel-Redirect por defecto para no requerir configuración adicional en Nginx
 USE_X_ACCEL_REDIRECT = False

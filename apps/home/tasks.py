@@ -82,13 +82,11 @@ def update_job_progress(
         current_job if current_job and current_job.id == target_job_id else None
     )
 
-    print(
-        f"[update_job_progress] job_id={job_id}, progress={progress}, status={status}, meta={meta}"
-    )
+    logger.debug("[update_job_progress] job_id=%s, progress=%s, status=%s, meta=%s", job_id, progress, status, meta)
     if job_to_update:
         if not meta:
             meta = {}
-        print(f"[update_job_progress] Updating job meta for job_id={target_job_id}")
+        logger.debug("[update_job_progress] Updating job meta for job_id=%s", target_job_id)
         # Asegurar que 'status' y 'progress' estén en meta para RQ
         # Usar meta.get para evitar sobreescribir valores existentes si no se proporcionan nuevos
         current_meta = job_to_update.meta or {}
@@ -102,21 +100,15 @@ def update_job_progress(
         job_to_update.meta.update(updated_meta)
         try:
             job_to_update.save_meta()
-            print(
-                f"[update_job_progress] Meta saved for job_id={target_job_id}: progress={updated_meta.get('progress')}% status={status}"
-            )
+            logger.debug("[update_job_progress] Meta saved for job_id=%s: progress=%s%% status=%s", target_job_id, updated_meta.get('progress'), status)
             logger.debug(
                 f"RQ Job {target_job_id} progress updated: {status} - {updated_meta.get('progress')}%"
             )
         except Exception as e:
-            print(
-                f"[update_job_progress] Error saving meta for job_id={target_job_id}: {e}"
-            )
+            logger.error("[update_job_progress] Error saving meta for job_id=%s: %s", target_job_id, e)
             logger.error(f"Error al guardar meta para RQ Job {target_job_id}: {e}")
     else:
-        print(
-            f"[update_job_progress] No job found to update for job_id={target_job_id}"
-        )
+        logger.debug("[update_job_progress] No job found to update for job_id=%s", target_job_id)
         # Si no estamos en el job actual (poco común para progreso), necesitaríamos fetch el job
         # Esto es menos eficiente y generalmente no necesario para updates de progreso
         logger.warning(
@@ -442,9 +434,7 @@ def cubo_ventas_task(
         f"Iniciando cubo_ventas_task (RQ Job ID: {job_id}) para DB: {database_name}, Periodo: {IdtReporteIni}-{IdtReporteFin}"
     )
 
-    print(
-        f"[cubo_ventas_task] INICIO: database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}, report_id={report_id}, batch_size={batch_size}"
-    )
+    logger.info("[cubo_ventas_task] INICIO: database_name=%s, IdtReporteIni=%s, IdtReporteFin=%s, user_id=%s, report_id=%s, batch_size=%s", database_name, IdtReporteIni, IdtReporteFin, user_id, report_id, batch_size)
 
     # Estimación inicial de pasos (puede ajustarse en CuboVentas si es necesario)
     # total_steps_estimate = 5 # No usado directamente aquí
@@ -467,7 +457,7 @@ def cubo_ventas_task(
             job_id, int(progress_percent), status="processing", meta=meta
         )
 
-    print("[cubo_ventas_task] Instanciando CuboVentas...")
+    logger.debug("[cubo_ventas_task] Instanciando CuboVentas...")
     # Instanciar y ejecutar la lógica principal, pasando el callback adaptado para RQ
     cubo_processor = CuboVentas(
         database_name,
@@ -482,7 +472,7 @@ def cubo_ventas_task(
     if hasattr(cubo_processor, "batch_size"):
         cubo_processor.batch_size = batch_size
 
-    print("[cubo_ventas_task] Ejecutando run() de CuboVentas...")
+    logger.debug("[cubo_ventas_task] Ejecutando run() de CuboVentas...")
     # run() ahora usa el callback internamente y devuelve el resultado final
     # El decorador @task_handler se encargará del manejo de errores y formato final
     result_data = cubo_processor.run()
@@ -491,10 +481,10 @@ def cubo_ventas_task(
     if result_data.get("success") and report_id == 6:
         try:
             _post_process_faltantes_consolidado(result_data["file_path"])
-            print("[cubo_ventas_task] Post-procesamiento Faltantes Consolidado completado")
+            logger.info("[cubo_ventas_task] Post-procesamiento Faltantes Consolidado completado")
         except Exception as e:
             logger.warning(f"Error en post-procesamiento Faltantes Consolidado: {e}")
-            print(f"[cubo_ventas_task] Error post-procesamiento: {e}")
+            logger.error("[cubo_ventas_task] Error post-procesamiento: %s", e)
 
     # --- Asegurar que el progreso final se reporte correctamente para el frontend ---
     job = get_current_job()
@@ -524,7 +514,7 @@ def cubo_ventas_task(
             result_data["preview_headers"] = []
             result_data["preview_sample"] = []
 
-    print(f"[cubo_ventas_task] RESULTADO: {result_data}")
+    logger.info("[cubo_ventas_task] RESULTADO: %s", result_data)
 
     # Invalidar cache de KPIs para que reflejen datos frescos
     if result_data.get("success"):
@@ -540,7 +530,7 @@ def cubo_ventas_task(
     except Exception:
         pass
 
-    print("[cubo_ventas_task] FIN")
+    logger.info("[cubo_ventas_task] FIN")
     # Devolver directamente el resultado de CuboVentas.run()
     # El decorador @task_handler añadirá execution_time y manejará el estado final.
     return result_data
@@ -568,9 +558,7 @@ def matrix_task(
     logger.info(
         f"Iniciando matrix_task (RQ Job ID: {job_id}) para DB: {database_name}, Periodo: {IdtReporteIni}-{IdtReporteFin}"
     )
-    print(
-        f"[matrix_task] INICIO: database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}, report_id={report_id}, batch_size={batch_size}"
-    )
+    logger.info("[matrix_task] INICIO: database_name=%s, IdtReporteIni=%s, IdtReporteFin=%s, user_id=%s, report_id=%s, batch_size=%s", database_name, IdtReporteIni, IdtReporteFin, user_id, report_id, batch_size)
 
     def rq_update_progress(
         stage,
@@ -591,12 +579,10 @@ def matrix_task(
             global_percent = int((hoja_idx / total_hojas) * 100)
         else:
             global_percent = progress_percent
-        print(
-            f"[matrix_task][progreso] stage={stage}, hoja_idx={hoja_idx}, total_hojas={total_hojas}, global_percent={global_percent}"
-        )
+        logger.debug("[matrix_task][progreso] stage=%s, hoja_idx=%s, total_hojas=%s, global_percent=%s", stage, hoja_idx, total_hojas, global_percent)
         update_job_progress(job_id, int(global_percent), status="processing", meta=meta)
 
-    print("[matrix_task] Instanciando MatrixVentas...")
+    logger.debug("[matrix_task] Instanciando MatrixVentas...")
     # Instanciar y ejecutar la lógica principal, pasando el callback adaptado para RQ
     matrix_processor = MatrixVentas(
         database_name,
@@ -611,14 +597,14 @@ def matrix_task(
     if hasattr(matrix_processor, "batch_size"):
         matrix_processor.batch_size = batch_size
 
-    print("[matrix_task] Ejecutando run() de MatrixVentas...")
+    logger.debug("[matrix_task] Ejecutando run() de MatrixVentas...")
     # run() ahora usa el callback internamente y devuelve el resultado final
     # El decorador @task_handler se encargará del manejo de errores y formato final
     result_data = (
         matrix_processor.run()
     )  # batch_size se pasa en __init__ o se usa default
 
-    print(f"[matrix_task] RESULTADO: {result_data}")
+    logger.info("[matrix_task] RESULTADO: %s", result_data)
 
     # Cerrar conexión Django después de finalizar procesamiento pesado
     try:
@@ -626,7 +612,7 @@ def matrix_task(
     except Exception:
         pass
 
-    print("[matrix_task] FIN")
+    logger.info("[matrix_task] FIN")
     # Devolver directamente el resultado de CuboVentas.run()
     # El decorador @task_handler añadirá execution_time y manejará el estado final.
     return result_data
@@ -656,9 +642,7 @@ def interface_task(
     logger.info(
         f"Iniciando interface_task (RQ Job ID: {job_id}) para DB: {database_name}, Periodo: {IdtReporteIni}-{IdtReporteFin}"
     )
-    print(
-        f"[interface_task] INICIO: database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}, report_id={report_id}, batch_size={batch_size}"
-    )
+    logger.info("[interface_task] INICIO: database_name=%s, IdtReporteIni=%s, IdtReporteFin=%s, user_id=%s, report_id=%s, batch_size=%s", database_name, IdtReporteIni, IdtReporteFin, user_id, report_id, batch_size)
 
     def rq_update_progress(
         stage,
@@ -679,12 +663,10 @@ def interface_task(
             global_percent = int((hoja_idx / total_hojas) * 100)
         else:
             global_percent = progress_percent
-        print(
-            f"[interface_task][progreso] stage={stage}, hoja_idx={hoja_idx}, total_hojas={total_hojas}, global_percent={global_percent}"
-        )
+        logger.debug("[interface_task][progreso] stage=%s, hoja_idx=%s, total_hojas=%s, global_percent=%s", stage, hoja_idx, total_hojas, global_percent)
         update_job_progress(job_id, int(global_percent), status="processing", meta=meta)
 
-    print("[interface_task] Instanciando InterfaceContable...")
+    logger.debug("[interface_task] Instanciando InterfaceContable...")
     # Instanciar y ejecutar la lógica principal, pasando el callback adaptado para RQ
     interface_processor = InterfaceContable(
         database_name,
@@ -699,14 +681,14 @@ def interface_task(
     if hasattr(interface_processor, "batch_size"):
         interface_processor.batch_size = batch_size
 
-    print("[interface_task] Ejecutando run() de InterfaceContable...")
+    logger.debug("[interface_task] Ejecutando run() de InterfaceContable...")
     # run() ahora usa el callback internamente y devuelve el resultado final
     # El decorador @task_handler se encargará del manejo de errores y formato final
     result_data = (
         interface_processor.run()
     )  # batch_size se pasa en __init__ o se usa default
 
-    print(f"[interface_task] RESULTADO: {result_data}")
+    logger.info("[interface_task] RESULTADO: %s", result_data)
 
     # Cerrar conexión Django después de finalizar procesamiento pesado
     try:
@@ -714,7 +696,7 @@ def interface_task(
     except Exception:
         pass
 
-    print("[interface_task] FIN")
+    logger.info("[interface_task] FIN")
     # Devolver directamente el resultado de CuboVentas.run()
     # El decorador @task_handler añadirá execution_time y manejará el estado final.
     return result_data
@@ -743,9 +725,7 @@ def interface_siigo_task(
     logger.info(
         f"Iniciando interface_siigo_task (RQ Job ID: {job_id}) para DB: {database_name}, Periodo: {IdtReporteIni}-{IdtReporteFin}"
     )
-    print(
-        f"[interface_siigo_task] INICIO: database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}, report_id={report_id}, batch_size={batch_size}"
-    )
+    logger.info("[interface_siigo_task] INICIO: database_name=%s, IdtReporteIni=%s, IdtReporteFin=%s, user_id=%s, report_id=%s, batch_size=%s", database_name, IdtReporteIni, IdtReporteFin, user_id, report_id, batch_size)
 
     def rq_update_progress(
         stage,
@@ -766,12 +746,10 @@ def interface_siigo_task(
             global_percent = int((hoja_idx / total_hojas) * 100)
         else:
             global_percent = progress_percent
-        print(
-            f"[interface_siigo_task][progreso] stage={stage}, hoja_idx={hoja_idx}, total_hojas={total_hojas}, global_percent={global_percent}"
-        )
+        logger.debug("[interface_siigo_task][progreso] stage=%s, hoja_idx=%s, total_hojas=%s, global_percent=%s", stage, hoja_idx, total_hojas, global_percent)
         update_job_progress(job_id, int(global_percent), status="processing", meta=meta)
 
-    print("[interface_siigo_task] Instanciando InterfaceContableSiigo...")
+    logger.debug("[interface_siigo_task] Instanciando InterfaceContableSiigo...")
     interface_processor = InterfaceContableSiigo(
         database_name,
         IdtReporteIni,
@@ -784,17 +762,17 @@ def interface_siigo_task(
     if hasattr(interface_processor, "batch_size"):
         interface_processor.batch_size = batch_size
 
-    print("[interface_siigo_task] Ejecutando run() de InterfaceContableSiigo...")
+    logger.debug("[interface_siigo_task] Ejecutando run() de InterfaceContableSiigo...")
     result_data = interface_processor.run()
 
-    print(f"[interface_siigo_task] RESULTADO: {result_data}")
+    logger.info("[interface_siigo_task] RESULTADO: %s", result_data)
 
     try:
         connection.close()
     except Exception:
         pass
 
-    print("[interface_siigo_task] FIN")
+    logger.info("[interface_siigo_task] FIN")
     return result_data
 
 
@@ -814,15 +792,11 @@ def plano_task(
     job = get_current_job()
     job_id = job.id if job else None
 
-    print(
-        f"[plano_task] INICIO: database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}, report_id={report_id}, batch_size={batch_size}"
-    )
-    print(f"[plano_task] Working directory: {os.getcwd()}")
-    print(
-        f"[plano_task] media/mydata.db exists? {os.path.exists(os.path.join('media', 'mydata.db'))}"
-    )
-    print(f"[plano_task] media/ dir exists? {os.path.exists('media')}")
-    print(f"[plano_task] User: {os.environ.get('USERNAME') or os.environ.get('USER')}")
+    logger.info("[plano_task] INICIO: database_name=%s, IdtReporteIni=%s, IdtReporteFin=%s, user_id=%s, report_id=%s, batch_size=%s", database_name, IdtReporteIni, IdtReporteFin, user_id, report_id, batch_size)
+    logger.debug("[plano_task] Working directory: %s", os.getcwd())
+    logger.debug("[plano_task] media/mydata.db exists? %s", os.path.exists(os.path.join('media', 'mydata.db')))
+    logger.debug("[plano_task] media/ dir exists? %s", os.path.exists('media'))
+    logger.debug("[plano_task] User: %s", os.environ.get('USERNAME') or os.environ.get('USER'))
 
     # Callback robusto y uniforme para progreso
     def rq_update_progress(
@@ -851,14 +825,12 @@ def plano_task(
             meta_dict["status"] = status
         if meta is not None:
             meta_dict.update(meta)
-        print(
-            f"[plano_task][progreso] stage={stage}, hoja_idx={hoja_idx}, total_hojas={total_hojas}, global_percent={global_percent}, status={status}, meta={meta}"
-        )
+        logger.debug("[plano_task][progreso] stage=%s, hoja_idx=%s, total_hojas=%s, global_percent=%s, status=%s, meta=%s", stage, hoja_idx, total_hojas, global_percent, status, meta)
         update_job_progress(
             job_id, int(global_percent), status=(status or "processing"), meta=meta_dict
         )
 
-    print("[plano_task] Instanciando InterfacePlano...")
+    logger.debug("[plano_task] Instanciando InterfacePlano...")
     update_job_progress(job_id, 10, meta={"stage": "Iniciando InterfacePlano"})
     interface = InterfacePlano(
         database_name,
@@ -868,12 +840,12 @@ def plano_task(
         report_id,
         progress_callback=rq_update_progress,
     )
-    print("[plano_task] Ejecutando run() de InterfacePlano...")
+    logger.debug("[plano_task] Ejecutando run() de InterfacePlano...")
     update_job_progress(
         job_id, 30, meta={"stage": "Evaluando y procesando datos para plano"}
     )
     resultado = interface.run()
-    print(f"[plano_task] RESULTADO: {resultado}")
+    logger.info("[plano_task] RESULTADO: %s", resultado)
 
     # --- Asegurar que el resultado siempre tenga 'metadata' relevante ---
     if "metadata" not in resultado or not isinstance(resultado.get("metadata"), dict):
@@ -913,7 +885,7 @@ def plano_task(
             status="completed",
             meta={"stage": "Finalizado", "result": resultado},
         )
-    print("[plano_task] FIN")
+    logger.info("[plano_task] FIN")
     return resultado
 
 
@@ -926,13 +898,11 @@ def cargue_zip_task(database_name: str, zip_file_path: str) -> ResultDict:
     job = get_current_job()
     job_id = job.id if job else None
 
-    print(
-        f"[cargue_zip_task] INICIO: database_name={database_name}, zip_file_path={zip_file_path}"
-    )
+    logger.info("[cargue_zip_task] INICIO: database_name=%s, zip_file_path=%s", database_name, zip_file_path)
 
     # Validar que el archivo exista ANTES de llamar a la lógica principal
     if not os.path.exists(zip_file_path):
-        print(f"[cargue_zip_task] Archivo ZIP no encontrado: {zip_file_path}")
+        logger.error("[cargue_zip_task] Archivo ZIP no encontrado: %s", zip_file_path)
         logger.error(f"Archivo ZIP no encontrado en cargue_zip_task: {zip_file_path}")
         # Devolver error directamente, el decorador lo manejará
         return {
@@ -940,18 +910,18 @@ def cargue_zip_task(database_name: str, zip_file_path: str) -> ResultDict:
             "error_message": f"El archivo ZIP no existe en la ruta: {zip_file_path}",
         }
 
-    print("[cargue_zip_task] Instanciando CargueZip...")
+    logger.debug("[cargue_zip_task] Instanciando CargueZip...")
     update_job_progress(job_id, 10, meta={"stage": "Iniciando CargueZip"})
 
     cargue_zip = CargueZip(database_name, zip_file_path)
-    print("[cargue_zip_task] Ejecutando procesar_zip()...")
+    logger.debug("[cargue_zip_task] Ejecutando procesar_zip()...")
     update_job_progress(job_id, 30, meta={"stage": "Procesando archivo ZIP"})
 
     # Asume que procesar_zip devuelve ResultDict o puede fallar
     resultado = cargue_zip.procesar_zip()
-    print(f"[cargue_zip_task] RESULTADO: {resultado}")
+    logger.info("[cargue_zip_task] RESULTADO: %s", resultado)
     update_job_progress(job_id, 90, meta={"stage": "Finalizando procesamiento ZIP"})
-    print("[cargue_zip_task] FIN")
+    logger.info("[cargue_zip_task] FIN")
     return resultado
 
 
@@ -964,19 +934,19 @@ def cargue_plano_task(database_name: str) -> ResultDict:
     job = get_current_job()
     job_id = job.id if job else None
 
-    print(f"[cargue_plano_task] INICIO: database_name={database_name}")
+    logger.info("[cargue_plano_task] INICIO: database_name=%s", database_name)
 
-    print("[cargue_plano_task] Instanciando CarguePlano...")
+    logger.debug("[cargue_plano_task] Instanciando CarguePlano...")
     update_job_progress(job_id, 10, meta={"stage": "Iniciando CarguePlano"})
     cargue_plano = CarguePlano(database_name)  # Asume CarguePlano es para TSOL
-    print("[cargue_plano_task] Ejecutando procesar_plano()...")
+    logger.debug("[cargue_plano_task] Ejecutando procesar_plano()...")
     update_job_progress(job_id, 30, meta={"stage": "Procesando archivos planos"})
 
     # Asume que procesar_plano devuelve ResultDict o puede fallar
     resultado = cargue_plano.procesar_plano()
-    print(f"[cargue_plano_task] RESULTADO: {resultado}")
+    logger.info("[cargue_plano_task] RESULTADO: %s", resultado)
     update_job_progress(job_id, 90, meta={"stage": "Finalizando carga de planos"})
-    print("[cargue_plano_task] FIN")
+    logger.info("[cargue_plano_task] FIN")
     return resultado
 
 
@@ -996,15 +966,13 @@ def extrae_bi_task(
     job = get_current_job()
     job_id = job.id if job else None
 
-    print(
-        f"[extrae_bi_task] INICIO: database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}, id_reporte={id_reporte}, batch_size={batch_size}"
-    )
+    logger.info("[extrae_bi_task] INICIO: database_name=%s, IdtReporteIni=%s, IdtReporteFin=%s, user_id=%s, id_reporte=%s, batch_size=%s", database_name, IdtReporteIni, IdtReporteFin, user_id, id_reporte, batch_size)
 
     def rq_update_progress(meta_dict, progress_percent):
         # meta_dict contiene: stage, tabla, nmReporte, progress
         update_job_progress(job_id, int(progress_percent), meta=meta_dict)
 
-    print("[extrae_bi_task] Instanciando ExtraeBiConfig y ExtraeBiExtractor...")
+    logger.debug("[extrae_bi_task] Instanciando ExtraeBiConfig y ExtraeBiExtractor...")
     update_job_progress(job_id, 5, meta={"stage": "Iniciando Extrae_Bi"})
     logger.info(
         f"Iniciando extrae_bi_task (RQ Job: {job_id}) para {database_name}, Periodo: {IdtReporteIni}-{IdtReporteFin}, user_id={user_id}, id_reporte={id_reporte}, batch_size={batch_size}"
@@ -1019,10 +987,10 @@ def extrae_bi_task(
         batch_size=batch_size,
         progress_callback=rq_update_progress,
     )
-    print("[extrae_bi_task] Ejecutando run() de ExtraeBiExtractor...")
+    logger.debug("[extrae_bi_task] Ejecutando run() de ExtraeBiExtractor...")
     update_job_progress(job_id, 15, meta={"stage": "Ejecutando extractor principal"})
     result = extractor.run()
-    print(f"[extrae_bi_task] RESULTADO: {result}")
+    logger.info("[extrae_bi_task] RESULTADO: %s", result)
 
     # Invalidar cache de KPIs tras actualizar datos BI
     if result.get("success"):
@@ -1033,7 +1001,7 @@ def extrae_bi_task(
             pass
 
     update_job_progress(job_id, 95, meta={"stage": "Finalizando extracción BI"})
-    print("[extrae_bi_task] FIN")
+    logger.info("[extrae_bi_task] FIN")
     return result
 
 
@@ -1058,9 +1026,7 @@ def cargue_infoventas_task(
     job = get_current_job()
     job_id = job.id if job else None
 
-    print(
-        f"[cargue_infoventas_task] INICIO: temp_path={temp_path}, database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}, job_id={job_id}"
-    )
+    logger.info("[cargue_infoventas_task] INICIO: temp_path=%s, database_name=%s, IdtReporteIni=%s, IdtReporteFin=%s, user_id=%s, job_id=%s", temp_path, database_name, IdtReporteIni, IdtReporteFin, user_id, job_id)
 
     def rq_update_progress(percent):
         if job:
@@ -1070,23 +1036,21 @@ def cargue_infoventas_task(
                 status="processing",
                 meta={"stage": f"Cargue {percent}%"},
             )
-        print(f"[cargue_infoventas_task] Progreso: {percent}% (job_id={job_id})")
+        logger.debug("[cargue_infoventas_task] Progreso: %s%% (job_id=%s)", percent, job_id)
 
     errores = []
     try:
-        print(
-            f"[cargue_infoventas_task] Instanciando CargueInfoVentasInsert con: temp_path={temp_path}, database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}"
-        )
+        logger.debug("[cargue_infoventas_task] Instanciando CargueInfoVentasInsert con: temp_path=%s, database_name=%s, IdtReporteIni=%s, IdtReporteFin=%s, user_id=%s", temp_path, database_name, IdtReporteIni, IdtReporteFin, user_id)
         cargador = CargueInfoVentasInsert(
             temp_path, database_name, IdtReporteIni, IdtReporteFin, user_id=user_id
         )
         try:
-            print("[cargue_infoventas_task] Llamando a procesar_cargue...")
+            logger.debug("[cargue_infoventas_task] Llamando a procesar_cargue...")
             cargador.procesar_cargue(progress_callback=rq_update_progress)
         except Exception as e:
             # Si ocurre un error parcial, lo guardamos pero seguimos
             error_msg = f"Error parcial durante el proceso de carga: {str(e)}"
-            print(f"[cargue_infoventas_task][ERROR] {error_msg}")
+            logger.error("[cargue_infoventas_task] Error: %s", error_msg)
             errores.append(error_msg)
         resultado = {
             "success": len(errores) == 0,
@@ -1102,7 +1066,7 @@ def cargue_infoventas_task(
             f"cargue_infoventas_task (Job ID: {job_id}) completado. Errores: {errores if errores else 'Ninguno'}"
         )
     except Exception as e:
-        print(f"[cargue_infoventas_task][ERROR CRÍTICO] {str(e)}")
+        logger.error("[cargue_infoventas_task] Error critico: %s", e)
         resultado = {"success": False, "error_message": str(e)}
         logger.error(
             f"Error crítico en cargue_infoventas_task (Job ID: {job_id}): {str(e)}",
@@ -1113,18 +1077,14 @@ def cargue_infoventas_task(
             try:
                 os.remove(temp_path)
                 logger.info(f"Archivo temporal eliminado: {temp_path}")
-                print(
-                    f"[cargue_infoventas_task] Archivo temporal eliminado: {temp_path}"
-                )
+                logger.info("[cargue_infoventas_task] Archivo temporal eliminado: %s", temp_path)
             except Exception as e:
                 logger.warning(
                     f"No se pudo eliminar el archivo temporal {temp_path}: {str(e)}"
                 )
-                print(
-                    f"[cargue_infoventas_task][WARNING] No se pudo eliminar el archivo temporal {temp_path}: {str(e)}"
-                )
+                logger.warning("[cargue_infoventas_task] No se pudo eliminar el archivo temporal %s: %s", temp_path, e)
 
-    print(f"[cargue_infoventas_task] FIN: {resultado}")
+    logger.info("[cargue_infoventas_task] FIN: %s", resultado)
     return resultado
 
 
@@ -1141,7 +1101,7 @@ def cargue_maestras_task(database_name, tablas_seleccionadas=None):
     job = get_current_job()
     job_id = job.id if job else None
 
-    print(f"[cargue_maestras_task] INICIO: database_name={database_name}, tablas_seleccionadas={tablas_seleccionadas}, job_id={job_id}")
+    logger.info("[cargue_maestras_task] INICIO: database_name=%s, tablas_seleccionadas=%s, job_id=%s", database_name, tablas_seleccionadas, job_id)
 
     resultado = {
         "status": "error",
@@ -1177,7 +1137,7 @@ def cargue_maestras_task(database_name, tablas_seleccionadas=None):
         # Cargar tablas
         if tablas_seleccionadas:
             # Carga individual de tablas seleccionadas
-            print(f"[cargue_maestras_task] Cargando tablas específicas: {tablas_seleccionadas}")
+            logger.info("[cargue_maestras_task] Cargando tablas especificas: %s", tablas_seleccionadas)
             
             resultados_tablas = {}
             total_tablas = len(tablas_seleccionadas)
@@ -1193,19 +1153,19 @@ def cargue_maestras_task(database_name, tablas_seleccionadas=None):
                         'status': 'exitoso',
                         'registros': registros
                     }
-                    print(f"[cargue_maestras_task] Tabla {tabla} cargada exitosamente: {registros} registros")
+                    logger.info("[cargue_maestras_task] Tabla %s cargada exitosamente: %s registros", tabla, registros)
                     
                 except Exception as e:
                     resultados_tablas[tabla] = {
                         'status': 'error',
                         'error': str(e)
                     }
-                    print(f"[cargue_maestras_task] Error cargando tabla {tabla}: {e}")
+                    logger.error("[cargue_maestras_task] Error cargando tabla %s: %s", tabla, e)
             
             resultado["data"] = resultados_tablas
         else:
             # Carga completa de todas las tablas
-            print(f"[cargue_maestras_task] Cargando todas las tablas maestras")
+            logger.info("[cargue_maestras_task] Cargando todas las tablas maestras")
             
             update_job_progress(job_id, 20, "processing", 
                               meta={"stage": "Cargando todas las tablas maestras"})
@@ -1223,7 +1183,7 @@ def cargue_maestras_task(database_name, tablas_seleccionadas=None):
                 resultados_completos = cargador.cargar_todas_las_tablas(progress_callback)
                 resultado["data"] = resultados_completos
             except Exception as e:
-                print(f"[cargue_maestras_task] Error en carga completa: {e}")
+                logger.error("[cargue_maestras_task] Error en carga completa: %s", e)
                 resultado["data"] = {
                     'status': 'error',
                     'error': str(e),
@@ -1252,7 +1212,7 @@ def cargue_maestras_task(database_name, tablas_seleccionadas=None):
             resultado["message"] = f"Todas las tablas cargadas exitosamente: {', '.join(exitosos)}"
             resultado["success"] = True
 
-        print(f"[cargue_maestras_task] COMPLETADO: {resultado['status']} - {resultado['message']}")
+        logger.info("[cargue_maestras_task] COMPLETADO: %s - %s", resultado['status'], resultado['message'])
 
     except Exception as e:
         resultado["total_tiempo"] = time.time() - start_time
@@ -1262,10 +1222,10 @@ def cargue_maestras_task(database_name, tablas_seleccionadas=None):
         update_job_progress(job_id, 100, "failed", 
                           meta={"stage": f"Error: {str(e)}"})
         
-        print(f"[cargue_maestras_task] ERROR: {str(e)}")
+        logger.error("[cargue_maestras_task] Error: %s", e)
         logger.error(f"Error en cargue_maestras_task: {str(e)}", exc_info=True)
 
-    print(f"[cargue_maestras_task] FIN: {resultado}")
+    logger.info("[cargue_maestras_task] FIN: %s", resultado)
     return resultado
 
 
@@ -1379,7 +1339,7 @@ def cargue_tabla_individual_task(database_name, nombre_tabla):
     job = get_current_job()
     job_id = job.id if job else None
 
-    print(f"[cargue_tabla_individual_task] INICIO: database_name={database_name}, tabla={nombre_tabla}, job_id={job_id}")
+    logger.info("[cargue_tabla_individual_task] INICIO: database_name=%s, tabla=%s, job_id=%s", database_name, nombre_tabla, job_id)
 
     resultado = {
         "status": "error",
@@ -1425,7 +1385,7 @@ def cargue_tabla_individual_task(database_name, nombre_tabla):
         update_job_progress(job_id, 100, "completed", 
                           meta={"stage": f"Completado: {registros} registros cargados"})
 
-        print(f"[cargue_tabla_individual_task] COMPLETADO: {nombre_tabla} - {registros} registros")
+        logger.info("[cargue_tabla_individual_task] COMPLETADO: %s - %s registros", nombre_tabla, registros)
 
     except Exception as e:
         resultado["message"] = f"Error cargando tabla {nombre_tabla}: {str(e)}"
@@ -1433,10 +1393,10 @@ def cargue_tabla_individual_task(database_name, nombre_tabla):
         update_job_progress(job_id, 100, "failed", 
                           meta={"stage": f"Error: {str(e)}"})
         
-        print(f"[cargue_tabla_individual_task] ERROR: {str(e)}")
+        logger.error("[cargue_tabla_individual_task] Error: %s", e)
         logger.error(f"Error en cargue_tabla_individual_task para {nombre_tabla}: {str(e)}", exc_info=True)
 
-    print(f"[cargue_tabla_individual_task] FIN: {resultado}")
+    logger.info("[cargue_tabla_individual_task] FIN: %s", resultado)
     return resultado
 
 
@@ -1529,6 +1489,598 @@ def _add_inventario_sheet(file_path, engine, proveedor_ids=None, macrozonas=None
         logger.info("Hoja Inventario agregada: %d filas", len(rows))
     except Exception as exc:
         logger.error("Error agregando hoja Inventario: %s", exc, exc_info=True)
+
+
+def _add_dashboard_supervisor_sheet(
+    file_path, engine, macrozonas, fecha_ini, fecha_fin, database_name,
+):
+    """
+    Agrega hoja 'Dashboard' (primera posición) con KPIs de fuerza de ventas
+    por zona.  Cifras en miles de pesos ($K).
+    """
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from sqlalchemy import text as sa_text
+
+    if not file_path or not os.path.exists(file_path) or not file_path.endswith(".xlsx"):
+        return
+    if not macrozonas:
+        return
+
+    macro_int = [int(x) for x in macrozonas]
+    placeholders = ", ".join(str(x) for x in macro_int)
+
+    sql_kpis = (
+        "SELECT "
+        "  macrozona_id, macro AS macrozona, "
+        "  MIN(bodega) AS bodega, MIN(nbAlmacen) AS almacen, "
+        "  nbZona AS zona, nmZona AS nombre_zona, "
+        "  SUM(CASE WHEN td = 'FV' THEN vlrAntesIva ELSE 0 END) AS ventas_netas, "
+        "  SUM(CASE WHEN td IN ('FD','NC') THEN ABS(vlrAntesIva) ELSE 0 END) AS devoluciones, "
+        "  SUM(CASE WHEN td = 'CM' THEN ABS(vlrAntesIva) ELSE 0 END) AS cambios, "
+        "  COUNT(DISTINCT CASE WHEN td = 'FV' THEN nbFactura END) AS num_facturas, "
+        "  COUNT(DISTINCT CASE WHEN td IN ('FD','NC') THEN nbFactura END) AS fact_dev, "
+        "  COUNT(DISTINCT CASE WHEN td = 'CM' THEN nbFactura END) AS fact_cam "
+        "FROM cuboventas "
+        "WHERE dtContabilizacion BETWEEN :fi AND :ff "
+        f"  AND macrozona_id IN ({placeholders}) "
+        "GROUP BY macrozona_id, macro, nbZona, nmZona "
+        "ORDER BY macrozona_id, nbZona"
+    )
+
+    # Impactos: clientes con venta neta > 0 por zona
+    sql_impactos = (
+        "SELECT zona, COUNT(*) AS impactos FROM ("
+        "  SELECT nbZona AS zona, idPuntoVenta "
+        "  FROM cuboventas "
+        "  WHERE dtContabilizacion BETWEEN :fi AND :ff "
+        f"    AND macrozona_id IN ({placeholders}) "
+        "  GROUP BY nbZona, idPuntoVenta "
+        "  HAVING SUM(vlrAntesIva) > 0"
+        ") sub GROUP BY zona"
+    )
+
+    sql_faltantes = (
+        "SELECT z.zona_id AS zona, COALESCE(SUM(f.vlFaltante), 0) AS faltantes "
+        "FROM faltantes f "
+        "JOIN zona z ON z.zona_id = f.nbZona "
+        "WHERE f.dtContabilizacion BETWEEN :fi AND :ff "
+        f"  AND z.macrozona_id IN ({placeholders}) "
+        "GROUP BY z.zona_id"
+    )
+
+    # Clientes activos por zona (desde tabla rutas)
+    sql_cl_activos = (
+        "SELECT r.zona_id AS zona, COUNT(DISTINCT r.cliente_id) AS cl_activos "
+        "FROM rutas r "
+        "JOIN zona z ON z.zona_id = r.zona_id "
+        f"WHERE z.macrozona_id IN ({placeholders}) "
+        "GROUP BY r.zona_id"
+    )
+
+    try:
+        params = {"fi": fecha_ini, "ff": fecha_fin}
+        with engine.connect() as conn:
+            rows = conn.execute(sa_text(sql_kpis), params).mappings().all()
+            falt_rows = conn.execute(sa_text(sql_faltantes), params).mappings().all()
+            imp_rows = conn.execute(sa_text(sql_impactos), params).mappings().all()
+            try:
+                cl_act_rows = conn.execute(sa_text(sql_cl_activos)).mappings().all()
+            except Exception:
+                cl_act_rows = []
+                logger.info("Tabla rutas no disponible, omitiendo cl. activos.")
+
+        if not rows:
+            logger.info("Dashboard sin datos para macrozonas %s", macrozonas)
+            return
+
+        falt_map = {str(r["zona"]): float(r["faltantes"] or 0) for r in falt_rows}
+        cl_act_map = {str(r["zona"]): int(r["cl_activos"] or 0) for r in cl_act_rows}
+        imp_map = {str(r["zona"]): int(r["impactos"] or 0) for r in imp_rows}
+
+        # ── Métricas por zona ──
+        zones = []
+        tot = {
+            "vb": 0, "vn": 0, "dev": 0, "cam": 0, "nf": 0,
+            "fd": 0, "fc": 0, "ca": 0, "ci": 0, "falt": 0,
+        }
+        for r in rows:
+            vb = float(r["ventas_netas"] or 0)   # venta bruta (solo FV)
+            dev = float(r["devoluciones"] or 0)
+            vn = vb - dev                          # venta neta real (FV - FD - NC)
+            cam = float(r["cambios"] or 0)
+            nf = int(r["num_facturas"] or 0)
+            fd = int(r["fact_dev"] or 0)
+            fc = int(r["fact_cam"] or 0)
+            ci = imp_map.get(str(r["zona"]), 0)
+            ca = cl_act_map.get(str(r["zona"]), 0)
+            falt = falt_map.get(str(r["zona"]), 0)
+
+            zones.append({
+                "zona": r["zona"], "nombre": r["nombre_zona"],
+                "macrozona": r["macrozona"] or "",
+                "almacen": r["almacen"] or r["bodega"] or "",
+                "vb": vb, "vn": vn, "dev": dev, "cam": cam,
+                "nf": nf, "fd": fd, "fc": fc,
+                "ca": ca, "ci": ci, "falt": falt,
+                "pct_dev": dev / vb if vb > 0 else 0,
+                "pct_cam": cam / vb if vb > 0 else 0,
+                "pct_cl": ci / ca if ca > 0 else 0,
+                "drop": vn / ci if ci > 0 else 0,
+            })
+            for k in ("vb", "vn", "dev", "cam", "falt"):
+                tot[k] += locals()[k]
+            tot["nf"] += nf; tot["fd"] += fd; tot["fc"] += fc
+            tot["ca"] += ca; tot["ci"] += ci
+
+        tot["pct_dev"] = tot["dev"] / tot["vb"] if tot["vb"] > 0 else 0
+        tot["pct_cam"] = tot["cam"] / tot["vb"] if tot["vb"] > 0 else 0
+        tot["pct_cl"] = tot["ci"] / tot["ca"] if tot["ca"] > 0 else 0
+        tot["drop"] = tot["vn"] / tot["ci"] if tot["ci"] > 0 else 0
+
+        # ── Construir hoja ──
+        wb = load_workbook(file_path)
+        ws = wb.create_sheet(title="Dashboard", index=0)
+
+        DARK = "2F5496"
+        BLUE = "4472C4"
+        LIGHT = "D6E4F0"
+        RED_C = "C00000"
+
+        fill_dark = PatternFill(start_color=DARK, end_color=DARK, fill_type="solid")
+        fill_blue = PatternFill(start_color=BLUE, end_color=BLUE, fill_type="solid")
+        fill_light = PatternFill(start_color=LIGHT, end_color=LIGHT, fill_type="solid")
+        center = Alignment(horizontal="center", vertical="center")
+        right_al = Alignment(horizontal="right", vertical="center")
+        left_al = Alignment(horizontal="left", vertical="center")
+        thin = Border(
+            left=Side(style="thin", color="D9E2F3"),
+            right=Side(style="thin", color="D9E2F3"),
+            top=Side(style="thin", color="D9E2F3"),
+            bottom=Side(style="thin", color="D9E2F3"),
+        )
+
+        # Fila 1-2: título
+        NUM_COLS = 16
+        for rw in (1, 2):
+            ws.merge_cells(start_row=rw, start_column=1, end_row=rw, end_column=NUM_COLS)
+            for c in range(1, NUM_COLS + 1):
+                ws.cell(row=rw, column=c).fill = fill_dark
+        ws["A1"].value = f"Dashboard Fuerza de Ventas — {database_name.upper()}"
+        ws["A1"].font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+        ws["A1"].alignment = center
+        ws["A2"].value = (
+            f"Periodo: {fecha_ini} a {fecha_fin}  ·  Cifras en miles de pesos ($K)"
+        )
+        ws["A2"].font = Font(name="Calibri", size=10, color="FFFFFF")
+        ws["A2"].alignment = center
+
+        # Fila 4-5: KPI cards (7 tarjetas × 2 cols)
+        lbl_font = Font(name="Calibri", size=9, color="666666")
+        val_ok = Font(name="Calibri", size=16, bold=True, color=DARK)
+        val_bad = Font(name="Calibri", size=16, bold=True, color=RED_C)
+        kpis = [
+            ("T. Venta Neta", f"${tot['vn']/1000:,.0f}K", False),
+            ("T. Devolución", f"${tot['dev']/1000:,.0f}K", True),
+            ("% Devolución", f"{tot['pct_dev']*100:.1f}%", True),
+            ("% Cl. Imp.", f"{tot['pct_cl']*100:.1f}%", False),
+            ("T. Cambios", f"${tot['cam']/1000:,.0f}K", True),
+            ("Drop Size", f"${tot['drop']/1000:,.0f}K", False),
+            ("# Facturas", f"{tot['nf']:,}", False),
+        ]
+        for i, (label, value, bad) in enumerate(kpis):
+            c = i * 2 + 1
+            ws.merge_cells(start_row=4, start_column=c, end_row=4, end_column=c + 1)
+            ws.merge_cells(start_row=5, start_column=c, end_row=5, end_column=c + 1)
+            ws.cell(row=4, column=c, value=label).font = lbl_font
+            ws.cell(row=4, column=c).alignment = center
+            cv = ws.cell(row=5, column=c, value=value)
+            cv.font = val_bad if bad else val_ok
+            cv.alignment = center
+
+        # Fila 7: encabezados tabla
+        headers = [
+            "Zona", "Macrozona", "Almacen",
+            "T. Vta Neta ($K)", "T. Devolución ($K)", "% Dev.",
+            "# Fact. Dev.", "T. Cambios ($K)", "% Camb.", "# Fact. Cam.",
+            "Cl. Activos", "Cl. Impactados", "% Cl. Imp.", "Drop Size ($K)",
+            "# Facturas", "Faltantes ($K)",
+        ]
+        hdr_font = Font(name="Calibri", size=9, bold=True, color="FFFFFF")
+        for ci, h in enumerate(headers, 1):
+            cell = ws.cell(row=7, column=ci, value=h)
+            cell.font = hdr_font
+            cell.fill = fill_blue
+            cell.alignment = center
+            cell.border = thin
+
+        # Filas 8+: datos por zona
+        pct_cols = (6, 9, 13)  # % Dev., % Camb., % Cl. Imp.
+        dat_font = Font(name="Calibri", size=9)
+        for ri, z in enumerate(zones, 8):
+            vals = [
+                z["zona"], z["macrozona"], z["almacen"],
+                round(z["vn"] / 1000), round(z["dev"] / 1000), z["pct_dev"],
+                z["fd"], round(z["cam"] / 1000), z["pct_cam"], z["fc"],
+                z["ca"], z["ci"], z["pct_cl"], round(z["drop"] / 1000),
+                z["nf"], round(z["falt"] / 1000),
+            ]
+            for ci, v in enumerate(vals, 1):
+                cell = ws.cell(row=ri, column=ci, value=v)
+                cell.font = dat_font
+                cell.border = thin
+                if ci in pct_cols:
+                    cell.number_format = "0.0%"
+                elif ci >= 4:
+                    cell.number_format = "#,##0"
+                cell.alignment = left_al if ci <= 3 else right_al
+                if ri % 2 == 0:
+                    cell.fill = fill_light
+
+        # Fila totales
+        tr = 8 + len(zones)
+        tot_font = Font(name="Calibri", size=9, bold=True, color="FFFFFF")
+        tot_vals = [
+            "TOTAL", "", "",
+            round(tot["vn"] / 1000), round(tot["dev"] / 1000), tot["pct_dev"],
+            tot["fd"], round(tot["cam"] / 1000), tot["pct_cam"], tot["fc"],
+            tot["ca"], tot["ci"], tot["pct_cl"], round(tot["drop"] / 1000),
+            tot["nf"], round(tot["falt"] / 1000),
+        ]
+        for ci, v in enumerate(tot_vals, 1):
+            cell = ws.cell(row=tr, column=ci, value=v)
+            cell.font = tot_font
+            cell.fill = fill_dark
+            cell.border = thin
+            if ci in pct_cols:
+                cell.number_format = "0.0%"
+            elif ci >= 4:
+                cell.number_format = "#,##0"
+            cell.alignment = left_al if ci <= 3 else right_al
+
+        # Anchos
+        widths = [8, 14, 14, 18, 18, 10, 12, 16, 10, 12, 12, 14, 10, 14, 12, 14]
+        for i, w in enumerate(widths, 1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+
+        wb.save(file_path)
+        logger.info("Hoja Dashboard agregada con %d zonas", len(zones))
+
+    except Exception as exc:
+        logger.error("Error agregando hoja Dashboard: %s", exc, exc_info=True)
+
+
+def _add_devoluciones_dia_sheet(file_path, engine, macrozonas):
+    """
+    Agrega hoja 'Devoluciones Dia' con el detalle de devoluciones por cliente
+    del día actual.  Cifras en miles de pesos ($K).
+    """
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from sqlalchemy import text as sa_text
+    from scripts.text_cleaner import TextCleaner
+    from datetime import date
+
+    if not file_path or not os.path.exists(file_path) or not file_path.endswith(".xlsx"):
+        return
+    if not macrozonas:
+        return
+
+    macro_int = [int(x) for x in macrozonas]
+    placeholders = ", ".join(str(x) for x in macro_int)
+
+    sql = (
+        "SELECT "
+        "  nmZona AS zona, nbDocumento AS documento, "
+        "  nmRazonSocial AS cliente, idPuntoVenta AS punto_venta, "
+        "  nbFactura AS factura, nbProducto AS cod_producto, "
+        "  nmProducto AS producto, "
+        "  ABS(cantAsignada) AS cantidad, "
+        "  ROUND(ABS(vlrAntesIva) / 1000, 1) AS valor_k, "
+        "  motivo "
+        "FROM cuboventas "
+        "WHERE dtContabilizacion = CURDATE() "
+        "  AND td IN ('FD','NC') "
+        f"  AND macrozona_id IN ({placeholders}) "
+        "ORDER BY nmZona, nmRazonSocial, nbProducto"
+    )
+
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(sa_text(sql))
+            rows = result.fetchall()
+
+        if not rows:
+            logger.info("Sin devoluciones del dia para macrozonas %s", macrozonas)
+            return
+
+        RED_C = "C00000"
+        PINK = "FCE4EC"
+        fill_red = PatternFill(start_color=RED_C, end_color=RED_C, fill_type="solid")
+        fill_pink = PatternFill(start_color=PINK, end_color=PINK, fill_type="solid")
+        center = Alignment(horizontal="center", vertical="center")
+        right_al = Alignment(horizontal="right", vertical="center")
+        thin = Border(
+            left=Side(style="thin", color="F2DCDB"),
+            right=Side(style="thin", color="F2DCDB"),
+            top=Side(style="thin", color="F2DCDB"),
+            bottom=Side(style="thin", color="F2DCDB"),
+        )
+
+        wb = load_workbook(file_path)
+        ws = wb.create_sheet(title="Devoluciones Dia")
+
+        # Fila 1: título
+        ws.merge_cells("A1:J1")
+        ws["A1"] = f"Devoluciones del Dia — {date.today().strftime('%d/%m/%Y')}"
+        ws["A1"].font = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+        ws["A1"].fill = fill_red
+        ws["A1"].alignment = center
+        for c in range(1, 11):
+            ws.cell(row=1, column=c).fill = fill_red
+
+        # Fila 2: resumen
+        total_valor = sum(float(r[8]) if r[8] else 0 for r in rows)
+        ws.merge_cells("A2:J2")
+        ws["A2"] = f"Total: {len(rows)} items  ·  Valor total: ${total_valor:,.1f}K"
+        ws["A2"].font = Font(name="Calibri", size=10, bold=True, color=RED_C)
+        ws["A2"].alignment = center
+
+        # Fila 3: encabezados
+        display_headers = [
+            "Zona", "Documento", "Cliente", "Punto Venta", "Factura",
+            "Cod. Producto", "Producto", "Cantidad", "Valor ($K)", "Motivo",
+        ]
+        hdr_font = Font(name="Calibri", size=9, bold=True, color="FFFFFF")
+        for ci, h in enumerate(display_headers, 1):
+            cell = ws.cell(row=3, column=ci, value=h)
+            cell.font = hdr_font
+            cell.fill = fill_red
+            cell.alignment = center
+            cell.border = thin
+
+        # Datos
+        dat_font = Font(name="Calibri", size=9)
+        for ri, row in enumerate(rows, 4):
+            for ci, v in enumerate(row, 1):
+                cleaned = TextCleaner.clean_for_excel(v) if isinstance(v, str) else v
+                cell = ws.cell(row=ri, column=ci, value=cleaned)
+                cell.font = dat_font
+                cell.border = thin
+                if ci in (8, 9):
+                    cell.alignment = right_al
+                    cell.number_format = "#,##0.0" if ci == 9 else "#,##0"
+                if ri % 2 == 0:
+                    cell.fill = fill_pink
+
+        # Anchos
+        widths = [8, 14, 30, 12, 14, 14, 30, 10, 12, 25]
+        for i, w in enumerate(widths, 1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+
+        wb.save(file_path)
+        logger.info("Hoja Devoluciones Dia agregada: %d filas", len(rows))
+
+    except Exception as exc:
+        logger.error("Error agregando hoja Devoluciones Dia: %s", exc, exc_info=True)
+
+
+def _add_vendedor_proveedor_sheet(
+    file_path, engine, macrozonas, fecha_ini, fecha_fin,
+):
+    """
+    Agrega hoja 'Vendedor x Proveedor' con KPIs cruzados:
+    venta, proyección, % cumplimiento, clientes impactados,
+    % clientes impactados, devoluciones, % devolución.
+    Cifras en miles de pesos ($K).
+    """
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from sqlalchemy import text as sa_text
+
+    if not file_path or not os.path.exists(file_path) or not file_path.endswith(".xlsx"):
+        return
+    if not macrozonas:
+        return
+
+    macro_int = [int(x) for x in macrozonas]
+    placeholders = ", ".join(str(x) for x in macro_int)
+
+    # ── Ventas, devoluciones por vendedor × proveedor ──
+    sql_main = (
+        "SELECT "
+        "  cv.nbZona AS zona, cv.nmZona AS vendedor, "
+        "  cv.idProveedor AS id_proveedor, cv.nmProveedor AS proveedor, "
+        "  SUM(CASE WHEN cv.td = 'FV' THEN cv.vlrAntesIva ELSE 0 END) AS venta, "
+        "  SUM(CASE WHEN cv.td IN ('FD','NC') THEN ABS(cv.vlrAntesIva) ELSE 0 END) AS devolucion "
+        "FROM cuboventas cv "
+        "WHERE cv.dtContabilizacion BETWEEN :fi AND :ff "
+        f"  AND cv.macrozona_id IN ({placeholders}) "
+        "GROUP BY cv.nbZona, cv.nmZona, cv.idProveedor, cv.nmProveedor "
+        "HAVING venta > 0 OR devolucion > 0 "
+        "ORDER BY cv.nbZona, cv.nmProveedor"
+    )
+
+    # Impactos por vendedor × proveedor: clientes con venta neta > 0
+    sql_imp_vp = (
+        "SELECT zona, id_proveedor, COUNT(*) AS cl_imp FROM ("
+        "  SELECT cv.nbZona AS zona, cv.idProveedor AS id_proveedor, cv.idPuntoVenta "
+        "  FROM cuboventas cv "
+        "  WHERE cv.dtContabilizacion BETWEEN :fi AND :ff "
+        f"    AND cv.macrozona_id IN ({placeholders}) "
+        "  GROUP BY cv.nbZona, cv.idProveedor, cv.idPuntoVenta "
+        "  HAVING SUM(cv.vlrAntesIva) > 0"
+        ") sub GROUP BY zona, id_proveedor"
+    )
+
+    # ── Clientes activos por zona (desde tabla rutas) ──
+    sql_cl = (
+        "SELECT r.zona_id AS zona, COUNT(DISTINCT r.cliente_id) AS total_cl "
+        "FROM rutas r "
+        "JOIN zona z ON z.zona_id = r.zona_id "
+        f"WHERE z.macrozona_id IN ({placeholders}) "
+        "GROUP BY r.zona_id"
+    )
+
+    # ── Presupuesto/proyección por zona × proveedor (tabla opcional) ──
+    sql_pres = (
+        "SELECT nbZona, CAST(idProveedor AS CHAR) AS id_prov, "
+        "  SUM(vlrPresupuesto) AS proyeccion "
+        "FROM presupuesto "
+        "WHERE dtPresupuesto BETWEEN :fi AND :ff "
+        "GROUP BY nbZona, idProveedor"
+    )
+
+    try:
+        params = {"fi": fecha_ini, "ff": fecha_fin}
+        with engine.connect() as conn:
+            rows = conn.execute(sa_text(sql_main), params).mappings().all()
+            imp_vp_rows = conn.execute(sa_text(sql_imp_vp), params).mappings().all()
+            try:
+                cl_rows = conn.execute(sa_text(sql_cl)).mappings().all()
+            except Exception:
+                cl_rows = []
+                logger.info("Tabla rutas no disponible, omitiendo cl. activos.")
+
+        if not rows:
+            logger.info("Vendedor×Proveedor sin datos para macrozonas %s", macrozonas)
+            return
+
+        cl_map = {str(r["zona"]): int(r["total_cl"] or 0) for r in cl_rows}
+        imp_vp_map = {
+            (str(r["zona"]), str(r["id_proveedor"])): int(r["cl_imp"] or 0)
+            for r in imp_vp_rows
+        }
+
+        # Presupuesto (puede no existir en todas las BD)
+        pres_map = {}
+        try:
+            with engine.connect() as conn:
+                pres_rows = conn.execute(sa_text(sql_pres), params).mappings().all()
+                for r in pres_rows:
+                    key = (str(r["nbZona"]), str(r["id_prov"]))
+                    pres_map[key] = float(r["proyeccion"] or 0)
+        except Exception:
+            logger.info("Tabla presupuesto no disponible, omitiendo proyeccion.")
+
+        # ── Construir datos ──
+        data = []
+        for r in rows:
+            venta_bruta = float(r["venta"] or 0)
+            dev = float(r["devolucion"] or 0)
+            venta_neta = venta_bruta - dev
+            cl_imp = imp_vp_map.get((str(r["zona"]), str(r["id_proveedor"])), 0)
+            total_cl = cl_map.get(str(r["zona"]), 0)
+            proy = pres_map.get((str(r["zona"]), str(r["id_proveedor"])), 0)
+
+            data.append({
+                "zona": r["zona"],
+                "vendedor": r["vendedor"],
+                "proveedor": r["proveedor"],
+                "venta_neta": venta_neta,
+                "proyeccion": proy,
+                "pct_cumpl": venta_neta / proy if proy > 0 else 0,
+                "cl_imp": cl_imp,
+                "pct_cl": cl_imp / total_cl if total_cl > 0 else 0,
+                "devolucion": dev,
+                "pct_dev": dev / venta_bruta if venta_bruta > 0 else 0,
+            })
+
+        # ── Construir hoja ──
+        wb = load_workbook(file_path)
+        ws = wb.create_sheet(title="Vendedor x Proveedor")
+
+        DARK = "2F5496"
+        BLUE = "4472C4"
+        LIGHT = "D6E4F0"
+        fill_dark = PatternFill(start_color=DARK, end_color=DARK, fill_type="solid")
+        fill_blue = PatternFill(start_color=BLUE, end_color=BLUE, fill_type="solid")
+        fill_light = PatternFill(start_color=LIGHT, end_color=LIGHT, fill_type="solid")
+        center = Alignment(horizontal="center", vertical="center")
+        right_al = Alignment(horizontal="right", vertical="center")
+        left_al = Alignment(horizontal="left", vertical="center")
+        thin = Border(
+            left=Side(style="thin", color="D9E2F3"),
+            right=Side(style="thin", color="D9E2F3"),
+            top=Side(style="thin", color="D9E2F3"),
+            bottom=Side(style="thin", color="D9E2F3"),
+        )
+
+        # Fila 1-2: título
+        for rw in (1, 2):
+            ws.merge_cells(start_row=rw, start_column=1, end_row=rw, end_column=10)
+            for c in range(1, 11):
+                ws.cell(row=rw, column=c).fill = fill_dark
+        ws["A1"].value = "Resumen Vendedor por Proveedor"
+        ws["A1"].font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+        ws["A1"].alignment = center
+        ws["A2"].value = (
+            f"Periodo: {fecha_ini} a {fecha_fin}  ·  Cifras en miles de pesos ($K)"
+        )
+        ws["A2"].font = Font(name="Calibri", size=10, color="FFFFFF")
+        ws["A2"].alignment = center
+
+        # Fila 4: encabezados
+        headers = [
+            "Zona", "Vendedor", "Proveedor", "Vta Neta ($K)",
+            "Proyección ($K)", "% Cumpl.", "Cl. Impactados",
+            "% Cl. Imp.", "Devolución ($K)", "% Dev.",
+        ]
+        hdr_font = Font(name="Calibri", size=9, bold=True, color="FFFFFF")
+        for ci, h in enumerate(headers, 1):
+            cell = ws.cell(row=4, column=ci, value=h)
+            cell.font = hdr_font
+            cell.fill = fill_blue
+            cell.alignment = center
+            cell.border = thin
+
+        # Filas 5+: datos
+        dat_font = Font(name="Calibri", size=9)
+        prev_zona = None
+        for ri, d in enumerate(data, 5):
+            vals = [
+                d["zona"], d["vendedor"], d["proveedor"],
+                round(d["venta_neta"] / 1000), round(d["proyeccion"] / 1000),
+                d["pct_cumpl"], d["cl_imp"], d["pct_cl"],
+                round(d["devolucion"] / 1000), d["pct_dev"],
+            ]
+            is_new_zone = d["zona"] != prev_zona
+            prev_zona = d["zona"]
+
+            for ci, v in enumerate(vals, 1):
+                cell = ws.cell(row=ri, column=ci, value=v)
+                cell.font = dat_font
+                cell.border = thin
+                if ci in (6, 8, 10):  # porcentajes
+                    cell.number_format = "0.0%"
+                elif ci in (4, 5, 7, 9):  # números
+                    cell.number_format = "#,##0"
+                cell.alignment = left_al if ci <= 3 else right_al
+                if ri % 2 == 0:
+                    cell.fill = fill_light
+
+            # Separador visual entre zonas (borde superior grueso)
+            if is_new_zone and ri > 5:
+                for ci in range(1, 11):
+                    c = ws.cell(row=ri, column=ci)
+                    c.border = Border(
+                        top=Side(style="medium", color=DARK),
+                        left=thin.left, right=thin.right, bottom=thin.bottom,
+                    )
+
+        # Anchos
+        widths = [8, 20, 25, 14, 16, 12, 14, 12, 16, 10]
+        for i, w in enumerate(widths, 1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+
+        wb.save(file_path)
+        logger.info("Hoja Vendedor×Proveedor agregada: %d filas", len(data))
+
+    except Exception as exc:
+        logger.error("Error agregando hoja Vendedor×Proveedor: %s", exc, exc_info=True)
 
 
 def _log_envio(engine, tipo, dest_id, dest_nombre, correos, fecha_ini, fecha_fin,
@@ -1642,7 +2194,7 @@ def enviar_reportes_email_task(database_name):
             # Generar reporte filtrado por proveedor_ids
             cubo = CuboVentas(
                 database_name, fecha_ini, fecha_fin,
-                user_id=None, reporte_id=2,
+                user_id=None, reporte_id=7,
             )
             # Inyectar filtro de proveedor
             if prov["proveedor_ids"]:
@@ -1692,7 +2244,7 @@ def enviar_reportes_email_task(database_name):
         try:
             cubo = CuboVentas(
                 database_name, fecha_ini, fecha_fin,
-                user_id=None, reporte_id=2,
+                user_id=None, reporte_id=7,
             )
             # Inyectar filtro de macrozonas
             if sup["macrozonas"]:
@@ -1700,17 +2252,35 @@ def enviar_reportes_email_task(database_name):
             result = cubo.run()
 
             if result.get("success") and result.get("file_path"):
-                # Agregar hoja de inventario filtrada por bodegas de las macrozonas
+                fp = result["file_path"]
                 if sup["macrozonas"]:
                     macro_list = [int(x.strip()) for x in sup["macrozonas"].split(",") if x.strip()]
-                    _add_inventario_sheet(result["file_path"], engine, macrozonas=macro_list)
+                    # Dashboard KPIs (se inserta como primera hoja)
+                    _add_dashboard_supervisor_sheet(
+                        fp, engine, macro_list, fecha_ini, fecha_fin, database_name,
+                    )
+                    # Vendedor × Proveedor
+                    _add_vendedor_proveedor_sheet(
+                        fp, engine, macro_list, fecha_ini, fecha_fin,
+                    )
+                    # Devoluciones del día
+                    _add_devoluciones_dia_sheet(fp, engine, macro_list)
+                    # Inventario
+                    _add_inventario_sheet(fp, engine, macrozonas=macro_list)
 
                 subject = f"Reporte {database_name} - {sup['nombre']} ({fecha_ini} a {fecha_fin})"
                 body = (
-                    f"<h3>Reporte de Ventas e Inventario - {sup['nombre']}</h3>"
+                    f"<h3>Reporte Fuerza de Ventas - {sup['nombre']}</h3>"
                     f"<p>Periodo: {fecha_ini} a {fecha_fin}</p>"
                     f"<p>Empresa: {database_name}</p>"
-                    f"<p>Adjunto encontrara el archivo Excel con el detalle de ventas e inventario.</p>"
+                    f"<p>El archivo adjunto contiene:</p>"
+                    f"<ul>"
+                    f"<li><b>Dashboard</b> — KPIs por zona (ventas, devoluciones, cambios, drop size)</li>"
+                    f"<li><b>Vendedor x Proveedor</b> — Venta, proyeccion, clientes, devoluciones por vendedor y proveedor</li>"
+                    f"<li><b>Devoluciones del Dia</b> — Detalle por cliente</li>"
+                    f"<li><b>Ventas</b> — Sabana de datos del mes</li>"
+                    f"<li><b>Inventario</b> — Stock disponible por producto</li>"
+                    f"</ul>"
                     f"<hr><small>Generado automaticamente por DataZenith.</small>"
                 )
                 _send_report_email(subject, correos_list, result["file_path"], body)
@@ -1736,6 +2306,260 @@ def enviar_reportes_email_task(database_name):
         "enviados": enviados,
         "errores": errores,
     }
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def enviar_reporte_email_proveedor_task(database_name, proveedor_id):
+    """
+    Genera y envia el reporte por correo para UN proveedor especifico.
+    Reutiliza la misma logica de enviar_reportes_email_task pero solo para un proveedor.
+    """
+    from sqlalchemy import text as sa_text
+    from scripts.conexion import Conexion as Cnx
+    from scripts.config import ConfigBasic as CB
+    from datetime import date
+
+    rq_job = get_current_job()
+    job_id = rq_job.id if rq_job else None
+
+    logger.info("[enviar_reporte_proveedor] INICIO para %s, proveedor_id=%s", database_name, proveedor_id)
+
+    config = CB(database_name)
+    c = config.config
+    db_bi = c.get("dbBi")
+    if not db_bi:
+        return {"success": False, "error_message": f"No se encontro dbBi para {database_name}"}
+
+    engine = Cnx.ConexionMariadb3(
+        str(c.get("nmUsrIn")), str(c.get("txPassIn")),
+        str(c.get("hostServerIn")), int(c.get("portServerIn")), db_bi,
+    )
+
+    hoy = date.today()
+    fecha_ini = hoy.replace(day=1).strftime("%Y-%m-%d")
+    fecha_fin = hoy.strftime("%Y-%m-%d")
+
+    update_job_progress(job_id, 10, meta={"stage": "Leyendo proveedor"})
+
+    with engine.connect() as conn:
+        prov = conn.execute(
+            sa_text(
+                "SELECT p.id, p.nombre, p.proveedor_ids, "
+                "GROUP_CONCAT(pc.correo SEPARATOR ',') AS correos "
+                "FROM proveedores_bi p "
+                "JOIN proveedores_correo pc ON pc.proveedor_id = p.id AND pc.activo = 1 "
+                "WHERE p.id = :pid GROUP BY p.id"
+            ),
+            {"pid": proveedor_id},
+        ).mappings().first()
+
+    if not prov:
+        return {"success": False, "error_message": f"Proveedor {proveedor_id} no encontrado o sin correos activos."}
+
+    correos_list = [e.strip() for e in (prov["correos"] or "").split(",") if e.strip()]
+    if not correos_list:
+        return {"success": False, "error_message": f"El proveedor '{prov['nombre']}' no tiene correos activos."}
+
+    update_job_progress(job_id, 30, meta={"stage": f"Generando reporte: {prov['nombre']}"})
+
+    try:
+        cubo = CuboVentas(
+            database_name, fecha_ini, fecha_fin,
+            user_id=None, reporte_id=7,
+        )
+        if prov["proveedor_ids"]:
+            cubo.proveedores = [int(x.strip()) for x in prov["proveedor_ids"].split(",") if x.strip()]
+        result = cubo.run()
+
+        if result.get("success") and result.get("file_path"):
+            update_job_progress(job_id, 70, meta={"stage": "Agregando inventario"})
+            if prov["proveedor_ids"]:
+                prov_id_list = [int(x.strip()) for x in prov["proveedor_ids"].split(",") if x.strip()]
+                _add_inventario_sheet(result["file_path"], engine, proveedor_ids=prov_id_list)
+
+            update_job_progress(job_id, 85, meta={"stage": "Enviando correo"})
+            subject = f"Reporte {database_name} - {prov['nombre']} ({fecha_ini} a {fecha_fin})"
+            body = (
+                f"<h3>Reporte de Ventas e Inventario - {prov['nombre']}</h3>"
+                f"<p>Periodo: {fecha_ini} a {fecha_fin}</p>"
+                f"<p>Empresa: {database_name}</p>"
+                f"<p>Adjunto encontrara el archivo Excel con el detalle de ventas e inventario.</p>"
+                f"<hr><small>Generado automaticamente por DataZenith.</small>"
+            )
+            _send_report_email(subject, correos_list, result["file_path"], body)
+            _log_envio(engine, "proveedor", prov["id"], prov["nombre"],
+                       prov["correos"], fecha_ini, fecha_fin,
+                       result.get("file_path"), "enviado")
+
+            return {
+                "success": True,
+                "message": f"Reporte enviado a {prov['nombre']} ({', '.join(correos_list)})",
+            }
+        else:
+            error_msg = result.get("error_message", "Sin datos para generar reporte")
+            _log_envio(engine, "proveedor", prov["id"], prov["nombre"],
+                       prov["correos"], fecha_ini, fecha_fin, None, "error", error_msg)
+            return {"success": False, "error_message": error_msg}
+
+    except Exception as exc:
+        logger.error("Error enviando reporte proveedor %s: %s", prov["nombre"], exc, exc_info=True)
+        _log_envio(engine, "proveedor", prov["id"], prov["nombre"],
+                   prov["correos"], fecha_ini, fecha_fin, None, "error", str(exc))
+        return {"success": False, "error_message": str(exc)}
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def enviar_reporte_email_supervisor_task(database_name, supervisor_id):
+    """
+    Genera y envia el reporte por correo para UN supervisor especifico.
+    Incluye: Dashboard, Vendedor x Proveedor, Devoluciones del Dia, Ventas, Inventario.
+    """
+    from sqlalchemy import text as sa_text
+    from scripts.conexion import Conexion as Cnx
+    from scripts.config import ConfigBasic as CB
+    from datetime import date
+
+    rq_job = get_current_job()
+    job_id = rq_job.id if rq_job else None
+
+    logger.info("[enviar_reporte_supervisor] INICIO para %s, supervisor_id=%s", database_name, supervisor_id)
+
+    config = CB(database_name)
+    c = config.config
+    db_bi = c.get("dbBi")
+    if not db_bi:
+        return {"success": False, "error_message": f"No se encontro dbBi para {database_name}"}
+
+    engine = Cnx.ConexionMariadb3(
+        str(c.get("nmUsrIn")), str(c.get("txPassIn")),
+        str(c.get("hostServerIn")), int(c.get("portServerIn")), db_bi,
+    )
+
+    hoy = date.today()
+    fecha_ini = hoy.replace(day=1).strftime("%Y-%m-%d")
+    fecha_fin = hoy.strftime("%Y-%m-%d")
+
+    update_job_progress(job_id, 10, meta={"stage": "Leyendo supervisor"})
+
+    with engine.connect() as conn:
+        sup = conn.execute(
+            sa_text(
+                "SELECT s.id, s.nombre, "
+                "GROUP_CONCAT(DISTINCT sc.correo SEPARATOR ',') AS correos, "
+                "GROUP_CONCAT(DISTINCT sm.macrozona_id SEPARATOR ',') AS macrozonas "
+                "FROM supervisores s "
+                "JOIN supervisores_correo sc ON sc.supervisor_id = s.id AND sc.activo = 1 "
+                "LEFT JOIN supervisores_macrozona sm ON sm.supervisor_id = s.id "
+                "WHERE s.id = :sid GROUP BY s.id"
+            ),
+            {"sid": supervisor_id},
+        ).mappings().first()
+
+    if not sup:
+        return {"success": False, "error_message": f"Supervisor {supervisor_id} no encontrado o sin correos activos."}
+
+    correos_list = [e.strip() for e in (sup["correos"] or "").split(",") if e.strip()]
+    if not correos_list:
+        return {"success": False, "error_message": f"El supervisor '{sup['nombre']}' no tiene correos activos."}
+
+    update_job_progress(job_id, 20, meta={"stage": f"Generando reporte: {sup['nombre']}"})
+
+    try:
+        cubo = CuboVentas(
+            database_name, fecha_ini, fecha_fin,
+            user_id=None, reporte_id=7,
+        )
+        # Inyectar filtro de macrozonas
+        if sup["macrozonas"]:
+            cubo.macrozonas = [int(x.strip()) for x in sup["macrozonas"].split(",") if x.strip()]
+        result = cubo.run()
+
+        if result.get("success") and result.get("file_path"):
+            fp = result["file_path"]
+            update_job_progress(job_id, 50, meta={"stage": "Agregando hojas adicionales"})
+
+            if sup["macrozonas"]:
+                macro_list = [int(x.strip()) for x in sup["macrozonas"].split(",") if x.strip()]
+                _add_dashboard_supervisor_sheet(
+                    fp, engine, macro_list, fecha_ini, fecha_fin, database_name,
+                )
+                _add_vendedor_proveedor_sheet(
+                    fp, engine, macro_list, fecha_ini, fecha_fin,
+                )
+                _add_devoluciones_dia_sheet(fp, engine, macro_list)
+                _add_inventario_sheet(fp, engine, macrozonas=macro_list)
+
+            update_job_progress(job_id, 85, meta={"stage": "Enviando correo"})
+            subject = f"Reporte {database_name} - {sup['nombre']} ({fecha_ini} a {fecha_fin})"
+            body = (
+                f"<h3>Reporte Fuerza de Ventas - {sup['nombre']}</h3>"
+                f"<p>Periodo: {fecha_ini} a {fecha_fin}</p>"
+                f"<p>Empresa: {database_name}</p>"
+                f"<p>El archivo adjunto contiene:</p>"
+                f"<ul>"
+                f"<li><b>Dashboard</b> — KPIs por zona (ventas, devoluciones, cambios, drop size)</li>"
+                f"<li><b>Vendedor x Proveedor</b> — Venta, proyeccion, clientes, devoluciones por vendedor y proveedor</li>"
+                f"<li><b>Devoluciones del Dia</b> — Detalle por cliente</li>"
+                f"<li><b>Ventas</b> — Sabana de datos del mes</li>"
+                f"<li><b>Inventario</b> — Stock disponible por producto</li>"
+                f"</ul>"
+                f"<hr><small>Generado automaticamente por DataZenith.</small>"
+            )
+            _send_report_email(subject, correos_list, fp, body)
+            _log_envio(engine, "supervisor", sup["id"], sup["nombre"],
+                       sup["correos"], fecha_ini, fecha_fin,
+                       result.get("file_path"), "enviado")
+
+            return {
+                "success": True,
+                "message": f"Reporte enviado a {sup['nombre']} ({', '.join(correos_list)})",
+            }
+        else:
+            error_msg = result.get("error_message", "Sin datos para generar reporte")
+            _log_envio(engine, "supervisor", sup["id"], sup["nombre"],
+                       sup["correos"], fecha_ini, fecha_fin, None, "error", error_msg)
+            return {"success": False, "error_message": error_msg}
+
+    except Exception as exc:
+        logger.error("Error enviando reporte supervisor %s: %s", sup["nombre"], exc, exc_info=True)
+        _log_envio(engine, "supervisor", sup["id"], sup["nombre"],
+                   sup["correos"], fecha_ini, fecha_fin, None, "error", str(exc))
+        return {"success": False, "error_message": str(exc)}
+
+
+# ── Wrappers para scheduling per-empresa (calculan fechas y ejecutan) ──
+
+@job("default", timeout=DEFAULT_TIMEOUT)
+def cdt_empresa_scheduled(empresa_id):
+    """Nocturno CDT: ayer completo, una empresa."""
+    from datetime import date, timedelta
+    hoy = date.today()
+    fi = (hoy - timedelta(days=1)).isoformat()
+    ff = hoy.isoformat()
+    planos_cdt_task(empresa_id, fi, ff, enviar_sftp=True)
+
+
+@job("default", timeout=DEFAULT_TIMEOUT)
+def tsol_empresa_scheduled(empresa_id):
+    """Nocturno TSOL: mes anterior completo, una empresa."""
+    from datetime import date, timedelta
+    hoy = date.today()
+    pm = hoy.replace(day=1) - timedelta(days=1)
+    fi = pm.replace(day=1).isoformat()
+    ff = pm.isoformat()
+    planos_tsol_task(empresa_id, fi, ff, enviar_ftp=True)
+
+
+@job("default", timeout=DEFAULT_TIMEOUT)
+def cosmos_empresa_scheduled(empresa_id):
+    """Nocturno Cosmos: 45 dias atras hasta hoy, una empresa."""
+    from datetime import date, timedelta
+    hoy = date.today()
+    fi = (hoy - timedelta(days=45)).isoformat()
+    ff = hoy.isoformat()
+    planos_cosmos_task(empresa_id, fi, ff, enviar_ftps=True)
 
 
 @job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)

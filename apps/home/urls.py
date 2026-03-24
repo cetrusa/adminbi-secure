@@ -8,6 +8,7 @@ from .views import CleanMediaView
 app_name = "home_app"
 
 urlpatterns = [
+    path("ayuda/", views.AyudaPage.as_view(), name="ayuda"),
     path(
         "panel_cubo/",
         views.HomePanelCuboPage.as_view(),
@@ -114,13 +115,16 @@ urlpatterns = [
     path("email-config/proveedores/crear/", email_views.ProveedoresBiCreateView.as_view(), name="proveedores_bi_create"),
     path("email-config/proveedores/<int:pk>/editar/", email_views.ProveedoresBiEditView.as_view(), name="proveedores_bi_edit"),
     path("email-config/proveedores/<int:pk>/eliminar/", email_views.ProveedoresBiDeleteView.as_view(), name="proveedores_bi_delete"),
+    path("email-config/proveedores/<int:pk>/enviar/", email_views.EnviarReporteProveedorView.as_view(), name="enviar_reporte_proveedor"),
     path("email-config/proveedores/carga-masiva/", email_views.CargaMasivaProveedoresView.as_view(), name="carga_masiva_proveedores"),
     path("email-config/supervisores/", email_views.SupervisoresListView.as_view(), name="supervisores_list"),
     path("email-config/supervisores/crear/", email_views.SupervisoresCreateView.as_view(), name="supervisores_create"),
     path("email-config/supervisores/<int:pk>/editar/", email_views.SupervisoresEditView.as_view(), name="supervisores_edit"),
     path("email-config/supervisores/<int:pk>/eliminar/", email_views.SupervisoresDeleteView.as_view(), name="supervisores_delete"),
+    path("email-config/supervisores/<int:pk>/enviar/", email_views.EnviarReporteSupervisorView.as_view(), name="enviar_reporte_supervisor"),
     path("email-config/supervisores/carga-masiva/", email_views.CargaMasivaSupervisoresView.as_view(), name="carga_masiva_supervisores"),
     path("email-config/macrozonas/", email_views.MacrozonasJsonView.as_view(), name="macrozonas_json"),
+    path("email-config/programacion/", email_views.ProgramacionListView.as_view(), name="programacion_list"),
     # --- Trazabilidad Preventa vs Facturación ---
     path("trazabilidad/", views.TrazabilidadPage.as_view(), name="trazabilidad"),
     path("trazabilidad/data/", views.TrazabilidadDataAjaxView.as_view(), name="trazabilidad_data_ajax"),

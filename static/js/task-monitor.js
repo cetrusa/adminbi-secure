@@ -243,9 +243,12 @@
     } else if (taskStatus === 'failed') {
       this.updateProgressBar(100, 'Proceso fallido');
       var errorMsg = 'Error en el proceso';
-      if (response.error) errorMsg = response.error;
+      if (response.error_message) errorMsg = response.error_message;
+      else if (response.error) errorMsg = response.error;
       else if (response.result && typeof response.result === 'string') errorMsg = response.result;
+      else if (response.result && response.result.error_message) errorMsg = response.result.error_message;
       else if (response.result && response.result.error) errorMsg = response.result.error;
+      else if (response.result && response.result.message) errorMsg = response.result.message;
       else if (response.meta && response.meta.error) errorMsg = response.meta.error;
       else if (response.traceback) errorMsg = response.traceback.split('\n').slice(-2)[0];
       this.stopMonitoring('Error en el proceso: ' + errorMsg, true, 1000);

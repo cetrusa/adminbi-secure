@@ -83,6 +83,14 @@
                 <a href="{% url 'home_app:proveedores_bi_edit' pk=p.id %}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
                   <i class="fas fa-edit"></i>
                 </a>
+                <form method="post" action="{% url 'home_app:enviar_reporte_proveedor' pk=p.id %}" class="d-inline"
+                      onsubmit="return confirm('Enviar reporte a {{ p.nombre }} ahora?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-success me-1" title="Enviar reporte ahora"
+                          {% if not p.activo %}disabled{% endif %}>
+                    <i class="fas fa-paper-plane"></i>
+                  </button>
+                </form>
                 <form method="post" action="{% url 'home_app:proveedores_bi_delete' pk=p.id %}" class="d-inline"
                       onsubmit="return confirm('Eliminar proveedor {{ p.nombre }}?');">
                   {% csrf_token %}

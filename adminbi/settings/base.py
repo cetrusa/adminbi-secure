@@ -98,15 +98,22 @@ SESSION_SAVE_EVERY_REQUEST = (
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://redis:6379/1",  # Asegúrate que el host y puerto coincidan con tu docker-compose
+        "LOCATION": "redis://redis:6379/1",
+        "KEY_PREFIX": "adminbi",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "CONNECTION_POOL_KWARGS": {
+                "max_connections": 50,
+                "retry_on_timeout": True,
+            },
         },
     }
 }
 
-RECAPTCHA_PUBLIC_KEY = "6LeffTwlAAAAAKYsF2RHBuWmMxSMYLo7DvWb_szY"
-RECAPTCHA_PRIVATE_KEY = "6LeffTwlAAAAAMwYZgijw9H4HQLMssatf7xayp8k"
+RECAPTCHA_PUBLIC_KEY = get_secret("RECAPTCHA_PUBLIC_KEY", default="6LeffTwlAAAAAKYsF2RHBuWmMxSMYLo7DvWb_szY")
+RECAPTCHA_PRIVATE_KEY = get_secret("RECAPTCHA_PRIVATE_KEY")
 
 TEMPLATES = [
     {

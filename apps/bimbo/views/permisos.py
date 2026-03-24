@@ -123,14 +123,16 @@ class BimboPermisosDataView(View):
         if agencia_ids_pagina:
             try:
                 engine = _get_bimbo_engine()
-                id_list = ", ".join(str(int(i)) for i in agencia_ids_pagina)
+                placeholders = ", ".join(f":id_{i}" for i in range(len(agencia_ids_pagina)))
+                params = {f"id_{i}": int(v) for i, v in enumerate(agencia_ids_pagina)}
                 with engine.connect() as conn:
                     rows_ag = conn.execute(
                         text(
                             f"SELECT id, CEVE, Nombre "
                             f"FROM powerbi_bimbo.agencias_bimbo "
-                            f"WHERE id IN ({id_list})"
-                        )
+                            f"WHERE id IN ({placeholders})"
+                        ),
+                        params,
                     ).mappings().all()
                 agencias_map = {r["id"]: dict(r) for r in rows_ag}
             except Exception as exc:

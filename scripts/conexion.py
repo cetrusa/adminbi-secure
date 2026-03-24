@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import random
 import time
 from contextlib import suppress
 from threading import Lock
@@ -33,6 +34,22 @@ class Conexion:
         return hashlib.sha1(label.encode("utf-8")).hexdigest()
 
     @classmethod
+    def _cleanup_stale_metadata(cls) -> None:
+        """Limpia entradas de metadata huérfanas que TTLCache evictó automáticamente."""
+        active_keys = set(cls._connection_cache.keys())
+        stale_label_keys = set(cls._connection_labels.keys()) - active_keys
+        stale_ts_keys = set(cls._connection_timestamps.keys()) - active_keys
+        for key in stale_label_keys:
+            cls._connection_labels.pop(key, None)
+        for key in stale_ts_keys:
+            cls._connection_timestamps.pop(key, None)
+        if stale_label_keys or stale_ts_keys:
+            logging.debug(
+                "Limpiadas %d entradas stale de metadata de conexiones",
+                len(stale_label_keys | stale_ts_keys),
+            )
+
+    @classmethod
     def _store_engine(
         cls,
         cache_key: str,
@@ -42,6 +59,7 @@ class Conexion:
         cls._connection_cache[cache_key] = engine
         cls._connection_labels[cache_key] = label
         cls._connection_timestamps[cache_key] = time.time()
+        cls._cleanup_stale_metadata()
 
     @classmethod
     def _get_cached_engine(
@@ -50,6 +68,7 @@ class Conexion:
         try:
             engine = cls._connection_cache[cache_key]
         except KeyError:
+            logging.debug("Cache miss para conexión: %s", cache_key)
             cls._connection_labels.pop(cache_key, None)
             cls._connection_timestamps.pop(cache_key, None)
             return None
@@ -370,50 +389,48 @@ class Conexion:
         """
         Devuelve un resumen de los pools activos para monitoreo externo (por ejemplo, Prometheus).
         """
+        metrics = []
         with Conexion._cache_lock:
-            metrics = []
-            snapshot = list(Conexion._connection_cache.items())
+            for cache_key, engine in list(Conexion._connection_cache.items()):
+                pool = getattr(engine, "pool", None)
+                if not pool:
+                    continue
 
-        for cache_key, engine in snapshot:
-            pool = getattr(engine, "pool", None)
-            if not pool:
-                continue
+                labels = {
+                    "connection": Conexion._connection_labels.get(cache_key, cache_key)
+                }
 
-            labels = {
-                "connection": Conexion._connection_labels.get(cache_key, cache_key)
-            }
-
-            try:
-                metrics.extend(
-                    [
-                        {
-                            "metric": "db_pool_size",
-                            "labels": labels.copy(),
-                            "value": pool.size(),
-                        },
-                        {
-                            "metric": "db_pool_checked_in",
-                            "labels": labels.copy(),
-                            "value": pool.checkedin(),
-                        },
-                        {
-                            "metric": "db_pool_checked_out",
-                            "labels": labels.copy(),
-                            "value": pool.checkedout(),
-                        },
-                        {
-                            "metric": "db_pool_overflow",
-                            "labels": labels.copy(),
-                            "value": pool.overflow(),
-                        },
-                    ]
-                )
-            except Exception as exc:
-                logging.debug(
-                    "No se pudieron obtener métricas del pool para %s: %s",
-                    labels.get("connection"),
-                    exc,
-                )
+                try:
+                    metrics.extend(
+                        [
+                            {
+                                "metric": "db_pool_size",
+                                "labels": labels.copy(),
+                                "value": pool.size(),
+                            },
+                            {
+                                "metric": "db_pool_checked_in",
+                                "labels": labels.copy(),
+                                "value": pool.checkedin(),
+                            },
+                            {
+                                "metric": "db_pool_checked_out",
+                                "labels": labels.copy(),
+                                "value": pool.checkedout(),
+                            },
+                            {
+                                "metric": "db_pool_overflow",
+                                "labels": labels.copy(),
+                                "value": pool.overflow(),
+                            },
+                        ]
+                    )
+                except Exception as exc:
+                    logging.debug(
+                        "No se pudieron obtener métricas del pool para %s: %s",
+                        labels.get("connection"),
+                        exc,
+                    )
 
         return metrics
 
@@ -537,7 +554,12 @@ class Conexion:
                 last_error = e
                 if attempt < retries:
                     wait = (2 ** attempt) * base_backoff
-                    logging.warning(f"Retry {attempt + 1}/{retries} tras OperationalError: {e}. Esperando {wait}s…")
+                    jitter = random.uniform(0, wait * 0.25)
+                    wait = min(wait + jitter, 30)  # cap máximo 30s
+                    logging.warning(
+                        "Retry %d/%d tras OperationalError: %s. Esperando %.1fs…",
+                        attempt + 1, retries, e, wait,
+                    )
                     time.sleep(wait)
                     attempt += 1
                 else:
@@ -636,23 +658,25 @@ class Conexion:
         """
         Verifica la salud de los pools de conexiones y cierra aquellos que podrían tener problemas.
         """
+        keys_to_clear = []
         with Conexion._cache_lock:
             for key, engine in list(Conexion._connection_cache.items()):
                 try:
                     pool = engine.pool
-                    # Detectar posibles condiciones problemáticas
                     if (
-                        pool.overflow() > 10  # Muchas conexiones en overflow
+                        pool.overflow() > 10
                         or pool.checkedout()
-                        > pool.size() * 0.9  # Más del 90% del pool en uso
+                        > pool.size() * 0.9
                     ):
                         logging.warning(
                             f"Pool posiblemente en estado de saturación para {key}: "
                             f"overflow={pool.overflow()}, checkedout={pool.checkedout()}. Reiniciando."
                         )
-                        # Eliminar y recrear esta conexión
-                        Conexion.clear_connection_cache(key)
+                        keys_to_clear.append(key)
                 except Exception as e:
                     logging.warning(
                         f"Error al verificar estado del pool para {key}: {e}"
                     )
+        # Limpiar fuera del loop de iteración para evitar double-dispose
+        for key in keys_to_clear:
+            Conexion.clear_connection_cache(key)

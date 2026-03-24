@@ -127,21 +127,17 @@ def analyze_template_performance():
     """
     Función para analizar qué templates son más lentos de renderizar
     """
-    print("🔍 ANALIZANDO TEMPLATES LENTOS...")
-    
+    logger.info("Analizando templates lentos...")
+
     # Esta función se puede expandir para detectar templates problemáticos
     slow_templates = [
         "home/panel_cubo.html",
-        "includes/database_selector.html", 
+        "includes/database_selector.html",
         "base.html"
     ]
-    
-    print("📋 Templates que pueden estar causando lentitud:")
-    for template in slow_templates:
-        print(f"   - {template}")
-    
-    print("\n💡 RECOMENDACIONES:")
-    print("1. Usar {% load cache %} y {% cache %} en templates")
-    print("2. Minimizar loops {% for %} en templates")
-    print("3. Usar {% include %} con 'only' para limitar contexto")
-    print("4. Evitar consultas dentro de templates")
+
+    logger.info("Templates que pueden estar causando lentitud: %s", slow_templates)
+    logger.info(
+        "Recomendaciones: 1) cache en templates, 2) minimizar loops for, "
+        "3) include con 'only', 4) evitar consultas en templates"
+    )

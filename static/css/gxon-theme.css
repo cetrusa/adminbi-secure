@@ -2875,3 +2875,912 @@ span.flatpickr-weekday {
 .alert .btn-close:hover {
     opacity: 1;
 }
+
+/* =========================================================================
+   LIGHT MODE — Paleta y overrides para data-bs-theme="light"
+   ========================================================================= */
+
+/* --- Variables raíz Light Mode --- */
+[data-bs-theme="light"] {
+    --bs-body-bg: #f5f8fa;
+    --bs-body-color: #1e1e2d;
+    --bs-card-bg: #ffffff;
+    --bs-card-border-color: rgba(0, 0, 0, 0.08);
+
+    /* Colores de acento: idénticos al dark para coherencia de marca */
+    --bs-primary: #3699ff;
+    --bs-primary-rgb: 54, 153, 255;
+    --bs-success: #1bc5bd;
+    --bs-success-rgb: 27, 197, 189;
+    --bs-info: #8950fc;
+    --bs-info-rgb: 137, 80, 252;
+    --bs-warning: #ffa800;
+    --bs-warning-rgb: 255, 168, 0;
+    --bs-danger: #f64e60;
+    --bs-danger-rgb: 246, 78, 96;
+
+    --bs-light: #f1f3f5;
+    --bs-dark: #1e1e2d;
+    --bs-tertiary-bg: #e9ecef;
+}
+
+/* =========================================================================
+   Light: Topbar y Sidebar
+   ========================================================================= */
+[data-bs-theme="light"] .gxon-topbar {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .gxon-topbar .text-white {
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="light"] .gxon-topbar .navbar-toggler {
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="light"] .gxon-topbar .nav-item .nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-bs-theme="light"] .gxon-sidebar {
+    background-color: #ffffff !important;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .gxon-sidebar .nav-link {
+    color: #5e6278 !important;
+}
+
+[data-bs-theme="light"] .gxon-sidebar .nav-link:hover {
+    color: var(--bs-primary) !important;
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+[data-bs-theme="light"] .gxon-sidebar .nav-link.active,
+[data-bs-theme="light"] .gxon-sidebar .nav-link:active {
+    color: #ffffff !important;
+}
+
+/* =========================================================================
+   Light: Cards
+   ========================================================================= */
+[data-bs-theme="light"] .card {
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-bs-theme="light"] .card-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* =========================================================================
+   Light: Scrollbar
+   ========================================================================= */
+[data-bs-theme="light"] ::-webkit-scrollbar-track {
+    background: #f5f8fa;
+}
+
+[data-bs-theme="light"] ::-webkit-scrollbar-thumb {
+    background: #c4c4c4;
+}
+
+[data-bs-theme="light"] ::-webkit-scrollbar-thumb:hover {
+    background: #a0a0a0;
+}
+
+/* =========================================================================
+   Light: Accordions
+   ========================================================================= */
+[data-bs-theme="light"] .accordion {
+    --bs-accordion-border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .accordion-button::after {
+    filter: none;
+}
+
+[data-bs-theme="light"] .accordion-button:not(.collapsed)::after {
+    filter: none;
+}
+
+/* =========================================================================
+   Light: Alerts
+   ========================================================================= */
+[data-bs-theme="light"] .alert-secondary {
+    background-color: #6c757d;
+}
+
+[data-bs-theme="light"] .alert-dark {
+    background-color: #343a40;
+}
+
+[data-bs-theme="light"] .alert .btn-close {
+    filter: none;
+    opacity: 0.6;
+}
+
+[data-bs-theme="light"] .alert .btn-close:hover {
+    opacity: 1;
+}
+
+/* =========================================================================
+   Light: Badges y BG utilities
+   ========================================================================= */
+[data-bs-theme="light"] .bg-secondary {
+    background-color: #6c757d !important;
+}
+
+[data-bs-theme="light"] .bg-secondary-subtle {
+    color: #5e6278 !important;
+}
+
+/* =========================================================================
+   Light: Breadcrumbs
+   ========================================================================= */
+[data-bs-theme="light"] .breadcrumb-item+.breadcrumb-item::before {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================================================
+   Light: Buttons
+   ========================================================================= */
+[data-bs-theme="light"] .btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+/* =========================================================================
+   Light: Dropdowns
+   ========================================================================= */
+[data-bs-theme="light"] .dropdown-menu {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .dropdown-divider {
+    border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .dropdown-menu-dark {
+    background-color: #343a40;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* =========================================================================
+   Light: Modals
+   ========================================================================= */
+[data-bs-theme="light"] .modal-content {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme="light"] .modal-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .modal-header .btn-close {
+    filter: none;
+}
+
+[data-bs-theme="light"] .modal-title {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* =========================================================================
+   Light: List Groups
+   ========================================================================= */
+[data-bs-theme="light"] .list-group-item {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* =========================================================================
+   Light: Tabs & Navs
+   ========================================================================= */
+[data-bs-theme="light"] .nav-tabs {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .nav-tabs .nav-link {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .nav-pills .nav-link {
+    color: #5e6278;
+}
+
+/* =========================================================================
+   Light: Offcanvas
+   ========================================================================= */
+[data-bs-theme="light"] .offcanvas-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .offcanvas-header .btn-close {
+    filter: none;
+}
+
+[data-bs-theme="light"] .offcanvas.text-bg-dark {
+    background-color: #343a40 !important;
+}
+
+/* =========================================================================
+   Light: Pagination
+   ========================================================================= */
+[data-bs-theme="light"] .page-item .page-link {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .page-item.disabled .page-link {
+    color: rgba(94, 98, 120, 0.4);
+}
+
+[data-bs-theme="light"] .pagination-dark .page-item.active .page-link {
+    background-color: #343a40;
+    border-color: #343a40;
+}
+
+/* =========================================================================
+   Light: Progress
+   ========================================================================= */
+[data-bs-theme="light"] .progress {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+/* =========================================================================
+   Light: Toasts
+   ========================================================================= */
+[data-bs-theme="light"] .toast {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .toast-header {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .toast-header .btn-close {
+    filter: none;
+}
+
+/* =========================================================================
+   Light: Form Elements
+   ========================================================================= */
+[data-bs-theme="light"] .form-control,
+[data-bs-theme="light"] .form-select {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+[data-bs-theme="light"] .form-control::placeholder {
+    color: #a1a5b7;
+}
+
+[data-bs-theme="light"] .form-control:disabled,
+[data-bs-theme="light"] .form-control[readonly],
+[data-bs-theme="light"] .form-select:disabled {
+    background-color: #f1f3f5;
+    color: #a1a5b7;
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-bs-theme="light"] .input-group-text {
+    background-color: #f1f3f5;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .form-check-input {
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+[data-bs-theme="light"] .form-floating>label {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .form-text {
+    color: #6c757d !important;
+}
+
+/* Validation containers */
+[data-bs-theme="light"] .validation-container {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* =========================================================================
+   Light: Tables & DataTables
+   ========================================================================= */
+[data-bs-theme="light"] .table {
+    --bs-table-border-color: rgba(0, 0, 0, 0.08);
+    --bs-table-hover-bg: rgba(0, 0, 0, 0.02);
+    --bs-table-striped-bg: rgba(0, 0, 0, 0.015);
+}
+
+[data-bs-theme="light"] .table th {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .table-dark {
+    --bs-table-bg: #343a40;
+    --bs-table-color: #fff;
+    --bs-table-border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-bs-theme="light"] .dataTables_wrapper .dataTables_length select,
+[data-bs-theme="light"] .dataTables_wrapper .dataTables_filter input {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+[data-bs-theme="light"] .dataTables_wrapper .dataTables_info {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .dataTables_wrapper .dataTables_paginate .paginate_button {
+    color: #5e6278 !important;
+}
+
+/* =========================================================================
+   Light: Flatpickr (Date Picker)
+   ========================================================================= */
+[data-bs-theme="light"] .flatpickr-calendar {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .flatpickr-calendar.arrowTop:before,
+[data-bs-theme="light"] .flatpickr-calendar.arrowTop:after {
+    border-bottom-color: #ffffff;
+}
+
+[data-bs-theme="light"] .flatpickr-calendar.arrowBottom:before,
+[data-bs-theme="light"] .flatpickr-calendar.arrowBottom:after {
+    border-top-color: #ffffff;
+}
+
+[data-bs-theme="light"] .flatpickr-months .flatpickr-month {
+    background: #ffffff;
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .flatpickr-current-month .flatpickr-monthDropdown-months,
+[data-bs-theme="light"] .flatpickr-current-month input.cur-year {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .flatpickr-current-month .flatpickr-monthDropdown-months:hover,
+[data-bs-theme="light"] .flatpickr-current-month input.cur-year:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-bs-theme="light"] .flatpickr-weekdays {
+    background: #ffffff;
+}
+
+[data-bs-theme="light"] span.flatpickr-weekday {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .flatpickr-day {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .flatpickr-day:hover,
+[data-bs-theme="light"] .flatpickr-day:focus {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--bs-body-color);
+}
+
+/* =========================================================================
+   Light: Tagify
+   ========================================================================= */
+[data-bs-theme="light"] .tagify {
+    --tags-border-color: rgba(0, 0, 0, 0.12);
+    --tag-bg: rgba(0, 0, 0, 0.05);
+    --tag-hover: rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .tagify__input {
+    color: #5e6278;
+}
+
+/* =========================================================================
+   Light: ApexCharts
+   ========================================================================= */
+[data-bs-theme="light"] .apexcharts-canvas {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .apexcharts-toolbar {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .apexcharts-menu {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .apexcharts-theme-light .apexcharts-menu-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-bs-theme="light"] .apexcharts-xaxis line,
+[data-bs-theme="light"] .apexcharts-yaxis line {
+    stroke: rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme="light"] .apexcharts-xaxis-tick {
+    stroke: rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme="light"] .apexcharts-gridline {
+    stroke: rgba(0, 0, 0, 0.06);
+}
+
+[data-bs-theme="light"] .apexcharts-text {
+    fill: #5e6278;
+}
+
+[data-bs-theme="light"] .apexcharts-legend-text {
+    color: #5e6278 !important;
+}
+
+/* =========================================================================
+   Light: Maps (jVectorMap)
+   ========================================================================= */
+[data-bs-theme="light"] .jvm-region {
+    fill: #d0d5dd;
+    stroke: #e9ecef;
+}
+
+[data-bs-theme="light"] .jvm-tooltip {
+    background-color: #1e1e2d;
+    color: #fff;
+}
+
+/* =========================================================================
+   Light: Chat App
+   ========================================================================= */
+[data-bs-theme="light"] .chat-app-wrapper {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .chat-sidebar {
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .chat-search-container {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .chat-contact-item {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+[data-bs-theme="light"] .chat-contact-item:hover,
+[data-bs-theme="light"] .chat-contact-item.active {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+[data-bs-theme="light"] .chat-contact-info h6 {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .chat-contact-info p {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .chat-main-panel {
+    background-color: #f5f8fa;
+}
+
+[data-bs-theme="light"] .chat-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .chat-message-bubble.received {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+[data-bs-theme="light"] .chat-input-area {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .chat-input-area .form-control {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+[data-bs-theme="light"] .chat-input-area .form-control:focus {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* =========================================================================
+   Light: Sidebar Submenus
+   ========================================================================= */
+[data-bs-theme="light"] .gxon-sidebar .nav-item .collapse .nav::before {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .gxon-sidebar .nav-item .collapse .nav-link {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .gxon-sidebar .nav-item .collapse .nav-link:hover,
+[data-bs-theme="light"] .gxon-sidebar .nav-item .collapse .nav-link.active {
+    color: var(--bs-primary);
+}
+
+[data-bs-theme="light"] .gxon-sidebar .nav-link.active-multi-level {
+    color: var(--bs-primary) !important;
+}
+
+/* =========================================================================
+   Light: Calendar App
+   ========================================================================= */
+[data-bs-theme="light"] .calendar-draggable-events h6 {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .calendar-main-panel {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .fc-theme-standard .fc-scrollgrid {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .fc-theme-standard td,
+[data-bs-theme="light"] .fc-theme-standard th {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .fc-col-header-cell-cushion {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .fc-daygrid-day-number {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .fc-day-today {
+    background-color: rgba(54, 153, 255, 0.04) !important;
+}
+
+[data-bs-theme="light"] .fc .fc-toolbar-title {
+    color: var(--bs-body-color);
+}
+
+/* =========================================================================
+   Light: Email App
+   ========================================================================= */
+[data-bs-theme="light"] .email-app-wrapper {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .email-sidebar {
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .email-menu-item {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .email-menu-item:hover {
+    color: var(--bs-body-color);
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+[data-bs-theme="light"] .email-menu-item.active {
+    color: var(--bs-primary);
+}
+
+[data-bs-theme="light"] .email-toolbar {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .email-list-item {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-bs-theme="light"] .email-list-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+[data-bs-theme="light"] .email-list-item.unread .email-sender,
+[data-bs-theme="light"] .email-list-item.unread .email-subject {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .email-sender {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .email-subject {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .email-time {
+    color: #a1a5b7;
+}
+
+[data-bs-theme="light"] .email-read-title {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .email-read-body {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .email-read-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .email-attachments-wrapper {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .email-attachments-title {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .email-attachment-card {
+    background-color: #f5f8fa;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .email-attachment-info h6 {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .email-compose-form .form-group {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .email-compose-form .form-label {
+    color: #a1a5b7;
+}
+
+[data-bs-theme="light"] .auth-divider::before,
+[data-bs-theme="light"] .auth-divider::after {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+[data-bs-theme="light"] .auth-social-btns .btn-icon {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #5e6278;
+}
+
+/* =========================================================================
+   Light: Quick Access Cards & Database Selector
+   ========================================================================= */
+[data-bs-theme="light"] .quick-access-card {
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-bs-theme="light"] .quick-access-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-bs-theme="light"] .quick-access-card h6 {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .database-selector-wrapper {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .database-selector-wrapper .form-select {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+[data-bs-theme="light"] .database-selector-wrapper .selector-label {
+    color: #5e6278;
+}
+
+/* =========================================================================
+   Light: Select2
+   ========================================================================= */
+[data-bs-theme="light"] .database-selector-wrapper .select2-container--bootstrap-5 .select2-selection {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+[data-bs-theme="light"] .select2-container--bootstrap-5 .select2-dropdown {
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+[data-bs-theme="light"] .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+[data-bs-theme="light"] .select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="light"] .select2-container--bootstrap-5 .select2-results__message {
+    color: #a1a5b7;
+}
+
+/* =========================================================================
+   Light: Daterangepicker
+   ========================================================================= */
+[data-bs-theme="light"] .daterangepicker {
+    background-color: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-bs-theme="light"] .daterangepicker td.off,
+[data-bs-theme="light"] .daterangepicker td.off.in-range {
+    color: #a1a5b7 !important;
+}
+
+[data-bs-theme="light"] .daterangepicker td.available:hover,
+[data-bs-theme="light"] .daterangepicker th.available:hover {
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="light"] .daterangepicker th {
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="light"] .daterangepicker td {
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="light"] .daterangepicker select.monthselect,
+[data-bs-theme="light"] .daterangepicker select.yearselect {
+    background-color: #ffffff !important;
+    color: var(--bs-body-color) !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-bs-theme="light"] .daterangepicker .drp-buttons {
+    border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-bs-theme="light"] .daterangepicker .drp-buttons .btn-default,
+[data-bs-theme="light"] .daterangepicker .drp-buttons .cancelBtn {
+    background-color: #e9ecef !important;
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="light"] .daterangepicker::before,
+[data-bs-theme="light"] .daterangepicker::after {
+    border-bottom-color: #ffffff !important;
+}
+
+[data-bs-theme="light"] .daterangepicker .ranges {
+    background-color: #ffffff !important;
+}
+
+[data-bs-theme="light"] .daterangepicker .ranges li {
+    color: #5e6278;
+}
+
+[data-bs-theme="light"] .daterangepicker .drp-calendar .input-mini {
+    background-color: #ffffff !important;
+    color: var(--bs-body-color) !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-bs-theme="light"] #reportrange {
+    background-color: var(--bs-card-bg) !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    color: var(--bs-body-color) !important;
+}
+
+/* =========================================================================
+   Light: Navbar Dark variant
+   ========================================================================= */
+[data-bs-theme="light"] .navbar-dark {
+    background-color: #ffffff;
+}
+
+/* =========================================================================
+   Light: Theme toggle button
+   ========================================================================= */
+[data-bs-theme="light"] #themeToggleBtn {
+    color: var(--bs-body-color) !important;
+}
+
+/* =========================================================================
+   Light: User profile pill in topbar
+   ========================================================================= */
+[data-bs-theme="light"] .gxon-topbar .bg-light {
+    background-color: #e9ecef !important;
+}
+
+/* =========================================================================
+   Light: Transición suave al cambiar de tema
+   ========================================================================= */
+html {
+    transition: background-color 0.3s ease;
+}
+
+body,
+.gxon-sidebar,
+.gxon-topbar,
+.card,
+.modal-content,
+.dropdown-menu,
+.form-control,
+.form-select,
+.toast,
+.offcanvas,
+.list-group-item {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* =========================================================================
+   Sección de Ayuda / Manual de Usuario
+   ========================================================================= */
+
+/* --- Help Offcanvas --- */
+.help-search-box {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 0.75rem;
+}
+
+.help-list .help-item {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.help-list .help-item:last-child {
+    border-bottom: none;
+}
+
+.help-list .help-item strong {
+    color: var(--bs-primary);
+    font-size: 0.9rem;
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+.help-list .help-item p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--bs-body-color);
+    opacity: 0.85;
+    line-height: 1.45;
+}
+
+/* --- Help Page --- */
+.help-module-card .table th {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.65rem 1rem;
+}
+
+.help-module-card .table td {
+    padding: 0.85rem 1rem;
+    vertical-align: top;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.help-module-card .table td small {
+    display: inline-block;
+    margin-top: 0.35rem;
+}
+
+/* --- Light mode overrides --- */
+[data-bs-theme="light"] .help-search-box {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .help-list .help-item {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-bs-theme="light"] .help-list .help-item p {
+    opacity: 0.9;
+}

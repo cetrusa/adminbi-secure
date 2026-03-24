@@ -1,0 +1,381 @@
+{% load static %}
+<!-- Offcanvas de Ayuda Rápida -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="helpOffcanvas" aria-labelledby="helpOffcanvasLabel"
+     style="width: 420px;">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title fw-bold" id="helpOffcanvasLabel">
+            <i class="fas fa-circle-question text-primary me-2"></i>Ayuda Rápida
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <div class="px-3 pb-2 pt-1 help-search-box">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="helpSearchInput"
+                       placeholder="Buscar en la ayuda..." autocomplete="off">
+            </div>
+        </div>
+
+        <div class="accordion accordion-flush" id="helpAccordion">
+
+            <!-- ============================================================ -->
+            <!-- CUBOS DE VENTAS -->
+            <!-- ============================================================ -->
+            {% if perms.permisos.panel_cubo %}
+            <div class="accordion-item help-section" data-module="cubos">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#helpCubos">
+                        <i class="fas fa-chart-bar text-primary me-2"></i>
+                        <strong>Cubos de Ventas</strong>
+                    </button>
+                </h2>
+                <div id="helpCubos" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                    <div class="accordion-body py-2 px-3">
+                        <ul class="list-unstyled help-list mb-0">
+                            {% if perms.permisos.cubo %}
+                            <li class="help-item">
+                                <strong>Cubo de Ventas</strong>
+                                <p>Genera el cubo de ventas consolidado a partir de la base de datos SIDIS. Permite seleccionar rango de fechas, empresa y base de datos para generar archivos descargables con el análisis de ventas por producto, cliente y territorio.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.proveedor %}
+                            <li class="help-item">
+                                <strong>Inf. Proveedor</strong>
+                                <p>Genera informes de ventas segmentados por proveedor. Útil para compartir información de desempeño comercial con proveedores específicos, incluyendo volúmenes y tendencias.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.faltantes %}
+                            <li class="help-item">
+                                <strong>Faltantes</strong>
+                                <p>Identifica productos con quiebre de stock o faltantes en el inventario. Muestra productos que no se han vendido o que tienen disponibilidad cero, comparando contra catálogo activo.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.preventa %}
+                            <li class="help-item">
+                                <strong>Preventa</strong>
+                                <p>Reporte de pedidos preventa capturados por la fuerza de ventas. Permite analizar la conversión de preventa a facturación y el cumplimiento de metas por vendedor y zona.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.trazabilidad %}
+                            <li class="help-item">
+                                <strong>Trazabilidad</strong>
+                                <p>Compara los pedidos de preventa contra la facturación real. Muestra métricas de efectividad (% conversión), diferencias entre lo pedido y lo facturado, y KPIs de cumplimiento.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.amovildesk %}
+                            <li class="help-item">
+                                <strong>Inf. Amovildesk</strong>
+                                <p>Dashboard integrado con información de la plataforma Amovildesk para seguimiento de gestión comercial y logística en campo.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.reportes %}
+                            <li class="help-item">
+                                <strong>Reporteador</strong>
+                                <p>Generador de reportes personalizados. Permite seleccionar una plantilla de reporte predefinida, aplicar filtros de fecha y base de datos, y descargar los resultados en formato Excel.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.matrix %}
+                            <li class="help-item">
+                                <strong>Matrix Ventas</strong>
+                                <p>Genera una matriz cruzada de ventas (productos vs clientes/territorios). Ideal para análisis de cobertura y penetración de mercado por categoría de producto.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.config_email_reportes %}
+                            <li class="help-item">
+                                <strong>Correos Proveedores / Supervisores</strong>
+                                <p>Administra las listas de correo electrónico para el envío automático de reportes a proveedores y supervisores de zona. Permite agregar, editar y cargar contactos masivamente.</p>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================================ -->
+            <!-- INTERFACE CONTABLE -->
+            <!-- ============================================================ -->
+            {% if perms.permisos.panel_interface %}
+            <div class="accordion-item help-section" data-module="interface">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#helpInterface">
+                        <i class="fas fa-calculator text-success me-2"></i>
+                        <strong>Interface Contable</strong>
+                    </button>
+                </h2>
+                <div id="helpInterface" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                    <div class="accordion-body py-2 px-3">
+                        <ul class="list-unstyled help-list mb-0">
+                            {% if perms.permisos.interface %}
+                            <li class="help-item">
+                                <strong>Int. Contables</strong>
+                                <p>Genera interfaces contables para integración con el sistema ERP. Extrae movimientos de ventas, devoluciones y ajustes del período seleccionado en formato compatible con el software contable.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.interface_siigo %}
+                            <li class="help-item">
+                                <strong>Int. Siigo</strong>
+                                <p>Genera la interface contable en formato específico para SIIGO. Incluye cuentas, centros de costo y terceros mapeados según la configuración de la empresa.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.plano %}
+                            <li class="help-item">
+                                <strong>Archivos Planos</strong>
+                                <p>Genera archivos planos (CSV/TXT) con datos de ventas, clientes o productos para integración con sistemas externos o análisis en herramientas de terceros.</p>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================================ -->
+            <!-- BI -->
+            <!-- ============================================================ -->
+            {% if perms.permisos.panel_bi %}
+            <div class="accordion-item help-section" data-module="bi">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#helpBi">
+                        <i class="fas fa-chart-pie text-warning me-2"></i>
+                        <strong>BI - Inteligencia de Negocios</strong>
+                    </button>
+                </h2>
+                <div id="helpBi" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                    <div class="accordion-body py-2 px-3">
+                        <ul class="list-unstyled help-list mb-0">
+                            {% if perms.permisos.informe_bi %}
+                            <li class="help-item">
+                                <strong>Dashboard BI</strong>
+                                <p>Panel interactivo de Power BI embebido con indicadores clave de desempeño comercial. Incluye gráficos de ventas, tendencias, comparativos y segmentación por múltiples dimensiones.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.informe_bi_embed %}
+                            <li class="help-item">
+                                <strong>BI Embed</strong>
+                                <p>Vista alternativa del dashboard BI con integración embebida directa. Ofrece la misma información en un formato optimizado para visualización en pantalla completa.</p>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================================ -->
+            <!-- ACTUALIZACIÓN -->
+            <!-- ============================================================ -->
+            {% if perms.permisos.panel_actualizacion %}
+            <div class="accordion-item help-section" data-module="actualizacion">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#helpActualizacion">
+                        <i class="fas fa-sync-alt text-info me-2"></i>
+                        <strong>Actualización</strong>
+                    </button>
+                </h2>
+                <div id="helpActualizacion" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                    <div class="accordion-body py-2 px-3">
+                        <ul class="list-unstyled help-list mb-0">
+                            {% if perms.permisos.actualizar_base %}
+                            <li class="help-item">
+                                <strong>Actualización BD</strong>
+                                <p>Ejecuta el proceso de extracción e inserción de datos desde la base origen (SIDIS) hacia la base BI. Actualiza tablas de ventas, clientes, productos, bodegas y catálogos para el rango de fechas seleccionado.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.actualizacion_bi %}
+                            <li class="help-item">
+                                <strong>Actualización BI</strong>
+                                <p>Refresca el modelo de datos BI después de una actualización de base de datos. Recalcula indicadores, agrega nuevos períodos y sincroniza los dashboards de Power BI.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.cargue_infoventas %}
+                            <li class="help-item">
+                                <strong>Cargue Info Ventas</strong>
+                                <p>Permite cargar manualmente archivos de información de ventas cuando la extracción automática no está disponible. Acepta archivos Excel con el formato estándar de ventas.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.cargue_maestras or perms.permisos.cargue_infoproducto %}
+                            <li class="help-item">
+                                <strong>Archivos Maestros</strong>
+                                <p>Carga y actualiza las tablas maestras del sistema: productos, proveedores, categorías y otros catálogos base. Permite importar desde archivos Excel para mantener los datos de referencia al día.</p>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================================ -->
+            <!-- PLANOS PROVEEDORES -->
+            <!-- ============================================================ -->
+            {% if perms.permisos.ejecutar_cdt or perms.permisos.ejecutar_tsol or perms.permisos.ejecutar_cosmos %}
+            <div class="accordion-item help-section" data-module="planos">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#helpPlanos">
+                        <i class="fas fa-file-export text-cyan me-2"></i>
+                        <strong>Planos Proveedores</strong>
+                    </button>
+                </h2>
+                <div id="helpPlanos" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                    <div class="accordion-body py-2 px-3">
+                        <ul class="list-unstyled help-list mb-0">
+                            {% if perms.permisos.ejecutar_cdt %}
+                            <li class="help-item">
+                                <strong>CDT - Planos MasterFoods</strong>
+                                <p>Genera y envía archivos planos en formato CDT para el proveedor MasterFoods. Los archivos se transmiten automáticamente por SFTP. Incluye historial de envíos y opción de reenvío.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.ejecutar_tsol %}
+                            <li class="help-item">
+                                <strong>TSOL - TrackSales</strong>
+                                <p>Genera archivos planos en formato TSOL para integración con la plataforma TrackSales. Los archivos se envían por FTP al proveedor. Permite consultar historial y reenviar archivos.</p>
+                            </li>
+                            {% endif %}
+                            {% if perms.permisos.ejecutar_cosmos %}
+                            <li class="help-item">
+                                <strong>Cosmos</strong>
+                                <p>Genera y transmite archivos planos en formato Cosmos vía FTPS (FTP seguro). Incluye generación, envío automático, historial de transmisiones y descarga de archivos.</p>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================================ -->
+            <!-- BIMBO -->
+            <!-- ============================================================ -->
+            {% if perms.permisos.reportes_bimbo %}
+            <div class="accordion-item help-section" data-module="bimbo">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#helpBimbo">
+                        <i class="fas fa-truck text-danger me-2"></i>
+                        <strong>Bimbo</strong>
+                    </button>
+                </h2>
+                <div id="helpBimbo" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                    <div class="accordion-body py-2 px-3">
+                        <ul class="list-unstyled help-list mb-0">
+                            <li class="help-item">
+                                <strong>Venta Cero</strong>
+                                <p>Analiza productos Bimbo con venta cero en el período. Identifica SKUs sin movimiento por agencia, permitiendo detectar problemas de distribución o disponibilidad.</p>
+                            </li>
+                            <li class="help-item">
+                                <strong>Rutero</strong>
+                                <p>Reporte de cobertura de rutas por territorio y agencia. Muestra la asignación de clientes a rutas y el nivel de cobertura de la fuerza de ventas Bimbo.</p>
+                            </li>
+                            <li class="help-item">
+                                <strong>Inventarios</strong>
+                                <p>Control de niveles de inventario de productos Bimbo. Muestra existencias actuales, rotación y alertas de sobre-stock o desabastecimiento por agencia.</p>
+                            </li>
+                            <li class="help-item">
+                                <strong>Preventa</strong>
+                                <p>Seguimiento de pedidos preventa para agencias Bimbo. Compara lo solicitado contra lo despachado y calcula indicadores de cumplimiento.</p>
+                            </li>
+                            <li class="help-item">
+                                <strong>Faltantes</strong>
+                                <p>Detalla productos Bimbo faltantes o con quiebre de inventario por agencia. Permite priorizar reabastecimiento y medir niveles de servicio.</p>
+                            </li>
+                            <li class="help-item">
+                                <strong>Planos Bimbo</strong>
+                                <p>Genera archivos planos específicos para integración con los sistemas Bimbo. Incluye formatos de ventas, inventarios y catálogos en las estructuras requeridas.</p>
+                            </li>
+                            <li class="help-item">
+                                <strong>Equivalencias</strong>
+                                <p>Gestiona la tabla de equivalencias entre códigos de producto internos y códigos Bimbo. Permite crear y editar mapeos de productos manualmente.</p>
+                            </li>
+                            <li class="help-item">
+                                <strong>Homologación</strong>
+                                <p>Proceso automático y manual de homologación de productos. El sistema sugiere equivalencias por similitud de nombre/código y permite ajustar manualmente los mapeos.</p>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================================ -->
+            <!-- MONITOR -->
+            <!-- ============================================================ -->
+            {% if perms.monitor.panel_monitor %}
+            <div class="accordion-item help-section" data-module="monitor">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#helpMonitor">
+                        <i class="fas fa-heartbeat text-danger me-2"></i>
+                        <strong>Monitor</strong>
+                    </button>
+                </h2>
+                <div id="helpMonitor" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                    <div class="accordion-body py-2 px-3">
+                        <ul class="list-unstyled help-list mb-0">
+                            <li class="help-item">
+                                <strong>Dashboard de Monitoreo</strong>
+                                <p>Panel de salud del sistema en tiempo real. Muestra el estado de las conexiones a bases de datos, procesos en cola, tareas en ejecución y alertas del sistema.</p>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div><!-- /accordion -->
+
+        <!-- Link a página completa -->
+        <div class="p-3 text-center border-top">
+            <a href="{% url 'home_app:ayuda' %}" class="btn btn-sm btn-subtle-primary">
+                <i class="fas fa-book-open me-1"></i> Ver manual completo
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Búsqueda en offcanvas -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var searchInput = document.getElementById('helpSearchInput');
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', function() {
+        var query = this.value.toLowerCase().trim();
+        var items = document.querySelectorAll('#helpAccordion .help-item');
+        var sections = document.querySelectorAll('#helpAccordion .help-section');
+
+        if (!query) {
+            items.forEach(function(el) { el.style.display = ''; });
+            sections.forEach(function(el) { el.style.display = ''; });
+            return;
+        }
+
+        sections.forEach(function(section) {
+            var hasVisible = false;
+            section.querySelectorAll('.help-item').forEach(function(item) {
+                var text = item.textContent.toLowerCase();
+                if (text.indexOf(query) !== -1) {
+                    item.style.display = '';
+                    hasVisible = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            section.style.display = hasVisible ? '' : 'none';
+            // Auto-expand sections with matches
+            if (hasVisible) {
+                var collapse = section.querySelector('.accordion-collapse');
+                if (collapse && !collapse.classList.contains('show')) {
+                    new bootstrap.Collapse(collapse, {toggle: true});
+                }
+            }
+        });
+    });
+});
+</script>

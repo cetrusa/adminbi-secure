@@ -13,6 +13,8 @@ from django.urls import reverse_lazy
 from django.views import View
 from sqlalchemy import text
 
+import django_rq
+
 from scripts.config import ConfigBasic
 from scripts.conexion import Conexion
 
@@ -49,6 +51,19 @@ class EmailConfigBaseView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Base para todas las vistas de configuracion de email."""
     login_url = reverse_lazy("users_app:user-login")
     permission_required = "permisos.config_email_reportes"
+
+    def dispatch(self, request, *args, **kwargs):
+        # Interceptar cambio de base de datos desde el selector (mismo patrón que BaseView)
+        if request.method == "POST" and "database_select" in request.POST:
+            db = request.POST.get("database_select")
+            if db and request.user.conf_empresas.filter(name=db).exists():
+                request.session["database_name"] = db
+                request.session.modified = True
+                request.session.save()
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"status": "success", "database_name": db})
+            return redirect(request.path)
+        return super().dispatch(request, *args, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +179,7 @@ class ProveedoresBiCreateView(EmailConfigBaseView):
         return render(request, "home/email_config/proveedores_form.html", {
             "modo": "crear",
             "database_name": database_name,
-            "form_url": "home_app:proveedores_bi_create",
+            "form_url": "home_app:proveedores_bi_list",
         })
 
     def post(self, request, *args, **kwargs):
@@ -191,7 +206,7 @@ class ProveedoresBiCreateView(EmailConfigBaseView):
                 "modo": "crear",
                 "database_name": database_name,
                 "form_data": request.POST,
-                "form_url": "home_app:proveedores_bi_create",
+                "form_url": "home_app:proveedores_bi_list",
             })
 
         try:
@@ -365,7 +380,7 @@ class CargaMasivaProveedoresView(EmailConfigBaseView):
             return redirect("home_app:panel_cubo")
         return render(request, "home/email_config/carga_masiva.html", {
             "database_name": database_name,
-            "form_url": "home_app:carga_masiva_proveedores",
+            "form_url": "home_app:proveedores_bi_list",
             "tipo": "proveedores",
         })
 
@@ -469,7 +484,7 @@ class CargaMasivaSupervisoresView(EmailConfigBaseView):
             return redirect("home_app:panel_cubo")
         return render(request, "home/email_config/carga_masiva.html", {
             "database_name": database_name,
-            "form_url": "home_app:carga_masiva_supervisores",
+            "form_url": "home_app:supervisores_list",
             "tipo": "supervisores",
         })
 
@@ -617,7 +632,7 @@ class SupervisoresCreateView(EmailConfigBaseView):
         return render(request, "home/email_config/supervisores_form.html", {
             "modo": "crear",
             "database_name": database_name,
-            "form_url": "home_app:supervisores_create",
+            "form_url": "home_app:supervisores_list",
         })
 
     def post(self, request, *args, **kwargs):
@@ -641,7 +656,7 @@ class SupervisoresCreateView(EmailConfigBaseView):
                 "modo": "crear",
                 "database_name": database_name,
                 "form_data": request.POST,
-                "form_url": "home_app:supervisores_create",
+                "form_url": "home_app:supervisores_list",
             })
 
         try:
@@ -850,3 +865,294 @@ class MacrozonasJsonView(EmailConfigBaseView):
         except Exception as exc:
             logger.error("Error obteniendo macrozonas de %s: %s", db_bi, exc)
             return JsonResponse({"ok": False, "error": str(exc)})
+
+
+# ---------------------------------------------------------------------------
+# Envio individual de reporte a proveedor
+# ---------------------------------------------------------------------------
+
+class EnviarReporteProveedorView(EmailConfigBaseView):
+    """Encola el envio de reporte para un proveedor especifico."""
+
+    def post(self, request, pk, *args, **kwargs):
+        database_name = _require_database(request)
+        if not database_name:
+            messages.error(request, "No hay empresa seleccionada.")
+            return redirect("home_app:panel_cubo")
+
+        try:
+            from apps.home.tasks import enviar_reporte_email_proveedor_task
+            queue = django_rq.get_queue("default")
+            queue.enqueue(
+                enviar_reporte_email_proveedor_task,
+                database_name,
+                pk,
+            )
+            messages.success(
+                request,
+                f"Envio de reporte encolado para proveedor #{pk}. "
+                "Revise el log de envios en unos minutos.",
+            )
+        except Exception as exc:
+            logger.error("Error encolando envio proveedor %s: %s", pk, exc)
+            messages.error(request, f"Error al encolar envio: {exc}")
+
+        return redirect("home_app:proveedores_bi_list")
+
+
+class EnviarReporteSupervisorView(EmailConfigBaseView):
+    """Encola el envio de reporte para un supervisor especifico."""
+
+    def post(self, request, pk, *args, **kwargs):
+        database_name = _require_database(request)
+        if not database_name:
+            messages.error(request, "No hay empresa seleccionada.")
+            return redirect("home_app:panel_cubo")
+
+        try:
+            from apps.home.tasks import enviar_reporte_email_supervisor_task
+            queue = django_rq.get_queue("default")
+            queue.enqueue(
+                enviar_reporte_email_supervisor_task,
+                database_name,
+                pk,
+            )
+            messages.success(
+                request,
+                f"Envio de reporte encolado para supervisor #{pk}. "
+                "Revise el log de envios en unos minutos.",
+            )
+        except Exception as exc:
+            logger.error("Error encolando envio supervisor %s: %s", pk, exc)
+            messages.error(request, f"Error al encolar envio: {exc}")
+
+        return redirect("home_app:supervisores_list")
+
+
+# ---------------------------------------------------------------------------
+# Programación de Tareas
+# ---------------------------------------------------------------------------
+
+def reprogramar_tareas(logger_inst=None):
+    """Cancela y reprograma todas las tareas según la BD ProgramacionTarea."""
+    import importlib
+    from datetime import datetime, timedelta
+    from apps.permisos.models import ProgramacionTarea
+
+    log = logger_inst or logger
+
+    try:
+        from django_rq import get_scheduler
+        scheduler = get_scheduler("default")
+    except Exception as exc:
+        log.error("No se pudo obtener el scheduler: %s", exc)
+        return
+
+    try:
+        tareas = list(ProgramacionTarea.objects.select_related("empresa").all())
+    except Exception:
+        # Migracion 0029 no aplicada aun — campo empresa no existe
+        log.warning("Campo 'empresa' no disponible. Cargando tareas sin select_related.")
+        tareas = list(ProgramacionTarea.objects.all())
+
+    func_paths = {t.func_path for t in tareas}
+
+    # Cancelar jobs existentes que coincidan
+    for job in scheduler.get_jobs():
+        if job.func_name in func_paths:
+            scheduler.cancel(job)
+
+    # Reprogramar las activas
+    for tarea in tareas:
+        if not tarea.activo:
+            log.info("Tarea '%s' desactivada, omitiendo.", tarea.nombre)
+            continue
+
+        try:
+            module_path, func_name = tarea.func_path.rsplit(".", 1)
+            module = importlib.import_module(module_path)
+            func = getattr(module, func_name)
+        except (ImportError, AttributeError) as exc:
+            log.error("No se pudo importar %s: %s", tarea.func_path, exc)
+            continue
+
+        now_utc = datetime.utcnow()
+        hora_utc = tarea.hora_utc
+        next_run = now_utc.replace(
+            hour=hora_utc.hour, minute=hora_utc.minute, second=0, microsecond=0,
+        )
+        if next_run <= now_utc:
+            next_run += timedelta(days=1)
+
+        # Determinar args según tipo de tarea
+        kwargs = {}
+        empresa = getattr(tarea, "empresa", None)
+        if empresa:
+            if "email" in tarea.func_path:
+                kwargs["args"] = [empresa.name]   # email usa database_name
+            else:
+                kwargs["args"] = [empresa.id]     # CDT/TSOL/Cosmos usan empresa_id
+        elif "clean_old_media" in tarea.func_path:
+            kwargs["args"] = [4]
+
+        scheduler.schedule(
+            scheduled_time=next_run,
+            func=func,
+            interval=tarea.intervalo_segundos,
+            repeat=None,
+            **kwargs,
+        )
+        log.info(
+            "Tarea '%s' [%s] programada: %s UTC (cada %ds)",
+            tarea.nombre,
+            getattr(empresa, "name", "Global") if empresa else "Global",
+            next_run,
+            tarea.intervalo_segundos,
+        )
+
+
+class ProgramacionListView(EmailConfigBaseView):
+    """Lista y edicion de horarios de tareas programadas (per-empresa)."""
+
+    def get(self, request, *args, **kwargs):
+        from apps.permisos.models import ProgramacionTarea, ConfEmpresas
+
+        database_name = request.session.get("database_name")
+        empresa = (
+            ConfEmpresas.objects.filter(name=database_name).first()
+            if database_name else None
+        )
+
+        try:
+            if empresa:
+                # Auto-crear tareas si la empresa no tiene ninguna
+                if not ProgramacionTarea.objects.filter(empresa=empresa).exists():
+                    self._crear_tareas_empresa(empresa)
+                tareas_empresa = ProgramacionTarea.objects.filter(empresa=empresa)
+            else:
+                tareas_empresa = ProgramacionTarea.objects.none()
+
+            # Tareas globales (empresa=NULL) — solo lectura
+            tareas_globales = ProgramacionTarea.objects.filter(empresa__isnull=True)
+        except Exception:
+            # Migracion 0029 no aplicada aun — fallback a todas las tareas sin filtro
+            logger.warning("Campo 'empresa' no disponible en ProgramacionTarea. Ejecute: manage.py migrate permisos")
+            tareas_empresa = ProgramacionTarea.objects.all()
+            tareas_globales = ProgramacionTarea.objects.none()
+
+        return render(request, "home/email_config/programacion_list.html", {
+            "tareas": tareas_empresa,
+            "tareas_globales": tareas_globales,
+            "empresa_actual": empresa,
+            "form_url": "home_app:programacion_list",
+        })
+
+    def post(self, request, *args, **kwargs):
+        from apps.permisos.models import ProgramacionTarea, ConfEmpresas
+        import datetime
+
+        database_name = request.session.get("database_name")
+        empresa = (
+            ConfEmpresas.objects.filter(name=database_name).first()
+            if database_name else None
+        )
+
+        if not empresa:
+            messages.error(request, "Seleccione una empresa primero.")
+            return redirect("home_app:programacion_list")
+
+        # Solo editar tareas de esta empresa (fallback: todas si migracion no aplicada)
+        try:
+            tareas = ProgramacionTarea.objects.filter(empresa=empresa)
+        except Exception:
+            tareas = ProgramacionTarea.objects.all()
+        actualizadas = 0
+
+        for tarea in tareas:
+            hora_str = request.POST.get(f"hora_{tarea.id}", "")
+            activo = request.POST.get(f"activo_{tarea.id}") == "on"
+
+            cambio = False
+            if hora_str:
+                try:
+                    h, m = hora_str.split(":")
+                    nueva_hora = datetime.time(int(h), int(m))
+                    if tarea.hora_local != nueva_hora:
+                        tarea.hora_local = nueva_hora
+                        cambio = True
+                except (ValueError, TypeError):
+                    pass
+
+            if tarea.activo != activo:
+                tarea.activo = activo
+                cambio = True
+
+            if cambio:
+                tarea.save()
+                actualizadas += 1
+
+        # Reprogramar en el scheduler
+        if actualizadas > 0:
+            try:
+                reprogramar_tareas(logger)
+                messages.success(
+                    request,
+                    f"{actualizadas} tarea(s) actualizada(s) y reprogramada(s) correctamente.",
+                )
+            except Exception as exc:
+                logger.error("Error reprogramando tareas: %s", exc)
+                messages.warning(
+                    request,
+                    f"{actualizadas} tarea(s) guardada(s) en BD, pero error al reprogramar: {exc}. "
+                    "Los cambios se aplicarán al reiniciar el servidor.",
+                )
+        else:
+            messages.info(request, "No hubo cambios.")
+
+        return redirect("home_app:programacion_list")
+
+    @staticmethod
+    def _crear_tareas_empresa(empresa):
+        """Crea tareas por defecto según integraciones activas de la empresa."""
+        from apps.permisos.models import ProgramacionTarea
+        import datetime
+
+        tareas = []
+        if empresa.envio_email_activo:
+            tareas.append({
+                "nombre": "Reportes por Correo",
+                "descripcion": "Envio de reportes email a proveedores y supervisores.",
+                "func_path": "apps.home.tasks.enviar_reportes_email_task",
+                "hora_local": datetime.time(23, 30),
+                "icono": "fas fa-envelope",
+            })
+        if getattr(empresa, "envio_cdt_activo", False) and empresa.cdt_codigo_proveedor:
+            tareas.append({
+                "nombre": "Planos CDT",
+                "descripcion": "Generacion y envio de planos CDT por SFTP.",
+                "func_path": "apps.home.tasks.cdt_empresa_scheduled",
+                "hora_local": datetime.time(23, 0),
+                "icono": "fas fa-file-export",
+            })
+        if getattr(empresa, "envio_tsol_activo", False) and empresa.tsol_codigo:
+            tareas.append({
+                "nombre": "Planos TSOL",
+                "descripcion": "Generacion y envio de planos TSOL por FTP.",
+                "func_path": "apps.home.tasks.tsol_empresa_scheduled",
+                "hora_local": datetime.time(23, 15),
+                "icono": "fas fa-file-code",
+            })
+        if getattr(empresa, "envio_cosmos_activo", False) and empresa.cosmos_empresa_id:
+            tareas.append({
+                "nombre": "Planos Cosmos",
+                "descripcion": "Generacion y envio de planos Cosmos por FTPS.",
+                "func_path": "apps.home.tasks.cosmos_empresa_scheduled",
+                "hora_local": datetime.time(23, 45),
+                "icono": "fas fa-satellite",
+            })
+
+        for t in tareas:
+            ProgramacionTarea.objects.get_or_create(
+                empresa=empresa, nombre=t["nombre"],
+                defaults={**t, "activo": True, "intervalo_segundos": 86400},
+            )

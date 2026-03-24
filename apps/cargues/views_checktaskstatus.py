@@ -1,15 +1,14 @@
+import logging
+import time
+
 from django.views import View
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 from rq.job import Job, NoSuchJobError
 from django_rq import get_connection
-import time
-import os
-import traceback
+
+logger = logging.getLogger(__name__)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class CheckCargueTaskStatusView(View):
     """
     Vista para comprobar el estado de tareas de cargue masivo y recuperar resultados/progreso.
@@ -28,18 +27,18 @@ class CheckCargueTaskStatusView(View):
 
     def _check_task_status(self, task_id):
         """Lógica común para verificar el estado de una tarea"""
-        print(f"[CHECKTASKSTATUS] Verificando estado. task_id={task_id}")
+        logger.debug("Verificando estado. task_id=%s", task_id)
         if not task_id:
-            print("[CHECKTASKSTATUS][ERROR] No task ID provided")
+            logger.warning("No task ID provided")
             return JsonResponse({"error": "No task ID provided"}, status=400)
-        
+
         connection = get_connection()
         try:
             job = Job.fetch(task_id, connection=connection)
-            print(f"[CHECKTASKSTATUS] Job status: {job.get_status()} | job_id={job.id}")
+            logger.debug("Job status: %s | job_id=%s", job.get_status(), job.id)
             if job.is_finished:
                 result = job.result
-                print(f"[CHECKTASKSTATUS] Job terminado. Resultado: {result}")
+                logger.debug("Job terminado. job_id=%s", job.id)
                 job_info = {
                     "execution_time": (
                         result.get("execution_time", 0)
@@ -78,7 +77,7 @@ class CheckCargueTaskStatusView(View):
                     }
                 )
             elif job.is_failed:
-                print(f"[CHECKTASKSTATUS][ERROR] Job fallido. job_id={job.id}")
+                logger.error("Job fallido. job_id=%s", job.id)
                 error_info = {
                     "job_id": job.id,
                     "exception": (
@@ -120,11 +119,12 @@ class CheckCargueTaskStatusView(View):
                 if progress > 5 and elapsed_time > 0:
                     try:
                         eta = (elapsed_time / progress) * (100 - progress)
-                    except:
+                    except (ZeroDivisionError, TypeError, ValueError):
                         eta = None
                 meta["last_update"] = time.time()
-                print(
-                    f"[CHECKTASKSTATUS] Job en progreso. progress={progress}, stage={stage}, meta={meta}"
+                logger.debug(
+                    "Job en progreso. progress=%s, stage=%s, meta=%s",
+                    progress, stage, meta,
                 )
                 return JsonResponse(
                     {
@@ -137,7 +137,7 @@ class CheckCargueTaskStatusView(View):
                     }
                 )
         except NoSuchJobError:
-            print(f"[CHECKTASKSTATUS][ERROR] Tarea no encontrada: {task_id}")
+            logger.warning("Tarea no encontrada: %s", task_id)
             return JsonResponse(
                 {
                     "status": "notfound",
@@ -145,5 +145,5 @@ class CheckCargueTaskStatusView(View):
                 }
             )
         except Exception as e:
-            print(f"[CHECKTASKSTATUS][ERROR] Excepción: {e}\n{traceback.format_exc()}")
+            logger.exception("Excepción al verificar tarea %s", task_id)
             return JsonResponse({"status": "error", "error": str(e)}, status=500)

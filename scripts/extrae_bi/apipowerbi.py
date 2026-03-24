@@ -336,7 +336,7 @@ class Api_PowerBi:
                 try:
                     if response.content:
                         error_detail = response.json()
-                except:
+                except (ValueError, KeyError):
                     error_detail = response.text
 
                 error_message = f"Error al iniciar refresh. Código: {response.status_code}, Razón: {response.reason}, Detalles: {error_detail}"
@@ -609,10 +609,10 @@ class Api_PowerBi:
     def send_email(self, error_message):
         host = "smtp.gmail.com"
         port = 587
-        username = "torredecontrolamovil@gmail.com"
-        password = "dldaqtceiesyybje"
+        username = get_secret("SMTP_NOTIFICATION_USER")
+        password = get_secret("SMTP_NOTIFICATION_PASS_ALT")
 
-        from_addr = "torredecontrolamovil@gmail.com"
+        from_addr = username
         to_addr = ["cesar.trujillo@amovil.co", "soporte@amovil.co"]
 
         msg = MIMEMultipart()

@@ -32,6 +32,7 @@ mydata.db
 # Credentials and sensitive JSON data
 secret.json
 config_email.json
+config_masterfoods.json
 Exe_Extrae_Bi.json
 InstalarExeFinal-actualizar-Insert.json
 InstalarExeFinal-con-Excel-compi.json

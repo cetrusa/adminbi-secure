@@ -203,8 +203,8 @@ class CuboVentas:
                 "ff": self.IdtReporteFin,
                 "empresa": self.database_name.upper(),  # Asumiendo que :empresa es un valor
             }
-            if self.reporte_id != 2:
-                # Si es el reporte es diferente de 2, no hay filtros adicionales
+            if self.reporte_id not in (2, 7):
+                # Si el reporte no necesita filtros adicionales
                 final_sql_text = text(base_sql)
                 return final_sql_text, params
             else:

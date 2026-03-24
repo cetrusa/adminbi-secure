@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
@@ -114,6 +115,27 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
 
     display_actions.short_description = _("Acciones")
 
+    def _mask_conexion(self, conexion):
+        """Enmascara la contraseña en un dict de conexion JSON."""
+        if not conexion:
+            return "-"
+        masked = dict(conexion)
+        if "pass" in masked and masked["pass"]:
+            masked["pass"] = "********"
+        return masked
+
+    def cdt_conexion_masked(self, obj):
+        return self._mask_conexion(obj.cdt_conexion)
+    cdt_conexion_masked.short_description = _("Conexion SFTP CDT")
+
+    def tsol_conexion_masked(self, obj):
+        return self._mask_conexion(obj.tsol_conexion)
+    tsol_conexion_masked.short_description = _("Conexion FTP TSOL")
+
+    def cosmos_conexion_masked(self, obj):
+        return self._mask_conexion(obj.cosmos_conexion)
+    cosmos_conexion_masked.short_description = _("Conexion FTPS Cosmos")
+
     fieldsets = (
         (
             _("Información General"),
@@ -156,7 +178,7 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
                     "envio_cdt_activo", "planos_cdt",
                     "cdt_nombre_proveedor", "cdt_codigo_proveedor",
                     "cdt_codigos_distribuidor", "cdt_vendedores_especiales",
-                    "cdt_bodega_especial", "cdt_conexion",
+                    "cdt_bodega_especial", "cdt_conexion", "cdt_conexion_masked",
                 ),
                 "description": _("Configuración para generación de planos CDT: reglas de negocio y credenciales SFTP (JSON)."),
                 "classes": ("collapse",),
@@ -171,7 +193,7 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
                     "tsol_filtro_proveedores", "tsol_bodega_to_code",
                     "tsol_code_to_sede", "tsol_sedes_permitidas",
                     "tsol_sede_default_code", "tsol_sede_default_name",
-                    "tsol_conexion",
+                    "tsol_conexion", "tsol_conexion_masked",
                 ),
                 "description": _("Configuración para generación de planos TSOL (TrackSales): mapeos y credenciales FTP (JSON)."),
                 "classes": ("collapse",),
@@ -182,7 +204,7 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "envio_cosmos_activo", "cosmos_empresa_id", "planos_cosmos",
-                    "cosmos_conexion",
+                    "cosmos_conexion", "cosmos_conexion_masked",
                 ),
                 "description": _("Configuración para generación de planos Cosmos y credenciales FTPS (JSON)."),
                 "classes": ("collapse",),
@@ -212,7 +234,12 @@ class ConfEmpresasAdmin(admin.ModelAdmin):
             },
         ),
     )
-    readonly_fields = ("fecha_actualizacion",)
+    readonly_fields = (
+        "fecha_actualizacion",
+        "cdt_conexion_masked",
+        "tsol_conexion_masked",
+        "cosmos_conexion_masked",
+    )
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
@@ -318,13 +345,37 @@ class ConfSqlAdmin(admin.ModelAdmin):
     get_sql_preview.short_description = _("Vista previa SQL")
 
 
+class ConfTipoForm(forms.ModelForm):
+    """Formulario que oculta la contraseña en el admin."""
+
+    txPass = forms.CharField(
+        widget=forms.PasswordInput(render_value=True),
+        required=False,
+        label=_("Password"),
+        help_text=_("Contraseña para la conexion al servidor"),
+    )
+
+    class Meta:
+        model = ConfTipo
+        fields = "__all__"
+
+
 @admin.register(ConfTipo)
 class ConfTipoAdmin(admin.ModelAdmin):
     """Administrador para configuración de tipos."""
 
-    list_display = ("nbTipo", "get_description")
+    form = ConfTipoForm
+    list_display = ("nbTipo", "nmUsr", "get_description")
     search_fields = ("nbTipo",)
     list_per_page = 20
+    fieldsets = (
+        (_("Informacion General"), {
+            "fields": ("nbTipo", "txDescripcion"),
+        }),
+        (_("Credenciales"), {
+            "fields": ("nmUsr", "txPass"),
+        }),
+    )
 
     def get_description(self, obj):
         """Muestra descripción si existe."""
@@ -390,6 +441,7 @@ class CdtEnvioAdmin(admin.ModelAdmin):
         "total_inventario",
         "enviado_sftp_badge",
     )
+    list_select_related = ("empresa",)
     list_filter = ("estado", "enviado_sftp", "empresa")
     search_fields = ("empresa__name", "empresa__nmEmpresa")
     date_hierarchy = "fecha_ejecucion"
@@ -494,6 +546,7 @@ class TsolEnvioAdmin(admin.ModelAdmin):
         "total_inventario",
         "enviado_ftp_badge",
     )
+    list_select_related = ("empresa",)
     list_filter = ("estado", "enviado_ftp", "empresa")
     search_fields = ("empresa__name", "empresa__nmEmpresa")
     date_hierarchy = "fecha_ejecucion"
@@ -596,6 +649,7 @@ class CosmosEnvioAdmin(admin.ModelAdmin):
         "total_registros",
         "enviado_ftps_badge",
     )
+    list_select_related = ("empresa",)
     list_filter = ("estado", "enviado_ftps", "empresa")
     search_fields = ("empresa__name", "empresa__nmEmpresa")
     date_hierarchy = "fecha_ejecucion"

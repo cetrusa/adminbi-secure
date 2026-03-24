@@ -322,10 +322,12 @@ class HomePanelBimboPage(HomePanelCuboPage):
             with engine.connect() as conn:
                 # Agencias (filtradas por permisos usando CEVE como clave compartida)
                 if ceves_permitidos:
-                    ceve_list = ", ".join(str(int(c)) for c in ceves_permitidos)
-                    where_clause = f"WHERE ab.CEVE IN ({ceve_list})"
+                    placeholders = ", ".join(f":ceve_{i}" for i in range(len(ceves_permitidos)))
+                    where_clause = f"WHERE ab.CEVE IN ({placeholders})"
+                    ceve_params = {f"ceve_{i}": int(c) for i, c in enumerate(ceves_permitidos)}
                 else:
                     where_clause = "WHERE 1=0"
+                    ceve_params = {}
                 # Intentar query con proveedores_agencia_bimbo
                 try:
                     rows = conn.execute(
@@ -345,7 +347,8 @@ class HomePanelBimboPage(HomePanelCuboPage):
                             "FROM powerbi_bimbo.agencias_bimbo ab "
                             "LEFT JOIN powerbi_adm.conf_empresas ce ON ab.id_agente = ce.id "
                             f"{where_clause} ORDER BY ab.id"
-                        )
+                        ),
+                        ceve_params,
                     ).mappings().all()
                 except Exception as exc_prov:
                     # Fallback: sin proveedores_agencia_bimbo (tabla puede no existir aun)
@@ -360,7 +363,8 @@ class HomePanelBimboPage(HomePanelCuboPage):
                             "FROM powerbi_bimbo.agencias_bimbo ab "
                             "LEFT JOIN powerbi_adm.conf_empresas ce ON ab.id_agente = ce.id "
                             f"{where_clause} ORDER BY ab.id"
-                        )
+                        ),
+                        ceve_params,
                     ).mappings().all()
                 agencias = [dict(r) for r in rows]
 

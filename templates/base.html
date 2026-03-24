@@ -1,8 +1,15 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es" data-bs-theme="dark">
+<html lang="es">
 
 <head>
+  <!-- Anti-FOUC: aplicar tema antes de pintar -->
+  <script>
+    (function(){
+      var t = localStorage.getItem('dz-theme') || 'dark';
+      document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+  </script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -155,9 +162,13 @@
     integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
     crossorigin="anonymous"></script>
 
+  <script src="{% static 'js/theme-toggle.js' %}"></script>
+
   {% block script %}{% endblock script %}
 
   {% if user.is_authenticated %}
+  {% include "includes/help_offcanvas.html" %}
+
   <!-- Modal de sesion expirada / por expirar -->
   <div class="modal fade" id="sessionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
     aria-labelledby="sessionModalLabel" aria-hidden="true">

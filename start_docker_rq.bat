@@ -34,6 +34,7 @@ set /a retries=30
 
 :docker_ready
 echo [INFO] Docker disponible. Levantando contenedores RQ...
+@REM docker-compose -f %COMPOSE_FILE% up -d
 docker-compose -f %COMPOSE_FILE% up --build
 if errorlevel 1 (
     echo [ERROR] Fallo docker-compose up.

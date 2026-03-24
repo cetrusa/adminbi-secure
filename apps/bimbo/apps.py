@@ -6,3 +6,6 @@ class BimboConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.bimbo"
     verbose_name = _("BIMBO — Administración")
+
+    def ready(self):
+        import apps.bimbo.signals  # noqa: F401

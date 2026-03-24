@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import time
@@ -37,15 +38,25 @@ class Inicio:
             self.dir_actual = "puentemes"
             self.nmDt = self.dir_actual
 
+    @staticmethod
+    def _load_secret(key):
+        """Carga un secreto desde secret.json."""
+        secret_path = os.path.join(os.path.dirname(__file__), "..", "..", "secret.json")
+        if not os.path.exists(secret_path):
+            secret_path = "secret.json"
+        with open(secret_path) as f:
+            secrets = json.loads(f.read())
+        return secrets[key]
+
     def send_email_notification(self, error_message):
         logging.info("Inicia envío de correos")
 
         host = "smtp.gmail.com"
         port = 587
-        username = "torredecontrolamovil@gmail.com"
-        password = "skmgumqcypkhykic"
+        username = self._load_secret("SMTP_NOTIFICATION_USER")
+        password = self._load_secret("SMTP_NOTIFICATION_PASS")
 
-        from_addr = "torredecontrolamovil@gmail.com"
+        from_addr = username
         to_addr = ["cesar.trujillo@amovil.co"]
         
         if not os.path.exists("difusionerror.txt"):

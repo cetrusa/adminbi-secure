@@ -51,18 +51,20 @@ def actualiza_bi_task(
     job = get_current_job()
     job_id = job.id if job else None
 
-    print(
-        f"[actualiza_bi_task] INICIO: database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}, id_reporte={id_reporte}, batch_size={batch_size}"
+    logger.info(
+        "[actualiza_bi_task] INICIO: database_name=%s, periodo=%s..%s, user_id=%s, id_reporte=%s, batch_size=%s",
+        database_name, IdtReporteIni, IdtReporteFin, user_id, id_reporte, batch_size,
     )
 
     def rq_update_progress(meta_dict, progress_percent):
-        print(
-            f"[actualiza_bi_task] Progress callback: meta={meta_dict}, progress={progress_percent}"
+        logger.debug(
+            "[actualiza_bi_task] Progress callback: meta=%s, progress=%s",
+            meta_dict, progress_percent,
         )
         # meta_dict contiene: stage, tabla, nmReporte, progress
         home_tasks.update_job_progress(job_id, int(progress_percent), meta=meta_dict)
 
-    print("[actualiza_bi_task] Instanciando ExtraeBiConfig y ExtraeBiExtractor...")
+    logger.debug("[actualiza_bi_task] Instanciando ExtraeBiConfig y ExtraeBiExtractor...")
     home_tasks.update_job_progress(job_id, 5, meta={"stage": "Iniciando Extrae_Bi"})
     logger.info(
         f"Iniciando actualiza_bi_task (RQ Job: {job_id}) para {database_name}, Periodo: {IdtReporteIni}-{IdtReporteFin}, user_id={user_id}, id_reporte={id_reporte}, batch_size={batch_size}"
@@ -78,14 +80,14 @@ def actualiza_bi_task(
         batch_size=batch_size,
         progress_callback=rq_update_progress,
     )
-    print("[actualiza_bi_task] Ejecutando run() de ExtraeBiExtractor...")
+    logger.debug("[actualiza_bi_task] Ejecutando run() de ExtraeBiExtractor...")
     home_tasks.update_job_progress(
         job_id, 15, meta={"stage": "Ejecutando extractor principal"}
     )
     result = extractor.run()
-    print(f"[actualiza_bi_task] RESULTADO: {result}")
+    logger.info("[actualiza_bi_task] RESULTADO: %s", result)
     home_tasks.update_job_progress(
         job_id, 95, meta={"stage": "Finalizando extracción BI"}
     )
-    print("[actualiza_bi_task] FIN")
+    logger.info("[actualiza_bi_task] FIN")
     return result

@@ -504,7 +504,7 @@ class TrazabilidadExtractor:
         else:
             group_query = _GROUPING_QUERIES.get(agrupacion)
             if not group_query:
-                group_query = _GROUPING_QUERIES["detalle"]
+                group_query = _GROUPING_QUERIES["total"]
             base_sql = group_query.replace("-- FILTERS_HERE", "")
             # Para count de agrupados, envolver en subquery
             count_sql = f"SELECT COUNT(*) FROM ({base_sql}) AS sub"

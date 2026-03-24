@@ -15,7 +15,7 @@ from django.views.generic import View, TemplateView
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from apps.users.decorators import registrar_auditoria
-from django.views.decorators.csrf import csrf_exempt, csrf_protect
+
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.decorators import login_required, permission_required
 from django.http import HttpResponseRedirect
@@ -60,6 +60,12 @@ CACHE_TIMEOUT_SHORT = 60 * 5  # 5 minutos
 CACHE_TIMEOUT_MEDIUM = 60 * 15  # 15 minutos
 CACHE_TIMEOUT_LONG = 60 * 60  # 1 hora
 BATCH_SIZE_DEFAULT = 50000  # TamaÃ±o por defecto para procesamiento por lotes
+
+class AyudaPage(LoginRequiredMixin, TemplateView):
+    """Vista para la página de ayuda / manual de usuario."""
+    template_name = "home/ayuda.html"
+    login_url = reverse_lazy("users_app:user-login")
+
 
 class HomePanelCuboPage(BaseView):
     """
@@ -220,7 +226,7 @@ class HomePanelCuboPage(BaseView):
         o lo crea si no existe.
         """
         # session_key = self.request.session.session_key or "anonymous"  # Comentado
-        cache_key = f"user_cubo_context_{database_name}"
+        cache_key = f"user_cubo_context_{database_name}_{self.request.user.id}"
         user_context = cache.get(cache_key)
 
         if user_context:
@@ -276,7 +282,8 @@ class HomePanelCuboPage(BaseView):
     def _get_cubo_kpis(database_name):
         """
         Obtiene KPIs de cuboventas desde la base BI para el panel y reportes.
-        Incluye ultima facturacion (td=FV) y estado de tablas.
+        Incluye venta neta (FV - FD - NC), devoluciones, dias habiles,
+        dias transcurridos, proyectado y estado de tablas.
         Retorna dict vacio si no hay datos o si ocurre un error.
         """
         try:
@@ -295,7 +302,7 @@ class HomePanelCuboPage(BaseView):
             )
 
             with engine.connect() as conn:
-                # KPIs principales de cuboventas
+                # KPIs generales de cuboventas (90 dias)
                 row = conn.execute(
                     text(
                         f"SELECT "
@@ -303,9 +310,6 @@ class HomePanelCuboPage(BaseView):
                         f"COUNT(*) AS total_registros, "
                         f"COUNT(DISTINCT cv.nbProducto) AS productos_unicos, "
                         f"COUNT(DISTINCT cv.idPuntoVenta) AS puntos_venta, "
-                        f"COALESCE(SUM(cv.vlrTotalconIva), 0) AS valor_total_ventas, "
-                        f"COALESCE(SUM(CASE WHEN cv.dtContabilizacion >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) "
-                        f"THEN cv.vlrTotalconIva ELSE 0 END), 0) AS ventas_ultimo_mes, "
                         f"MAX(CASE WHEN cv.td = 'FV' THEN cv.dtContabilizacion END) AS ultima_facturacion "
                         f"FROM `{db_bi}`.cuboventas cv "
                         f"WHERE cv.dtContabilizacion >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)"
@@ -315,7 +319,64 @@ class HomePanelCuboPage(BaseView):
                 if not row or row["ultimo_dato"] is None:
                     return {}
 
-                # Estado de tablas: verificar cuales existen y tienen datos
+                # Ventas del mes actual: bruta (FV), devoluciones (FD+NC)
+                ventas_mes = conn.execute(
+                    text(
+                        f"SELECT "
+                        f"COALESCE(SUM(CASE WHEN cv.td = 'FV' THEN cv.vlrAntesIva ELSE 0 END), 0) AS venta_bruta, "
+                        f"COALESCE(SUM(CASE WHEN cv.td IN ('FD','NC') THEN ABS(cv.vlrAntesIva) ELSE 0 END), 0) AS devoluciones "
+                        f"FROM `{db_bi}`.cuboventas cv "
+                        f"WHERE cv.dtContabilizacion >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01') "
+                        f"AND cv.dtContabilizacion <= CURDATE()"
+                    )
+                ).mappings().first()
+
+                venta_bruta = float(ventas_mes["venta_bruta"] or 0) if ventas_mes else 0
+                devoluciones = float(ventas_mes["devoluciones"] or 0) if ventas_mes else 0
+                venta_neta = venta_bruta - devoluciones
+
+                # Impactos: clientes con venta neta > 0 en el mes
+                impactos_row = conn.execute(
+                    text(
+                        f"SELECT COUNT(*) AS impactos FROM ("
+                        f"  SELECT cv.idPuntoVenta "
+                        f"  FROM `{db_bi}`.cuboventas cv "
+                        f"  WHERE cv.dtContabilizacion >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01') "
+                        f"  AND cv.dtContabilizacion <= CURDATE() "
+                        f"  GROUP BY cv.idPuntoVenta "
+                        f"  HAVING SUM(cv.vlrAntesIva) > 0"
+                        f") sub"
+                    )
+                ).mappings().first()
+                impactos = int(impactos_row["impactos"] or 0) if impactos_row else 0
+
+                # Dias habiles y transcurridos del mes (tabla habiles, boSeleccionado=0 es habil)
+                dias_habiles = 0
+                dias_transcurridos = 0
+                try:
+                    dias_row = conn.execute(
+                        text(
+                            f"SELECT "
+                            f"SUM(CASE WHEN h.boSeleccionado = 0 THEN 1 ELSE 0 END) AS dias_habiles, "
+                            f"SUM(CASE WHEN h.boSeleccionado = 0 AND h.dtFecha <= CURDATE() "
+                            f"THEN 1 ELSE 0 END) AS dias_transcurridos "
+                            f"FROM `{db_bi}`.habiles h "
+                            f"WHERE h.nbMes = MONTH(CURDATE()) "
+                            f"AND h.nbAnno = YEAR(CURDATE())"
+                        )
+                    ).mappings().first()
+                    if dias_row:
+                        dias_habiles = int(dias_row["dias_habiles"] or 0)
+                        dias_transcurridos = int(dias_row["dias_transcurridos"] or 0)
+                except Exception:
+                    logger.debug("Tabla habiles no disponible para %s", db_bi)
+
+                # Proyectado: (venta_neta / dias_transcurridos) * dias_habiles
+                proyectado = 0.0
+                if dias_transcurridos > 0 and dias_habiles > 0:
+                    proyectado = (venta_neta / dias_transcurridos) * dias_habiles
+
+                # Estado de tablas
                 tablas_check = conn.execute(
                     text(
                         "SELECT "
@@ -359,8 +420,13 @@ class HomePanelCuboPage(BaseView):
                 "total_registros": int(row["total_registros"] or 0),
                 "productos_unicos": int(row["productos_unicos"] or 0),
                 "puntos_venta": int(row["puntos_venta"] or 0),
-                "valor_total_ventas": float(row["valor_total_ventas"] or 0),
-                "ventas_ultimo_mes": float(row["ventas_ultimo_mes"] or 0),
+                "impactos": impactos,
+                "venta_bruta": venta_bruta,
+                "devoluciones": devoluciones,
+                "venta_neta": venta_neta,
+                "dias_habiles": dias_habiles,
+                "dias_transcurridos": dias_transcurridos,
+                "proyectado": proyectado,
                 "reportes_activos": reportes_activos,
                 "tablas_info": tablas_info,
                 "tablas_ok": tablas_ok,
@@ -382,7 +448,7 @@ class CuboKpisAjaxView(LoginRequiredMixin, View):
             return JsonResponse({"ok": False, "error": "No hay empresa seleccionada."})
 
         # Invalidar cache para forzar datos frescos
-        cache_key = f"user_cubo_context_{database_name}"
+        cache_key = f"user_cubo_context_{database_name}_{self.request.user.id}"
         cache.delete(cache_key)
 
         kpis = HomePanelCuboPage._get_cubo_kpis(database_name)
@@ -1345,24 +1411,24 @@ class CheckTaskStatusView(BaseView):
     """
 
     def post(self, request, *args, **kwargs):
-        print("[CheckTaskStatusView] Inicio POST")
+        logger.debug("[CheckTaskStatusView] Inicio POST")
         task_id = request.POST.get("task_id") or request.session.get("task_id")
-        print(f"[CheckTaskStatusView] task_id recibido: {task_id}")
+        logger.debug("[CheckTaskStatusView] task_id recibido: %s", task_id)
 
         if not task_id:
-            print("[CheckTaskStatusView] No task_id proporcionado")
+            logger.debug("[CheckTaskStatusView] No task_id proporcionado")
             return JsonResponse({"error": "No task ID provided"}, status=400)
 
         connection = get_connection()
         try:
-            print("[CheckTaskStatusView] Intentando fetch del job...")
+            logger.debug("[CheckTaskStatusView] Intentando fetch del job...")
             job = Job.fetch(task_id, connection=connection)
-            print(f"[CheckTaskStatusView] Job encontrado: {job}")
+            logger.debug("[CheckTaskStatusView] Job encontrado: %s", job)
 
             if job.is_finished:
-                print(f"[CheckTaskStatusView] Job {task_id} terminado")
+                logger.debug("[CheckTaskStatusView] Job %s terminado", task_id)
                 result = job.result
-                print(f"[CheckTaskStatusView] Resultado del job: {result}")
+                logger.debug("[CheckTaskStatusView] Resultado del job: %s", result)
 
                 task_name = (
                     job.func_name.split(".")[-1]
@@ -1390,31 +1456,26 @@ class CheckTaskStatusView(BaseView):
                     if "preview_sample" not in result:
                         result["preview_sample"] = []
 
-                # Si la tarea es interface_task y success es False, devolver error y NO mostrar link de descarga
+                # Si cualquier tarea terminó con success=False, devolver como fallida
+                # para que el frontend muestre el error real en vez de "completado"
                 if (
-                    task_name
-                    in [
-                        "interface_task",
-                        "interface_siigo_task",
-                        "plano_task",
-                        "matrix_task",
-                        "venta_cero_task",
-                    ]
-                    and isinstance(result, dict)
+                    isinstance(result, dict)
                     and not result.get("success", True)
                 ):
                     error_message = (
                         result.get("error_message")
                         or result.get("message")
-                        or "Error en la tarea de interface."
+                        or result.get("error")
+                        or f"Error en la tarea {task_name}."
                     )
-                    logger.warning(f"Tarea interface_task fallida: {error_message}")
+                    logger.warning("Tarea %s fallida: %s", task_name, error_message)
                     return JsonResponse(
                         {
                             "status": "failed",
                             "state": "FAILED",
                             "result": result,
                             "error_message": error_message,
+                            "error": error_message,
                             "summary": self._generate_summary(job, result),
                         },
                         status=200,
@@ -1444,8 +1505,9 @@ class CheckTaskStatusView(BaseView):
                     and "file_path" in result
                     and "file_name" in result
                 ):
-                    print(
-                        f"[CheckTaskStatusView] Guardando file_path y file_name en sesiÃ³n: {result['file_path']}, {result['file_name']}"
+                    logger.debug(
+                        "[CheckTaskStatusView] Guardando file_path y file_name en sesiÃ³n: %s, %s",
+                        result['file_path'], result['file_name']
                     )
                     request.session["file_path"] = result["file_path"]
                     request.session["file_name"] = result["file_name"]
@@ -1475,8 +1537,9 @@ class CheckTaskStatusView(BaseView):
 
                 # Si es la tarea de BI y hay estado Power BI, incluirlo en la respuesta principal
                 if task_name == "actualiza_bi_task" and result.get("powerbi_status"):
-                    print(
-                        f"[CheckTaskStatusView] Estado Power BI detectado: {result['powerbi_status']}"
+                    logger.debug(
+                        "[CheckTaskStatusView] Estado Power BI detectado: %s",
+                        result['powerbi_status']
                     )
                     return JsonResponse(
                         {
@@ -1489,10 +1552,11 @@ class CheckTaskStatusView(BaseView):
                         }
                     )
 
-                print(
-                    f"[CheckTaskStatusView] Devolviendo respuesta de Ã©xito para {task_id}"
+                logger.debug(
+                    "[CheckTaskStatusView] Devolviendo respuesta de Ã©xito para %s",
+                    task_id
                 )
-                logger.info(f"Tarea {task_id} completada exitosamente: {result}")
+                logger.info("Tarea %s completada exitosamente: %s", task_id, result)
                 return JsonResponse(
                     {
                         "status": "completed",
@@ -1504,7 +1568,7 @@ class CheckTaskStatusView(BaseView):
                 )
 
             elif job.is_failed:
-                print(f"[CheckTaskStatusView] Job {task_id} fallido")
+                logger.error("[CheckTaskStatusView] Job %s fallido", task_id)
                 error_info = {
                     "job_id": job.id,
                     "exception": (
@@ -1519,8 +1583,8 @@ class CheckTaskStatusView(BaseView):
                         job.enqueued_at.timestamp() if job.enqueued_at else None
                     ),
                 }
-                print(f"[CheckTaskStatusView] Error info: {error_info}")
-                logger.error(f"Tarea {task_id} fallida: {error_info}")
+                logger.error("[CheckTaskStatusView] Error info: %s", error_info)
+                logger.error("Tarea %s fallida: %s", task_id, error_info)
                 return JsonResponse(
                     {
                         "status": "failed",
@@ -1532,7 +1596,7 @@ class CheckTaskStatusView(BaseView):
                 )
 
             else:
-                print(f"[CheckTaskStatusView] Job {task_id} en progreso")
+                logger.debug("[CheckTaskStatusView] Job %s en progreso", task_id)
                 progress = 0
                 stage = "En cola"
                 meta = {}
@@ -1552,8 +1616,9 @@ class CheckTaskStatusView(BaseView):
                     if file_path and os.path.exists(file_path):
                         file_ready = True
                         if "file_name" in job.meta:
-                            print(
-                                f"[CheckTaskStatusView] Archivo parcial listo: {file_path}"
+                            logger.debug(
+                                "[CheckTaskStatusView] Archivo parcial listo: %s",
+                                file_path
                             )
                             request.session["file_path"] = file_path
                             request.session["file_name"] = job.meta.get("file_name")
@@ -1578,8 +1643,8 @@ class CheckTaskStatusView(BaseView):
                 meta["last_update"] = time.time()
 
                 if file_ready and progress >= 95 and meta.get("file_ready"):
-                    print(
-                        f"[CheckTaskStatusView] Ãxito parcial, archivo listo para descarga"
+                    logger.debug(
+                        "[CheckTaskStatusView] Ãxito parcial, archivo listo para descarga"
                     )
                     status_data = {
                         "status": "partial_success",
@@ -1608,11 +1673,11 @@ class CheckTaskStatusView(BaseView):
                             job.started_at.timestamp() if job.started_at else None
                         ),
                     }
-                print(f"[CheckTaskStatusView] Estado actual: {status_data}")
+                logger.debug("[CheckTaskStatusView] Estado actual: %s", status_data)
                 return JsonResponse(status_data)
 
         except NoSuchJobError:
-            print(f"[CheckTaskStatusView] NoSuchJobError para {task_id}")
+            logger.warning("[CheckTaskStatusView] NoSuchJobError para %s", task_id)
             return JsonResponse(
                 {
                     "status": "notfound",
@@ -1622,9 +1687,9 @@ class CheckTaskStatusView(BaseView):
             )
 
         except Exception as e:
-            print(f"[CheckTaskStatusView] ExcepciÃ³n: {str(e)}")
-            logger.error(
-                f"Error al comprobar estado de tarea {task_id}: {str(e)}\n{traceback.format_exc()}"
+            logger.exception("[CheckTaskStatusView] ExcepciÃ³n: %s", e)
+            logger.exception(
+                "Error al comprobar estado de tarea %s: %s", task_id, e
             )
             return JsonResponse({"status": "error", "state": "ERROR", "error": str(e)}, status=500)
 
@@ -1649,8 +1714,8 @@ class CheckTaskStatusView(BaseView):
         task_name = (
             job.func_name.split(".")[-1] if "." in job.func_name else job.func_name
         )
-        logger.info(f"Resumen: func_name={job.func_name}, task_name={task_name}")
-        print(f"Resumen: func_name={job.func_name}, task_name={task_name}")
+        logger.info("Resumen: func_name=%s, task_name=%s", job.func_name, task_name)
+        logger.debug("Resumen: func_name=%s, task_name=%s", job.func_name, task_name)
 
         if task_name == "actualiza_bi_task":
             # Para actualizaciÃ³n de BI
@@ -1860,11 +1925,12 @@ class ReporteGenericoPage(BaseView):
 
     @classmethod
     def as_view_with_params(cls, **initkwargs):
-        print(f"[ReporteGenericoPage] as_view_with_params: initkwargs={initkwargs}")
+        logger.debug("[ReporteGenericoPage] as_view_with_params: initkwargs=%s", initkwargs)
 
         def view(*args, **kwargs):
-            print(
-                f"[ReporteGenericoPage] as_view_with_params.view: args={args}, kwargs={kwargs}"
+            logger.debug(
+                "[ReporteGenericoPage] as_view_with_params.view: args=%s, kwargs=%s",
+                args, kwargs
             )
             self = cls(**initkwargs)
             return self.dispatch(*args, **kwargs)
@@ -1873,14 +1939,16 @@ class ReporteGenericoPage(BaseView):
 
     @method_decorator(registrar_auditoria)
     def dispatch(self, request, *args, **kwargs):
-        print(
-            f"[ReporteGenericoPage] dispatch: method={request.method}, user={request.user}, args={args}, kwargs={kwargs}"
+        logger.debug(
+            "[ReporteGenericoPage] dispatch: method=%s, user=%s, args=%s, kwargs=%s",
+            request.method, request.user, args, kwargs
         )
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        print(
-            f"[ReporteGenericoPage] post: POST={request.POST}, user={request.user}, args={args}, kwargs={kwargs}"
+        logger.debug(
+            "[ReporteGenericoPage] post: POST=%s, user=%s, args=%s, kwargs=%s",
+            request.POST, request.user, args, kwargs
         )
         database_name = request.POST.get("database_select")
         IdtReporteIni = request.POST.get("IdtReporteIni")
@@ -1897,7 +1965,7 @@ class ReporteGenericoPage(BaseView):
             # Limpiar cachÃ© de configuraciÃ³n para reflejar el cambio inmediatamente
             from scripts.config import ConfigBasic
             ConfigBasic.clear_cache(database_name=database_name)
-            print(
+            logger.debug(
                 "[ReporteGenericoPage] post: Solo cambio de base de datos, actualizado en sesiÃ³n y cachÃ© limpiado."
             )
             return JsonResponse(
@@ -1907,7 +1975,7 @@ class ReporteGenericoPage(BaseView):
                 }
             )
         if not all([database_name, IdtReporteIni, IdtReporteFin]):
-            print("[ReporteGenericoPage] post: Faltan datos requeridos")
+            logger.debug("[ReporteGenericoPage] post: Faltan datos requeridos")
             return JsonResponse(
                 {
                     "success": False,
@@ -1920,12 +1988,14 @@ class ReporteGenericoPage(BaseView):
             # Esto asegura que la tarea use la configuraciÃ³n mÃ¡s reciente
             from scripts.config import ConfigBasic
             ConfigBasic.clear_cache(database_name=database_name)
-            print(
-                f"[ReporteGenericoPage] post: CachÃ© limpiado para database_name={database_name}"
+            logger.debug(
+                "[ReporteGenericoPage] post: CachÃ© limpiado para database_name=%s",
+                database_name
             )
             
-            print(
-                f"[ReporteGenericoPage] post: Llamando a task_func.delay con database_name={database_name}, IdtReporteIni={IdtReporteIni}, IdtReporteFin={IdtReporteFin}, user_id={user_id}, id_reporte={self.id_reporte}, batch_size={batch_size}"
+            logger.debug(
+                "[ReporteGenericoPage] post: Llamando a task_func.delay con database_name=%s, IdtReporteIni=%s, IdtReporteFin=%s, user_id=%s, id_reporte=%s, batch_size=%s",
+                database_name, IdtReporteIni, IdtReporteFin, user_id, self.id_reporte, batch_size
             )
             task = self.task_func.delay(
                 database_name,
@@ -1935,24 +2005,25 @@ class ReporteGenericoPage(BaseView):
                 id_reporte,
                 batch_size,
             )
-            print(f"[ReporteGenericoPage] post: Tarea lanzada con task_id={task.id}")
+            logger.debug("[ReporteGenericoPage] post: Tarea lanzada con task_id=%s", task.id)
             return JsonResponse({"success": True, "task_id": task.id})
         except Exception as e:
-            print(
-                f"[ReporteGenericoPage] post: Error al iniciar la tarea de reporte: {e}"
+            logger.exception(
+                "[ReporteGenericoPage] post: Error al iniciar la tarea de reporte: %s", e
             )
-            logger.error(f"Error al iniciar la tarea de reporte: {e}")
+            logger.exception("Error al iniciar la tarea de reporte: %s", e)
             return JsonResponse(
                 {"success": False, "error_message": f"Error: {str(e)}"}, status=500
             )
 
     def get(self, request, *args, **kwargs):
-        print(
-            f"[ReporteGenericoPage] get: user={request.user}, args={args}, kwargs={kwargs}"
+        logger.debug(
+            "[ReporteGenericoPage] get: user=%s, args=%s, kwargs=%s",
+            request.user, args, kwargs
         )
         database_name = request.session.get("database_name")
         if not database_name:
-            print(
+            logger.debug(
                 "[ReporteGenericoPage] get: No hay database_name en sesiÃ³n, redirigiendo."
             )
             messages.warning(
@@ -1961,13 +2032,14 @@ class ReporteGenericoPage(BaseView):
             return redirect("home_app:panel_cubo")
         context = self.get_context_data(**kwargs)
         context["data"] = None
-        print(
-            f"[ReporteGenericoPage] get: Renderizando respuesta con context={context}"
+        logger.debug(
+            "[ReporteGenericoPage] get: Renderizando respuesta con context=%s",
+            context
         )
         return self.render_to_response(context)
 
     def get_context_data(self, **kwargs):
-        print(f"[ReporteGenericoPage] get_context_data: kwargs={kwargs}")
+        logger.debug("[ReporteGenericoPage] get_context_data: kwargs=%s", kwargs)
         context = super().get_context_data(**kwargs)
         context["form_url"] = self.form_url
         user_id = self.request.user.id
@@ -1977,7 +2049,7 @@ class ReporteGenericoPage(BaseView):
             context["proveedores"] = config.config.get("proveedores", [])
             context["macrozonas"] = config.config.get("macrozonas", [])
             # KPIs de cuboventas (cacheados via _get_cached_user_context del panel)
-            cache_key = f"user_cubo_context_{database_name}"
+            cache_key = f"user_cubo_context_{database_name}_{self.request.user.id}"
             cached = cache.get(cache_key)
             if cached and cached.get("kpis"):
                 context["kpis"] = cached["kpis"]
@@ -1998,7 +2070,7 @@ class ReporteGenericoPage(BaseView):
                 context["file_size"] = os.path.getsize(file_path)
             else:
                 context["file_size"] = None
-        print(f"[ReporteGenericoPage] get_context_data: context={context}")
+        logger.debug("[ReporteGenericoPage] get_context_data: context=%s", context)
         return context
 
     def get_reporte_preview(
@@ -2187,7 +2259,7 @@ class ReporteListView(View):
             ]
             return JsonResponse({"status": "success", "reportes_list": reportes_list})
         except Exception as e:
-            print(f"Error en ReporteListView: {e}")
+            logger.exception("Error en ReporteListView: %s", e)
             return JsonResponse(
                 {
                     "status": "error",
@@ -2555,7 +2627,6 @@ def cdt_download(request, envio_id):
 @permission_required("permisos.reenviar_cdt", raise_exception=True)
 def cdt_reenviar_sftp(request, envio_id):
     """Re-envia un envio CDT por SFTP."""
-    import json as json_lib
     from apps.permisos.models import CdtEnvio
 
     if request.method != "POST":
@@ -2778,27 +2849,13 @@ def tsol_reenviar_ftp(request, envio_id):
         return JsonResponse({"error": "Archivo ZIP no disponible."}, status=404)
 
     try:
-        import zipfile
-
-        # Extraer archivos del ZIP a un directorio temporal
-        extract_dir = envio.archivo_descarga.replace(".zip", "_reenvio")
-        os.makedirs(extract_dir, exist_ok=True)
-
-        with zipfile.ZipFile(envio.archivo_descarga, "r") as zf:
-            zf.extractall(extract_dir)
-
-        archivos = [
-            os.path.join(extract_dir, f) for f in os.listdir(extract_dir)
-            if not f.startswith(".")
-        ]
-
         from scripts.tsol.PlanosTSOL import PlanosTSOL
 
         processor = PlanosTSOL.__new__(PlanosTSOL)
         processor.empresa = envio.empresa
         processor._log = lambda msg: logger.info(msg)
 
-        ftp_ok = processor.enviar_por_ftp(archivos)
+        ftp_ok = processor.enviar_por_ftp(envio.archivo_descarga)
 
         envio.enviado_ftp = ftp_ok
         if ftp_ok:

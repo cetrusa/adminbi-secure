@@ -232,8 +232,8 @@ class PlanosCosmos:
         intento = 0
         while intento < 3:
             try:
-                sql = text(f"SELECT * FROM powerbi_adm.conf_sql_cosmos WHERE nmReporte = '{reporte}'")
-                result = self.config_basic.execute_sql_query(sql)
+                sql = text("SELECT * FROM powerbi_adm.conf_sql_cosmos WHERE nmReporte = :reporte")
+                result = self.config_basic.execute_sql_query(sql, params={"reporte": reporte})
                 df = result
 
                 if not df.empty:
@@ -294,9 +294,9 @@ class PlanosCosmos:
 
             for nbSql in tx_cosmos_list:
                 archivo_query = text(
-                    f"SELECT nmReporte, txDescripcion FROM powerbi_adm.conf_sql_cosmos WHERE nbSql = {nbSql}"
+                    "SELECT nmReporte, txDescripcion FROM powerbi_adm.conf_sql_cosmos WHERE nbSql = :nbSql"
                 )
-                result = self.config_basic.execute_sql_query(archivo_query)
+                result = self.config_basic.execute_sql_query(archivo_query, params={"nbSql": nbSql})
                 if not result.empty:
                     archivo = result.iloc[0]["txDescripcion"]
                     reporte = result.iloc[0]["nmReporte"]

@@ -14,7 +14,14 @@
       "Bash(git commit:*)",
       "Bash(test:*)",
       "Bash(pip show:*)",
-      "Bash(DJANGO_SETTINGS_MODULE=adminbi.settings.local python manage.py makemigrations:*)"
+      "Bash(DJANGO_SETTINGS_MODULE=adminbi.settings.local python manage.py makemigrations:*)",
+      "Bash(done)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)",
+      "Bash(python3:*)",
+      "Bash(/c/Python313/python:*)",
+      "Bash(DJANGO_SETTINGS_MODULE=adminbi.settings.local python manage.py migrate:*)",
+      "Bash(source:*)"
     ]
   }
 }

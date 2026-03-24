@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.http import JsonResponse
@@ -7,6 +9,8 @@ from django.utils.decorators import method_decorator
 
 from apps.bimbo.tasks import bimbo_homologacion_task
 from apps.users.views import BaseView
+
+logger = logging.getLogger(__name__)
 
 
 class HomologacionBimboPage(BaseView):
@@ -54,9 +58,9 @@ class HomologacionBimboPage(BaseView):
         except (ValueError, TypeError):
             id_agencia = None
 
-        print(
-            f"[homologacion_bimbo][POST] database_name={database_name} id_agencia={id_agencia}",
-            flush=True,
+        logger.debug(
+            "[homologacion_bimbo][POST] database_name=%s id_agencia=%s",
+            database_name, id_agencia,
         )
 
         job = bimbo_homologacion_task.delay(

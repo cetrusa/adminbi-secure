@@ -517,7 +517,7 @@ class MasterFoodsProcessor:
             hostname = self.config.get('sftp_host', 'mars.cdtbigdata.com')
             port = self.config.get('sftp_port', 22)
             username = self.config.get('sftp_user', 'mars.distrijass')
-            password = self.config.get('sftp_pass', 'faGTmw')
+            password = self.config.get('sftp_pass', '')
             
             self.logger.info(f"🔗 Conectando a {hostname}:{port} como {username}")
             
@@ -595,14 +595,14 @@ class MasterFoodsProcessor:
                 try:
                     sftp.close()
                     self.logger.info("📁 Canal SFTP cerrado")
-                except:
+                except Exception:
                     pass
             
             if ssh:
                 try:
                     ssh.close()
                     self.logger.info("🔗 Conexión SSH cerrada")
-                except:
+                except Exception:
                     pass
             
             # Log del resumen final
@@ -839,7 +839,7 @@ class MasterFoodsProcessor:
                             try:
                                 if len(str(cell.value)) > max_length:
                                     max_length = len(str(cell.value))
-                            except:
+                            except (TypeError, AttributeError):
                                 pass
                         adjusted_width = (max_length + 2)
                         worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
@@ -859,7 +859,7 @@ class MasterFoodsProcessor:
                             try:
                                 if len(str(cell.value)) > max_length:
                                     max_length = len(str(cell.value))
-                            except:
+                            except (TypeError, AttributeError):
                                 pass
                         adjusted_width = (max_length + 2)
                         worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
@@ -934,7 +934,7 @@ class MasterFoodsProcessor:
                     try:
                         if len(str(cell.value)) > max_length:
                             max_length = len(str(cell.value))
-                    except:
+                    except (TypeError, AttributeError):
                         pass
                 adjusted_width = (max_length + 2)
                 worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
