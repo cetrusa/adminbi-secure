@@ -34,7 +34,8 @@
 
         function init() {
             loadSelect2(function () {
-                var database = window.sessionStorage.getItem("database_name");
+                // Prioridad: sessionStorage > sesion del servidor (fallback)
+                var database = window.sessionStorage.getItem("database_name") || '{{ database_name|default:"" }}';
                 var $databaseSelect = $('#database_select');
 
                 $.get('{% url "users_app:database_list" %}', function (data) {
@@ -48,6 +49,8 @@
 
                     if (database) {
                         $databaseSelect.val(database);
+                        // Sincronizar sessionStorage con el valor del servidor si estaba vacio
+                        window.sessionStorage.setItem("database_name", database);
                     }
 
                     // Inicializar Select2 con búsqueda progresiva

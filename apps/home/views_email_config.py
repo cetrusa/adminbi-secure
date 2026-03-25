@@ -1044,6 +1044,7 @@ class ProgramacionListView(EmailConfigBaseView):
             "tareas": tareas_empresa,
             "tareas_globales": tareas_globales,
             "empresa_actual": empresa,
+            "database_name": request.session.get("database_name", ""),
             "form_url": "home_app:programacion_list",
         })
 

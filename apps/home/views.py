@@ -66,6 +66,12 @@ class AyudaPage(LoginRequiredMixin, TemplateView):
     template_name = "home/ayuda.html"
     login_url = reverse_lazy("users_app:user-login")
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_url"] = "home_app:panel_cubo"
+        context["database_name"] = self.request.session.get("database_name", "")
+        return context
+
 
 class HomePanelCuboPage(BaseView):
     """
@@ -336,7 +342,8 @@ class HomePanelCuboPage(BaseView):
                     text(
                         f"SELECT "
                         f"COALESCE(SUM(CASE WHEN cv.td = 'FV' THEN cv.vlrAntesIva ELSE 0 END), 0) AS venta_bruta, "
-                        f"COALESCE(SUM(CASE WHEN cv.td IN ('FD','NC') THEN ABS(cv.vlrAntesIva) ELSE 0 END), 0) AS devoluciones "
+                        f"COALESCE(SUM(CASE WHEN cv.td IN ('FD','NC') THEN ABS(cv.vlrAntesIva) ELSE 0 END), 0) AS devoluciones, "
+                        f"MAX(CASE WHEN cv.td = 'FV' THEN cv.dtContabilizacion END) AS ultima_fv "
                         f"FROM `{db_bi}`.cuboventas cv "
                         f"WHERE cv.dtContabilizacion >= :fi "
                         f"AND cv.dtContabilizacion <= :ff"
@@ -347,6 +354,7 @@ class HomePanelCuboPage(BaseView):
                 venta_bruta = float(ventas_mes["venta_bruta"] or 0) if ventas_mes else 0
                 devoluciones = float(ventas_mes["devoluciones"] or 0) if ventas_mes else 0
                 venta_neta = venta_bruta - devoluciones
+                ultima_fv = ventas_mes["ultima_fv"] if ventas_mes else None
 
                 # Impactos: clientes con venta neta > 0 en el mes
                 impactos_row = conn.execute(
@@ -365,19 +373,22 @@ class HomePanelCuboPage(BaseView):
                 impactos = int(impactos_row["impactos"] or 0) if impactos_row else 0
 
                 # Dias habiles y transcurridos del mes (tabla habiles, boSeleccionado=0 es habil)
+                # Transcurridos se cuentan solo hasta la ultima fecha de FV, no hasta hoy
                 dias_habiles = 0
                 dias_transcurridos = 0
                 try:
+                    fecha_corte = str(ultima_fv) if ultima_fv else hoy
                     dias_row = conn.execute(
                         text(
                             f"SELECT "
                             f"SUM(CASE WHEN h.boSeleccionado = 0 THEN 1 ELSE 0 END) AS dias_habiles, "
-                            f"SUM(CASE WHEN h.boSeleccionado = 0 AND h.dtFecha <= CURDATE() "
+                            f"SUM(CASE WHEN h.boSeleccionado = 0 AND h.dtFecha <= :corte "
                             f"THEN 1 ELSE 0 END) AS dias_transcurridos "
                             f"FROM `{db_bi}`.habiles h "
                             f"WHERE h.nbMes = MONTH(CURDATE()) "
                             f"AND h.nbAnno = YEAR(CURDATE())"
-                        )
+                        ),
+                        {"corte": fecha_corte}
                     ).mappings().first()
                     if dias_row:
                         dias_habiles = int(dias_row["dias_habiles"] or 0)

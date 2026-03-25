@@ -1514,7 +1514,7 @@ def _add_dashboard_supervisor_sheet(
     sql_kpis = (
         "SELECT "
         "  macrozona_id, macro AS macrozona, "
-        "  MIN(bodega) AS bodega, MIN(nbAlmacen) AS almacen, "
+        "  MIN(nbAlmacen) AS bodega, MIN(nbAlmacen) AS almacen, "
         "  nbZona AS zona, nmZona AS nombre_zona, "
         "  SUM(CASE WHEN td = 'FV' THEN vlrAntesIva ELSE 0 END) AS ventas_netas, "
         "  SUM(CASE WHEN td IN ('FD','NC') THEN ABS(vlrAntesIva) ELSE 0 END) AS devoluciones, "
@@ -1559,6 +1559,27 @@ def _add_dashboard_supervisor_sheet(
         "GROUP BY r.zona_id"
     )
 
+    # Ultima fecha de FV para calcular dias transcurridos reales
+    sql_ultima_fv = (
+        "SELECT MAX(dtContabilizacion) AS ultima_fv "
+        "FROM cuboventas "
+        "WHERE td = 'FV' "
+        "  AND dtContabilizacion BETWEEN :fi AND :ff "
+        f"  AND macrozona_id IN ({placeholders})"
+    )
+
+    # Dias habiles del mes (boSeleccionado=0 es habil)
+    # Transcurridos se cuentan solo hasta la ultima fecha de FV
+    sql_habiles = (
+        "SELECT "
+        "  SUM(CASE WHEN h.boSeleccionado = 0 THEN 1 ELSE 0 END) AS dias_habiles, "
+        "  SUM(CASE WHEN h.boSeleccionado = 0 AND h.dtFecha <= :corte "
+        "    THEN 1 ELSE 0 END) AS dias_transcurridos "
+        "FROM habiles h "
+        "WHERE h.nbMes = MONTH(CURDATE()) "
+        "  AND h.nbAnno = YEAR(CURDATE())"
+    )
+
     try:
         params = {"fi": fecha_ini, "ff": fecha_fin}
         with engine.connect() as conn:
@@ -1570,6 +1591,21 @@ def _add_dashboard_supervisor_sheet(
             except Exception:
                 cl_act_rows = []
                 logger.info("Tabla rutas no disponible, omitiendo cl. activos.")
+
+            # Dias habiles y proyeccion
+            dias_habiles = 0
+            dias_transcurridos = 0
+            try:
+                ufv_row = conn.execute(sa_text(sql_ultima_fv), params).mappings().first()
+                fecha_corte = str(ufv_row["ultima_fv"]) if ufv_row and ufv_row["ultima_fv"] else fecha_fin
+                dias_row = conn.execute(
+                    sa_text(sql_habiles), {"corte": fecha_corte}
+                ).mappings().first()
+                if dias_row:
+                    dias_habiles = int(dias_row["dias_habiles"] or 0)
+                    dias_transcurridos = int(dias_row["dias_transcurridos"] or 0)
+            except Exception:
+                logger.info("Tabla habiles no disponible, omitiendo proyeccion.")
 
         if not rows:
             logger.info("Dashboard sin datos para macrozonas %s", macrozonas)
@@ -1596,6 +1632,7 @@ def _add_dashboard_supervisor_sheet(
             ci = imp_map.get(str(r["zona"]), 0)
             ca = cl_act_map.get(str(r["zona"]), 0)
             falt = falt_map.get(str(r["zona"]), 0)
+            proy = (vn / dias_transcurridos) * dias_habiles if dias_transcurridos > 0 and dias_habiles > 0 else 0
 
             zones.append({
                 "zona": r["zona"], "nombre": r["nombre_zona"],
@@ -1603,7 +1640,7 @@ def _add_dashboard_supervisor_sheet(
                 "almacen": r["almacen"] or r["bodega"] or "",
                 "vb": vb, "vn": vn, "dev": dev, "cam": cam,
                 "nf": nf, "fd": fd, "fc": fc,
-                "ca": ca, "ci": ci, "falt": falt,
+                "ca": ca, "ci": ci, "falt": falt, "proy": proy,
                 "pct_dev": dev / vb if vb > 0 else 0,
                 "pct_cam": cam / vb if vb > 0 else 0,
                 "pct_cl": ci / ca if ca > 0 else 0,
@@ -1618,6 +1655,7 @@ def _add_dashboard_supervisor_sheet(
         tot["pct_cam"] = tot["cam"] / tot["vb"] if tot["vb"] > 0 else 0
         tot["pct_cl"] = tot["ci"] / tot["ca"] if tot["ca"] > 0 else 0
         tot["drop"] = tot["vn"] / tot["ci"] if tot["ci"] > 0 else 0
+        tot["proy"] = (tot["vn"] / dias_transcurridos) * dias_habiles if dias_transcurridos > 0 and dias_habiles > 0 else 0
 
         # ── Construir hoja ──
         wb = load_workbook(file_path)
@@ -1642,7 +1680,7 @@ def _add_dashboard_supervisor_sheet(
         )
 
         # Fila 1-2: título
-        NUM_COLS = 16
+        NUM_COLS = 17
         for rw in (1, 2):
             ws.merge_cells(start_row=rw, start_column=1, end_row=rw, end_column=NUM_COLS)
             for c in range(1, NUM_COLS + 1):
@@ -1662,6 +1700,7 @@ def _add_dashboard_supervisor_sheet(
         val_bad = Font(name="Calibri", size=16, bold=True, color=RED_C)
         kpis = [
             ("T. Venta Neta", f"${tot['vn']/1000:,.0f}K", False),
+            ("Proyección", f"${tot['proy']/1000:,.0f}K", False),
             ("T. Devolución", f"${tot['dev']/1000:,.0f}K", True),
             ("% Devolución", f"{tot['pct_dev']*100:.1f}%", True),
             ("% Cl. Imp.", f"{tot['pct_cl']*100:.1f}%", False),
@@ -1682,7 +1721,7 @@ def _add_dashboard_supervisor_sheet(
         # Fila 7: encabezados tabla
         headers = [
             "Zona", "Macrozona", "Almacen",
-            "T. Vta Neta ($K)", "T. Devolución ($K)", "% Dev.",
+            "T. Vta Neta ($K)", "Proyección ($K)", "T. Devolución ($K)", "% Dev.",
             "# Fact. Dev.", "T. Cambios ($K)", "% Camb.", "# Fact. Cam.",
             "Cl. Activos", "Cl. Impactados", "% Cl. Imp.", "Drop Size ($K)",
             "# Facturas", "Faltantes ($K)",
@@ -1696,12 +1735,13 @@ def _add_dashboard_supervisor_sheet(
             cell.border = thin
 
         # Filas 8+: datos por zona
-        pct_cols = (6, 9, 13)  # % Dev., % Camb., % Cl. Imp.
+        pct_cols = (7, 10, 14)  # % Dev., % Camb., % Cl. Imp.
         dat_font = Font(name="Calibri", size=9)
         for ri, z in enumerate(zones, 8):
             vals = [
                 z["zona"], z["macrozona"], z["almacen"],
-                round(z["vn"] / 1000), round(z["dev"] / 1000), z["pct_dev"],
+                round(z["vn"] / 1000), round(z["proy"] / 1000),
+                round(z["dev"] / 1000), z["pct_dev"],
                 z["fd"], round(z["cam"] / 1000), z["pct_cam"], z["fc"],
                 z["ca"], z["ci"], z["pct_cl"], round(z["drop"] / 1000),
                 z["nf"], round(z["falt"] / 1000),
@@ -1723,7 +1763,8 @@ def _add_dashboard_supervisor_sheet(
         tot_font = Font(name="Calibri", size=9, bold=True, color="FFFFFF")
         tot_vals = [
             "TOTAL", "", "",
-            round(tot["vn"] / 1000), round(tot["dev"] / 1000), tot["pct_dev"],
+            round(tot["vn"] / 1000), round(tot["proy"] / 1000),
+            round(tot["dev"] / 1000), tot["pct_dev"],
             tot["fd"], round(tot["cam"] / 1000), tot["pct_cam"], tot["fc"],
             tot["ca"], tot["ci"], tot["pct_cl"], round(tot["drop"] / 1000),
             tot["nf"], round(tot["falt"] / 1000),
@@ -1740,7 +1781,7 @@ def _add_dashboard_supervisor_sheet(
             cell.alignment = left_al if ci <= 3 else right_al
 
         # Anchos
-        widths = [8, 14, 14, 18, 18, 10, 12, 16, 10, 12, 12, 14, 10, 14, 12, 14]
+        widths = [8, 14, 14, 18, 18, 18, 10, 12, 16, 10, 12, 12, 14, 10, 14, 12, 14]
         for i, w in enumerate(widths, 1):
             ws.column_dimensions[get_column_letter(i)].width = w
 
