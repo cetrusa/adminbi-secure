@@ -156,25 +156,30 @@ class IncrustarBiPage(home_views.ReporteGenericoPage):
 
     def post(self, request, *args, **kwargs):
         """
-        Maneja la solicitud POST *únicamente* para actualizar la base de datos seleccionada
-        cuando el selector de base de datos envía el formulario.
+        Maneja la solicitud POST para actualizar la base de datos seleccionada.
+        Retorna JsonResponse para peticiones AJAX (database_selector.html).
         """
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
         database_name = request.POST.get("database_select")
 
         if database_name:
             request.session["database_name"] = database_name
+            request.session.modified = True
+            request.session.save()
             logger.info(
-                f"Usuario {request.user.id} seleccionó base de datos: {database_name} en IncrustarBiPage"
+                f"Usuario {request.user.id} selecciono base de datos: {database_name} en IncrustarBiPage"
             )
-            # Optional: Clear specific cache related to the old database if necessary
-            # cache.delete(f'some_cache_key_{request.user.id}')
         else:
             logger.warning(
-                f"Usuario {request.user.id} envió POST a IncrustarBiPage sin database_select."
+                f"Usuario {request.user.id} envio POST a IncrustarBiPage sin database_select."
             )
-            messages.warning(request, "No se seleccionó ninguna empresa.")
+            if is_ajax:
+                return JsonResponse({"success": False, "error": "No se selecciono empresa."}, status=400)
+            messages.warning(request, "No se selecciono ninguna empresa.")
+            return redirect(reverse_lazy("bi_app:reporte_embed"))
 
-        # Redirect back to the GET view of this page
+        if is_ajax:
+            return JsonResponse({"success": True, "message": f"Base de datos actualizada a: {database_name}"})
         return redirect(reverse_lazy("bi_app:reporte_embed"))
 
 

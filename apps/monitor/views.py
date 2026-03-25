@@ -27,14 +27,22 @@ class HomePanelMonitorPage(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         )
 
     def post(self, request, *args, **kwargs):
+        from django.http import JsonResponse
+
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
         database_name = request.POST.get("database_select")
         if not database_name:
+            if is_ajax:
+                return JsonResponse({"success": False, "error": "No se selecciono empresa."}, status=400)
             return redirect("monitor:dashboard")
         request.session["database_name"] = database_name
+        request.session.modified = True
+        request.session.save()
         StaticPage.name = database_name
         session_key = request.session.session_key or "anonymous"
-        cache_key = f"panel_monitor_{request.user.id}_{session_key}"
-        cache.delete(cache_key)
+        cache.delete(f"panel_monitor_{request.user.id}_{session_key}")
+        if is_ajax:
+            return JsonResponse({"success": True, "message": f"Base de datos actualizada a: {database_name}"})
         return redirect("monitor:dashboard")
 
     def get(self, request, *args, **kwargs):

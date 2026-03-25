@@ -90,9 +90,9 @@ class HomePanelCuboPage(BaseView):
     def post(self, request, *args, **kwargs):
         """
         Maneja la solicitud POST para seleccionar base de datos.
-        Optimizado para respuesta inmediata.
+        Retorna JsonResponse para peticiones AJAX (database_selector.html).
         """
-        start_time = time.time()  # MediciÃ³n de tiempo para anÃ¡lisis de rendimiento
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
         try:
             request.session["template_name"] = self.template_name
@@ -100,43 +100,51 @@ class HomePanelCuboPage(BaseView):
 
             if not database_name:
                 logger.warning(
-                    f"Intento de selecciÃ³n de base de datos vacÃ­a por usuario {request.user.id}"
+                    f"Intento de seleccion de base de datos vacia por usuario {request.user.id}"
                 )
+                if is_ajax:
+                    return JsonResponse({"success": False, "error": "No se selecciono empresa."}, status=400)
                 return redirect("home_app:panel_cubo")
 
-            # Validar el nombre de la base de datos (prevenir inyecciÃ³n)
+            # Validar el nombre de la base de datos (prevenir inyeccion)
             if not self._validate_database_name(database_name):
                 logger.warning(
-                    f"Intento de uso de nombre de base de datos invÃ¡lido: {database_name} por usuario {request.user.id}"
+                    f"Intento de uso de nombre de base de datos invalido: {database_name} por usuario {request.user.id}"
                 )
-                messages.error(request, "Nombre de base de datos no vÃ¡lido")
+                if is_ajax:
+                    return JsonResponse({"success": False, "error": "Nombre de base de datos no valido."}, status=400)
+                messages.error(request, "Nombre de base de datos no valido")
                 return redirect("home_app:panel_cubo")
 
-            # Usar modificaciÃ³n eficiente de sesiÃ³n
+            # Actualizar sesion
             request.session["database_name"] = database_name
-            request.session.modified = True  # Marcar la sesiÃ³n como modificada
-            request.session.save()  # Forzar guardado de la sesiÃ³n
+            request.session.modified = True
+            request.session.save()
             StaticPage.name = database_name
 
-            # Invalidar cachÃ© especÃ­fica para este usuario y sesiÃ³n
+            # Invalidar cache de pagina renderizada
             session_key = request.session.session_key or "anonymous"
-            cache_key = f"panel_cubo_{request.user.id}_{session_key}"
-            cache.delete(cache_key)
+            cache.delete(f"panel_cubo_{request.user.id}_{session_key}")
 
-            # Limpiar cachÃ© de configuraciÃ³n para este usuario y base de datos
+            # Invalidar cache de KPIs para esta empresa
+            cache.delete(f"user_cubo_context_{database_name}_{request.user.id}")
+
+            # Limpiar cache de configuracion
             ConfigBasic.clear_cache(
                 database_name=database_name, user_id=request.user.id
             )
 
-            logger.debug(
-                f"HomePanelCuboPage.post completado en {time.time() - start_time:.2f}s"
-            )
+            logger.debug("HomePanelCuboPage.post: sesion actualizada a %s", database_name)
 
+            if is_ajax:
+                return JsonResponse({"success": True, "message": f"Base de datos actualizada a: {database_name}"})
             return redirect("home_app:panel_cubo")
 
         except Exception as e:
             logger.error(f"Error en HomePanelCuboPage.post: {str(e)}")
-            messages.error(request, "Error al procesar la selecciÃ³n de base de datos")
+            if is_ajax:
+                return JsonResponse({"success": False, "error": str(e)}, status=500)
+            messages.error(request, "Error al procesar la seleccion de base de datos")
             return redirect("home_app:panel_cubo")
 
     def get(self, request, *args, **kwargs):
@@ -320,15 +328,20 @@ class HomePanelCuboPage(BaseView):
                     return {}
 
                 # Ventas del mes actual: bruta (FV), devoluciones (FD+NC)
+                from datetime import date as _date
+                primer_dia_mes = _date.today().replace(day=1).isoformat()
+                hoy = _date.today().isoformat()
+
                 ventas_mes = conn.execute(
                     text(
                         f"SELECT "
                         f"COALESCE(SUM(CASE WHEN cv.td = 'FV' THEN cv.vlrAntesIva ELSE 0 END), 0) AS venta_bruta, "
                         f"COALESCE(SUM(CASE WHEN cv.td IN ('FD','NC') THEN ABS(cv.vlrAntesIva) ELSE 0 END), 0) AS devoluciones "
                         f"FROM `{db_bi}`.cuboventas cv "
-                        f"WHERE cv.dtContabilizacion >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01') "
-                        f"AND cv.dtContabilizacion <= CURDATE()"
-                    )
+                        f"WHERE cv.dtContabilizacion >= :fi "
+                        f"AND cv.dtContabilizacion <= :ff"
+                    ),
+                    {"fi": primer_dia_mes, "ff": hoy}
                 ).mappings().first()
 
                 venta_bruta = float(ventas_mes["venta_bruta"] or 0) if ventas_mes else 0
@@ -341,12 +354,13 @@ class HomePanelCuboPage(BaseView):
                         f"SELECT COUNT(*) AS impactos FROM ("
                         f"  SELECT cv.idPuntoVenta "
                         f"  FROM `{db_bi}`.cuboventas cv "
-                        f"  WHERE cv.dtContabilizacion >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01') "
-                        f"  AND cv.dtContabilizacion <= CURDATE() "
+                        f"  WHERE cv.dtContabilizacion >= :fi "
+                        f"  AND cv.dtContabilizacion <= :ff "
                         f"  GROUP BY cv.idPuntoVenta "
                         f"  HAVING SUM(cv.vlrAntesIva) > 0"
                         f") sub"
-                    )
+                    ),
+                    {"fi": primer_dia_mes, "ff": hoy}
                 ).mappings().first()
                 impactos = int(impactos_row["impactos"] or 0) if impactos_row else 0
 
@@ -482,9 +496,9 @@ class HomePanelBiPage(BaseView):
     def post(self, request, *args, **kwargs):
         """
         Maneja la solicitud POST para seleccionar base de datos.
-        Optimizado para respuesta inmediata.
+        Retorna JsonResponse para peticiones AJAX (database_selector.html).
         """
-        start_time = time.time()  # MediciÃ³n de tiempo para anÃ¡lisis de rendimiento
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
         try:
             request.session["template_name"] = self.template_name
@@ -492,44 +506,44 @@ class HomePanelBiPage(BaseView):
 
             if not database_name:
                 logger.warning(
-                    f"Intento de selecciÃ³n de base de datos vacÃ­a por usuario {request.user.id}"
+                    f"Intento de seleccion de base de datos vacia por usuario {request.user.id}"
                 )
+                if is_ajax:
+                    return JsonResponse({"success": False, "error": "No se selecciono empresa."}, status=400)
                 return redirect("home_app:panel_bi")
 
-            # Validar el nombre de la base de datos (prevenir inyecciÃ³n)
             if not self._validate_database_name(database_name):
                 logger.warning(
-                    f"Intento de uso de nombre de base de datos invÃ¡lido: {database_name} por usuario {request.user.id}"
+                    f"Intento de uso de nombre de base de datos invalido: {database_name} por usuario {request.user.id}"
                 )
-                messages.error(request, "Nombre de base de datos no vÃ¡lido")
+                if is_ajax:
+                    return JsonResponse({"success": False, "error": "Nombre de base de datos no valido."}, status=400)
+                messages.error(request, "Nombre de base de datos no valido")
                 return redirect("home_app:panel_bi")
 
-            # Usar modificaciÃ³n eficiente de sesiÃ³n
             request.session["database_name"] = database_name
             request.session.modified = True
             request.session.save()
             StaticPage.name = database_name
 
-            # Invalidar cachÃ© especÃ­fica para este usuario y sesiÃ³n
-            # Incluir ID de sesiÃ³n para manejar modo incÃ³gnito
             session_key = request.session.session_key or "anonymous"
-            cache_key = f"panel_bi_{request.user.id}_{session_key}"
-            cache.delete(cache_key)
-
-            # Limpiar cachÃ© de configuraciÃ³n para este usuario y base de datos
+            cache.delete(f"panel_bi_{request.user.id}_{session_key}")
+            cache.delete(f"user_cubo_context_{database_name}_{request.user.id}")
             ConfigBasic.clear_cache(
                 database_name=database_name, user_id=request.user.id
             )
 
-            logger.debug(
-                f"HomePanelBiPage.post completado en {time.time() - start_time:.2f}s"
-            )
+            logger.debug("HomePanelBiPage.post: sesion actualizada a %s", database_name)
 
+            if is_ajax:
+                return JsonResponse({"success": True, "message": f"Base de datos actualizada a: {database_name}"})
             return redirect("home_app:panel_bi")
 
         except Exception as e:
             logger.error(f"Error en HomePanelBiPage.post: {str(e)}")
-            messages.error(request, "Error al procesar la selecciÃ³n de base de datos")
+            if is_ajax:
+                return JsonResponse({"success": False, "error": str(e)}, status=500)
+            messages.error(request, "Error al procesar la seleccion de base de datos")
             return redirect("home_app:panel_bi")
 
     def get(self, request, *args, **kwargs):
@@ -697,29 +711,32 @@ class HomePanelActualizacionPage(BaseView):
     def post(self, request, *args, **kwargs):
         """
         Maneja la solicitud POST para seleccionar base de datos.
-        Optimizado para respuesta inmediata.
+        Retorna JsonResponse para peticiones AJAX (database_selector.html).
         """
-        start_time = time.time()  # MediciÃ³n de tiempo para anÃ¡lisis de rendimiento
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
         request.session["template_name"] = self.template_name
         database_name = request.POST.get("database_select")
 
         if not database_name:
+            if is_ajax:
+                return JsonResponse({"success": False, "error": "No se selecciono empresa."}, status=400)
             return redirect("home_app:panel_actualizacion")
 
-        # Usar modificaciÃ³n eficiente de sesiÃ³n
         request.session["database_name"] = database_name
+        request.session.modified = True
+        request.session.save()
         StaticPage.name = database_name
 
-        # Invalidar cachÃ© especÃ­fica para este usuario y sesiÃ³n
         session_key = request.session.session_key or "anonymous"
-        cache_key = f"panel_actualizacion_{request.user.id}_{session_key}"
-        cache.delete(cache_key)
+        cache.delete(f"panel_actualizacion_{request.user.id}_{session_key}")
+        cache.delete(f"user_cubo_context_{database_name}_{request.user.id}")
+        ConfigBasic.clear_cache(database_name=database_name, user_id=request.user.id)
 
-        logger.debug(
-            f"HomePanelActualizacionPage.post completado en {time.time() - start_time:.2f}s"
-        )
+        logger.debug("HomePanelActualizacionPage.post: sesion actualizada a %s", database_name)
 
+        if is_ajax:
+            return JsonResponse({"success": True, "message": f"Base de datos actualizada a: {database_name}"})
         return redirect("home_app:panel_actualizacion")
 
     def get(self, request, *args, **kwargs):
@@ -849,32 +866,32 @@ class HomePanelInterfacePage(BaseView):
     def post(self, request, *args, **kwargs):
         """
         Maneja la solicitud POST para seleccionar base de datos.
-        Optimizado para respuesta inmediata.
+        Retorna JsonResponse para peticiones AJAX (database_selector.html).
         """
-        start_time = time.time()  # MediciÃ³n de tiempo para anÃ¡lisis de rendimiento
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
         request.session["template_name"] = self.template_name
         database_name = request.POST.get("database_select")
 
         if not database_name:
+            if is_ajax:
+                return JsonResponse({"success": False, "error": "No se selecciono empresa."}, status=400)
             return redirect("home_app:panel_interface")
 
-        # Usar modificaciÃ³n eficiente de sesiÃ³n
         request.session["database_name"] = database_name
+        request.session.modified = True
+        request.session.save()
         StaticPage.name = database_name
 
-        # Invalidar cachÃ© especÃ­fica para este usuario y sesiÃ³n
         session_key = request.session.session_key or "anonymous"
-        cache_key = f"panel_interface_{request.user.id}_{session_key}"
-        cache.delete(cache_key)
-
-        # Limpiar cachÃ© de configuraciÃ³n para este usuario y base de datos
+        cache.delete(f"panel_interface_{request.user.id}_{session_key}")
+        cache.delete(f"user_cubo_context_{database_name}_{request.user.id}")
         ConfigBasic.clear_cache(database_name=database_name, user_id=request.user.id)
 
-        logger.debug(
-            f"HomePanelInterfacePage.post completado en {time.time() - start_time:.2f}s"
-        )
+        logger.debug("HomePanelInterfacePage.post: sesion actualizada a %s", database_name)
 
+        if is_ajax:
+            return JsonResponse({"success": True, "message": f"Base de datos actualizada a: {database_name}"})
         return redirect("home_app:panel_interface")
 
     def get(self, request, *args, **kwargs):
@@ -1019,12 +1036,27 @@ class HomePanelPlanosPage(BaseView):
         return context
 
     def post(self, request, *args, **kwargs):
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
         request.session["template_name"] = self.template_name
         database_name = request.POST.get("database_select")
         if not database_name:
+            if is_ajax:
+                return JsonResponse({"success": False, "error": "No se selecciono empresa."}, status=400)
             return redirect("home_app:panel_planos")
+
         request.session["database_name"] = database_name
+        request.session.modified = True
+        request.session.save()
         StaticPage.name = database_name
+
+        cache.delete(f"user_cubo_context_{database_name}_{request.user.id}")
+        ConfigBasic.clear_cache(database_name=database_name, user_id=request.user.id)
+
+        logger.debug("HomePanelPlanosPage.post: sesion actualizada a %s", database_name)
+
+        if is_ajax:
+            return JsonResponse({"success": True, "message": f"Base de datos actualizada a: {database_name}"})
         return redirect("home_app:panel_planos")
 
 
