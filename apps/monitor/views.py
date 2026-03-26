@@ -39,8 +39,7 @@ class HomePanelMonitorPage(LoginRequiredMixin, UserPassesTestMixin, TemplateView
         request.session.modified = True
         request.session.save()
         StaticPage.name = database_name
-        session_key = request.session.session_key or "anonymous"
-        cache.delete(f"panel_monitor_{request.user.id}_{session_key}")
+        cache.delete(f"panel_monitor_{request.user.id}_{database_name}")
         if is_ajax:
             return JsonResponse({"success": True, "message": f"Base de datos actualizada a: {database_name}"})
         return redirect("monitor:dashboard")
@@ -48,8 +47,8 @@ class HomePanelMonitorPage(LoginRequiredMixin, UserPassesTestMixin, TemplateView
     def get(self, request, *args, **kwargs):
         if not request.session.session_key:
             request.session.save()
-        session_key = request.session.session_key
-        cache_key = f"panel_monitor_{request.user.id}_{session_key}"
+        database_name = request.session.get("database_name", "none")
+        cache_key = f"panel_monitor_{request.user.id}_{database_name}"
         cached_response = cache.get(cache_key)
         if cached_response:
             return cached_response

@@ -34,12 +34,31 @@ set /a retries=30
 
 :docker_ready
 echo [INFO] Docker disponible. Levantando contenedores RQ...
-@REM docker-compose -f %COMPOSE_FILE% up -d
-docker-compose -f %COMPOSE_FILE% up --build
+
+@REM Forzar rebuild sin cache para que web copie codigo actualizado
+echo [INFO] Rebuild sin cache (web usa COPY, no volumen)...
+docker-compose -f %COMPOSE_FILE% build --no-cache web
+if errorlevel 1 (
+    echo [ERROR] Fallo docker-compose build web.
+    exit /b 1
+)
+
+docker-compose -f %COMPOSE_FILE% up -d
 if errorlevel 1 (
     echo [ERROR] Fallo docker-compose up.
     exit /b 1
 )
 
-echo [OK] Contenedores levantados.
+@REM Esperar a que Redis este listo y limpiar cache de Django
+echo [INFO] Esperando Redis...
+ping -n 3 127.0.0.1 >nul
+echo [INFO] Limpiando cache de Redis (KPIs cacheados)...
+docker-compose -f %COMPOSE_FILE% exec -T redis redis-cli FLUSHALL >nul 2>&1
+if errorlevel 1 (
+    echo [WARN] No se pudo limpiar cache de Redis. Expirara en 15 min.
+) else (
+    echo [OK] Cache de Redis limpiado.
+)
+
+echo [OK] Contenedores levantados con codigo actualizado.
 exit /b 0

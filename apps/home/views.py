@@ -128,9 +128,8 @@ class HomePanelCuboPage(BaseView):
             request.session.save()
             StaticPage.name = database_name
 
-            # Invalidar cache de pagina renderizada
-            session_key = request.session.session_key or "anonymous"
-            cache.delete(f"panel_cubo_{request.user.id}_{session_key}")
+            # Invalidar cache de pagina renderizada (key incluye database_name)
+            cache.delete(f"panel_cubo_{request.user.id}_{database_name}")
 
             # Invalidar cache de KPIs para esta empresa
             cache.delete(f"user_cubo_context_{database_name}_{request.user.id}")
@@ -165,8 +164,8 @@ class HomePanelCuboPage(BaseView):
             if not request.session.session_key:
                 request.session.save()
             user_id = request.user.id
-            session_key = request.session.session_key
-            cache_key = f"panel_cubo_{user_id}_{session_key}"
+            database_name = request.session.get("database_name", "none")
+            cache_key = f"panel_cubo_{user_id}_{database_name}"
             cached_response = cache.get(cache_key)
 
             if cached_response:
@@ -537,8 +536,7 @@ class HomePanelBiPage(BaseView):
             request.session.save()
             StaticPage.name = database_name
 
-            session_key = request.session.session_key or "anonymous"
-            cache.delete(f"panel_bi_{request.user.id}_{session_key}")
+            cache.delete(f"panel_bi_{request.user.id}_{database_name}")
             cache.delete(f"user_cubo_context_{database_name}_{request.user.id}")
             ConfigBasic.clear_cache(
                 database_name=database_name, user_id=request.user.id
@@ -569,8 +567,8 @@ class HomePanelBiPage(BaseView):
             if not request.session.session_key:
                 request.session.save()
             user_id = request.user.id
-            session_key = request.session.session_key
-            cache_key = f"panel_bi_{user_id}_{session_key}"
+            database_name = request.session.get("database_name", "none")
+            cache_key = f"panel_bi_{user_id}_{database_name}"
             cached_response = cache.get(cache_key)
 
             if cached_response:
@@ -739,8 +737,7 @@ class HomePanelActualizacionPage(BaseView):
         request.session.save()
         StaticPage.name = database_name
 
-        session_key = request.session.session_key or "anonymous"
-        cache.delete(f"panel_actualizacion_{request.user.id}_{session_key}")
+        cache.delete(f"panel_actualizacion_{request.user.id}_{database_name}")
         cache.delete(f"user_cubo_context_{database_name}_{request.user.id}")
         ConfigBasic.clear_cache(database_name=database_name, user_id=request.user.id)
 
@@ -759,8 +756,8 @@ class HomePanelActualizacionPage(BaseView):
         # Asegurar que la sesiÃ³n tenga session_key Ãºnica antes de cachear
         if not request.session.session_key:
             request.session.save()
-        session_key = request.session.session_key
-        cache_key = f"panel_actualizacion_{request.user.id}_{session_key}"
+        database_name = request.session.get("database_name", "none")
+        cache_key = f"panel_actualizacion_{request.user.id}_{database_name}"
         cached_response = cache.get(cache_key)
 
         if cached_response:
@@ -894,8 +891,7 @@ class HomePanelInterfacePage(BaseView):
         request.session.save()
         StaticPage.name = database_name
 
-        session_key = request.session.session_key or "anonymous"
-        cache.delete(f"panel_interface_{request.user.id}_{session_key}")
+        cache.delete(f"panel_interface_{request.user.id}_{database_name}")
         cache.delete(f"user_cubo_context_{database_name}_{request.user.id}")
         ConfigBasic.clear_cache(database_name=database_name, user_id=request.user.id)
 
@@ -914,8 +910,8 @@ class HomePanelInterfacePage(BaseView):
         # Asegurar que la sesiÃ³n tenga session_key Ãºnica antes de cachear
         if not request.session.session_key:
             request.session.save()
-        session_key = request.session.session_key
-        cache_key = f"panel_interface_{request.user.id}_{session_key}"
+        database_name = request.session.get("database_name", "none")
+        cache_key = f"panel_interface_{request.user.id}_{database_name}"
         cached_response = cache.get(cache_key)
 
         if cached_response:

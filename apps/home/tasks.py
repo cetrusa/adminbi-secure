@@ -1442,7 +1442,9 @@ def _add_inventario_sheet(file_path, engine, proveedor_ids=None, macrozonas=None
         placeholders = ", ".join(str(x) for x in ids_int)
         sql = (
             "SELECT i.nbAlmacen, i.nbProducto, p.nmProducto, "
-            "p.nmProveedor, i.InvDisponible "
+            "p.nmProveedor, i.InvDisponible, "
+            "COALESCE(p.flPcioStdaCompra, 0) AS PrecioCosto, "
+            "ROUND(i.InvDisponible * COALESCE(p.flPcioStdaCompra, 0), 2) AS ValorInventario "
             "FROM inventario i "
             "JOIN productos p ON p.nbProducto = i.nbProducto "
             f"WHERE p.idProveedor IN ({placeholders}) "
@@ -1453,7 +1455,9 @@ def _add_inventario_sheet(file_path, engine, proveedor_ids=None, macrozonas=None
         macro_placeholders = ", ".join(str(x) for x in macro_int)
         sql = (
             "SELECT i.nbAlmacen, i.nbProducto, p.nmProducto, "
-            "p.nmProveedor, p.nmTpCategoria, i.InvDisponible "
+            "p.nmProveedor, p.nmTpCategoria, i.InvDisponible, "
+            "COALESCE(p.flPcioStdaCompra, 0) AS PrecioCosto, "
+            "ROUND(i.InvDisponible * COALESCE(p.flPcioStdaCompra, 0), 2) AS ValorInventario "
             "FROM inventario i "
             "JOIN productos p ON p.nbProducto = i.nbProducto "
             "WHERE i.nbAlmacen IN ("
