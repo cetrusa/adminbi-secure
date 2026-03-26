@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS trazabilidad_preventa (
     INDEX idx_trz_establecimiento (establecimiento_id),
     INDEX idx_trz_producto (producto_id),
     INDEX idx_trz_causa (causa_brecha)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish2_ci
 """
 
 
