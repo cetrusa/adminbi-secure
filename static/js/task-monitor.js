@@ -10,7 +10,8 @@
  *     csrfToken: '...',                    // CSRF Token
  *     modalTitle: 'Procesando Cubo...',    // Título del modal
  *     onComplete: function(response) {},   // Callback al completar (opcional)
- *     extraParams: function() { return {}; } // Params adicionales (opcional)
+ *     extraParams: function() { return {}; }, // Params adicionales (opcional)
+ *     serverDatabase: ''                     // Fallback BD desde Django context (opcional)
  *   });
  */
 (function (window) {
@@ -30,6 +31,7 @@
     this.modalTitle = options.modalTitle || 'Procesando...';
     this.onComplete = options.onComplete || null;
     this.extraParams = options.extraParams || function () { return {}; };
+    this.serverDatabase = options.serverDatabase || '';
 
     // Estado interno
     this.taskIdKey = this.taskType + '_task_id';
@@ -81,7 +83,10 @@
       return;
     }
 
-    var database = window.sessionStorage.getItem('database_name');
+    // Prioridad: sessionStorage > serverDatabase (Django context) > #database_select (selector)
+    var database = window.sessionStorage.getItem('database_name')
+                   || this.serverDatabase
+                   || (document.getElementById('database_select') && document.getElementById('database_select').value) || '';
     var IdtReporteIni = document.getElementById('IdtReporteIni').value;
     var IdtReporteFin = document.getElementById('IdtReporteFin').value;
 

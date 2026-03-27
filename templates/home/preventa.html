@@ -135,6 +135,7 @@ Informe Preventa
     <div class="card-header d-flex justify-content-between align-items-center">
       <h6 class="fw-bold mb-0" style="color: #6f42c1;">
         <i class="fas fa-table me-2"></i>Vista Previa - Preventa
+        <span class="badge bg-secondary fw-normal ms-2 small" id="dbIndicator"></span>
       </h6>
       <small class="text-muted" id="preview-info"></small>
     </div>
@@ -183,6 +184,7 @@ Informe Preventa
   'use strict';
 
   var dataTable = null;
+  var _serverDb = '{{ database_name|default:"" }}';
 
   function fmtNum(val) {
     if (val === null || val === undefined || val === '') return '-';
@@ -289,11 +291,16 @@ Informe Preventa
     checkTaskUrl: '{% url "home_app:check_task_status" %}',
     csrfToken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
     modalTitle: 'Procesando Preventa...',
+    serverDatabase: _serverDb,
     onComplete: function(response) {
       var result = response.result || {};
       var headers = result.preview_headers || [];
       var rows = result.preview_sample || [];
       renderDataTable(headers, rows);
+      // Mostrar BD activa en el badge
+      var db = window.sessionStorage.getItem('database_name') || _serverDb;
+      var indicator = document.getElementById('dbIndicator');
+      if (indicator && db) indicator.textContent = db;
     }
   });
 

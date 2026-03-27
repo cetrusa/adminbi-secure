@@ -158,7 +158,10 @@ Trazabilidad Preventa
     <div class="card-header">
       <!-- Fila 1: Titulo + Agrupacion + Refresh -->
       <div class="d-flex align-items-center justify-content-between mb-2">
-        <h6 class="fw-bold mb-0 text-info"><i class="fas fa-table me-2"></i>Consulta de Datos</h6>
+        <h6 class="fw-bold mb-0 text-info">
+          <i class="fas fa-table me-2"></i>Consulta de Datos
+          <span class="badge bg-secondary fw-normal ms-2 small" id="dbIndicator"></span>
+        </h6>
         <div class="d-flex align-items-center gap-2">
           <label for="agrupacion" class="form-label small fw-semibold text-muted mb-0">Agrupar por:</label>
           <select class="form-select form-select-sm" id="agrupacion" style="width: auto;">
@@ -265,6 +268,7 @@ Trazabilidad Preventa
     checkTaskUrl: '{% url "home_app:check_task_status" %}',
     csrfToken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
     modalTitle: 'Procesando Trazabilidad...',
+    serverDatabase: _serverDb,
     onComplete: function(response) {
       // Si no estaba consultando, abrir la consulta
       if (!consultaActiva) {
@@ -289,9 +293,13 @@ Trazabilidad Preventa
   }
 
   // ---- Parametros comunes ----
+  // Fallback: sessionStorage → contexto Django (server session)
+  var _serverDb = '{{ database_name|default:"" }}';
+
   function getBaseParams() {
+    var db = window.sessionStorage.getItem('database_name') || _serverDb;
     return {
-      db: window.sessionStorage.getItem('database_name'),
+      db: db,
       fi: document.getElementById('IdtReporteIni').value,
       ff: document.getElementById('IdtReporteFin').value
     };
@@ -542,6 +550,12 @@ Trazabilidad Preventa
   function activarConsulta() {
     consultaActiva = true;
     document.getElementById('consultaCard').style.display = 'block';
+    // Mostrar la BD activa en el badge indicador
+    var base = getBaseParams();
+    var indicator = document.getElementById('dbIndicator');
+    if (indicator && base.db) {
+      indicator.textContent = base.db;
+    }
     populateFilterDropdowns();
     loadKpis();
     initOrReloadDataTable();
