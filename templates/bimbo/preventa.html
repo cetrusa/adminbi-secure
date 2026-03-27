@@ -35,7 +35,7 @@ Informe de Preventa
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
             <div>
-                <h6 class="mb-0 fw-bold text-danger">Filtros de Ejecución</h6>
+                <h6 class="mb-0 fw-bold text-danger">Filtros de Ejecucion</h6>
                 <small class="text-muted">Selecciona CEVE y rango para procesar el dashboard.</small>
             </div>
             <div class="d-flex gap-2">
@@ -46,9 +46,9 @@ Informe de Preventa
         <div class="card-body">
             <form id="FormPreventa" action="{% url form_url %}" method="post">
                 {% csrf_token %}
-                
+
                 <div class="row g-3">
-                    <!-- Selección de Agencia (CEVE) -->
+                    <!-- Seleccion de Agencia (CEVE) -->
                     <div class="col-md-6">
                         <label for="ceves_code" class="form-label fw-semibold">Agencia (CEVE):</label>
                         <select class="form-select form-select-sm" id="ceves_code" name="ceves_code" required>
@@ -59,7 +59,7 @@ Informe de Preventa
                         </select>
                     </div>
 
-                    <!-- Selección de Fechas -->
+                    <!-- Seleccion de Fechas -->
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Rango de Fechas:</label>
                         <div id="reportrange" class="form-control form-control-sm d-flex align-items-center justify-content-between bg-white" style="cursor: pointer;">
@@ -89,7 +89,7 @@ Informe de Preventa
         <div>Ejecuta el reporte para ver resultados.</div>
     </div>
 
-    <!-- Resultados del Dashboard (KPIs + Matriz) -->
+    <!-- Resultados del Dashboard (KPIs + Filtros + Matriz) -->
     <div id="dashboardResults" style="display: none;">
         <!-- Fila de KPIs -->
         <div class="row mb-3 g-3">
@@ -183,41 +183,71 @@ Informe de Preventa
             </div>
         </div>
 
+        <!-- Filtros de Datos -->
+        <div class="card border-0 shadow-sm mb-3" id="filterCard">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-danger"><i class="fas fa-filter me-2"></i>Filtros de Datos</h6>
+                <span class="badge bg-light text-dark small" id="filterStatus">Sin filtros aplicados</span>
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold mb-1">Macrozona</label>
+                        <select id="filterMacrozona" class="form-select form-select-sm">
+                            <option value="">-- Todas --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold mb-1">Vendedor</label>
+                        <select id="filterVendedor" class="form-select form-select-sm">
+                            <option value="">-- Todos --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex gap-2">
+                        <button id="btnClearFilters" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-1"></i>Limpiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Matriz Avanzada -->
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-bottom py-3">
-                <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-th me-2"></i>Matriz de Desempeño por Zona</h5>
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-th me-2"></i>Matriz de Desempeno por Zona</h5>
+                <span class="badge bg-light text-muted" id="matrixCount"></span>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
                     <table class="table table-hover table-sm small align-middle mb-0" id="matrixTable">
-                        <thead class="table-light sticky-top" style="z-index:1;">
+                        <thead class="table-dark sticky-top" style="z-index:1;">
                             <tr>
-                                <th class="ps-4">Zona</th>
-                                <th class="text-center">H. Inicio</th>
-                                <th class="text-center">H. Fin</th>
-                                <th class="text-center">T. Total</th>
-                                <th class="text-center">Programados</th>
-                                <th class="text-center">Atendidos</th>
-                                <th class="text-center">Cl. con Pedido</th>
+                                <th class="ps-3" style="min-width:140px;">Zona</th>
+                                <th class="text-center" style="min-width:70px;">H.Inicio</th>
+                                <th class="text-center" style="min-width:70px;">H.Fin</th>
+                                <th class="text-center" style="min-width:70px;">T.Total</th>
+                                <th class="text-center">Prog.</th>
+                                <th class="text-center">Atend.</th>
+                                <th class="text-center">C.Pedido</th>
                                 <th class="text-center">No Compra</th>
-                                <th class="text-center">% Cobertura</th>
-                                <th class="text-center">% Eficiencia</th>
-                                <th class="text-center">% Efectividad</th>
-                                <th class="text-center">Pedidos Totales</th>
-                                <th class="text-center">Ticket Prom.</th>
+                                <th class="text-center">Cobert.%</th>
+                                <th class="text-center">Efic.%</th>
+                                <th class="text-center">Efect.%</th>
+                                <th class="text-center">Pedidos</th>
+                                <th class="text-center">Ticket</th>
                                 <th class="text-center">Valor Total</th>
-                                <th class="text-center">Valor Cambio</th>
-                                <th class="text-center">P. Ruta</th>
-                                <th class="text-center">P. Extra</th>
-                                <th class="text-center pe-4">Pendientes</th>
+                                <th class="text-center">V.Cambio</th>
+                                <th class="text-center">P.Ruta</th>
+                                <th class="text-center">P.Extra</th>
+                                <th class="text-center pe-3">Pend.</th>
                             </tr>
                         </thead>
                         <tbody id="matrixBody">
-                            <!-- Datos inyectados vía JS -->
+                            <!-- Datos inyectados via JS -->
                         </tbody>
-                        <tfoot class="table-light fw-bold sticky-bottom" id="matrixFooter">
-                            <!-- Totales inyectados vía JS -->
+                        <tfoot class="table-dark fw-bold sticky-bottom" id="matrixFooter">
+                            <!-- Totales inyectados via JS -->
                         </tfoot>
                     </table>
                 </div>
@@ -232,7 +262,7 @@ Informe de Preventa
     <div id="emptyState" class="text-center py-5">
         <div class="text-muted">
             <i class="fas fa-search fa-3x mb-3 text-gray-300"></i>
-            <p>Seleccione los parámetros y ejecute el reporte para ver resultados.</p>
+            <p>Seleccione los parametros y ejecute el reporte para ver resultados.</p>
         </div>
     </div>
 </div>
@@ -258,40 +288,52 @@ Informe de Preventa
         </div>
     </div>
 </div>
+
+<style>
+    #matrixTable tbody tr:hover { background-color: #fff3cd !important; }
+    #matrixTable .pct-high { color: #198754; font-weight: 600; }
+    #matrixTable .pct-mid  { color: #fd7e14; font-weight: 600; }
+    #matrixTable .pct-low  { color: #dc3545; font-weight: 600; }
+    .date-separator td { background-color: #495057 !important; color: #fff !important; font-size: 0.8rem; }
+</style>
 {% endblock window %}
 
 {% block script %}
 {{ block.super }}
 <script src="{% static 'js/format-utils.js' %}"></script>
 <script>
-    // --- Lógica del Dashboard ---
+(function(){
+    "use strict";
+
+    // --- Estado global ---
     var csrf_token = "{{ csrf_token }}";
     var startTime = 0;
     var progressInterval = null;
     var progressBar = document.getElementById("progressBar");
-    const bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
+    var bsProcessingModal = new bootstrap.Modal(document.getElementById("processingModal"));
 
+    // Datos completos para filtrado client-side
+    var _fullMatrix = [];
+    var _fullKpis = {};
+    var _fileResult = null;
+
+    // --- Submit ---
     document.getElementById("submitBtnPreventa").addEventListener("click", function(event) {
         event.preventDefault();
-        
         var database = window.sessionStorage.getItem("database_name");
         var ceves_code = document.getElementById("ceves_code").value;
         var IdtReporteIni = document.getElementById("IdtReporteIni").value;
         var IdtReporteFin = document.getElementById("IdtReporteFin").value;
-        
+
         if (!database || !ceves_code || !IdtReporteIni || !IdtReporteFin) {
             alert("Por favor complete todos los filtros.");
             return;
         }
 
         startMonitoringUI();
-
         fetch("{% url form_url %}", {
             method: "POST",
-            headers: {
-                "X-CSRFToken": csrf_token,
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
+            headers: { "X-CSRFToken": csrf_token, "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
                 "database_select": database,
                 "ceves_code": ceves_code,
@@ -300,8 +342,8 @@ Informe de Preventa
                 "batch_size": document.querySelector('input[name="batch_size"]').value || 20000
             })
         })
-        .then(response => response.json())
-        .then(data => {
+        .then(function(r){ return r.json(); })
+        .then(function(data){
             if (data.success) {
                 window.sessionStorage.setItem("preventa_task_id", data.job_id);
                 updateProgressBar(5, "Encolado...");
@@ -310,30 +352,26 @@ Informe de Preventa
                 stopMonitoring("Error: " + data.error_message);
             }
         })
-        .catch(err => stopMonitoring("Error de red: " + err));
+        .catch(function(err){ stopMonitoring("Error de red: " + err); });
     });
 
+    // --- Polling ---
     function checkTaskStatus() {
         var taskId = window.sessionStorage.getItem("preventa_task_id");
         if (!taskId) return;
-
         fetch("{% url 'home_app:check_task_status' %}", {
             method: "POST",
-            headers: {
-                "X-CSRFToken": csrf_token,
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
+            headers: { "X-CSRFToken": csrf_token, "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({"task_id": taskId})
         })
-        .then(response => response.json())
-        .then(data => handleTaskStatus(data))
-        .catch(err => console.warn("Error polling:", err));
+        .then(function(r){ return r.json(); })
+        .then(function(data){ handleTaskStatus(data); })
+        .catch(function(err){ console.warn("Error polling:", err); });
     }
 
     function handleTaskStatus(response) {
         if (!response || !response.status) return;
         var status = response.status.toLowerCase();
-        
         var progress = response.progress || 0;
         var stage = (response.meta && response.meta.stage) ? response.meta.stage : "Procesando...";
         updateProgressBar(progress, stage);
@@ -344,7 +382,7 @@ Informe de Preventa
                 stopMonitoring("Error: " + (result.error_message || result.error || "Proceso fallido"));
                 return;
             }
-            renderDashboard(result);
+            onDataReceived(result);
             stopMonitoring(null);
         } else if (status === "failed") {
             stopMonitoring("Error: " + (response.result ? response.result.error : "Falla interna"));
@@ -353,150 +391,288 @@ Informe de Preventa
         }
     }
 
-    function renderDashboard(result) {
+    // --- Recepcion de datos ---
+    function onDataReceived(result) {
         if (!result || !result.dashboard) {
-            var statusBox = document.getElementById("pv-status");
-            if (statusBox) {
-                statusBox.className = "alert alert-warning d-flex align-items-center mb-3";
-                statusBox.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i><div>No se encontraron datos para el rango seleccionado.</div>';
+            var sb = document.getElementById("pv-status");
+            if (sb) {
+                sb.className = "alert alert-warning d-flex align-items-center mb-3";
+                sb.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i><div>No se encontraron datos para el rango seleccionado.</div>';
             }
             return;
         }
-        var data = result.dashboard;
-        var kpis = data.kpis;
-        var matrix = data.matrix;
-        var statusBox = document.getElementById("pv-status");
-        var emptyState = document.getElementById("emptyState");
+        // Guardar data completa
+        _fullMatrix = result.dashboard.matrix || [];
+        _fullKpis = result.dashboard.kpis || {};
+        _fileResult = result;
 
-        // Mostrar contenedor
+        // Mostrar UI
         document.getElementById("dashboardResults").style.display = "block";
+        var emptyState = document.getElementById("emptyState");
         if (emptyState) emptyState.style.display = "none";
-        if (statusBox) {
-            statusBox.className = "alert alert-success d-flex align-items-center mb-3";
-            statusBox.innerHTML = '<i class="fas fa-check-circle me-2"></i><div>Reporte generado correctamente.</div>';
+        var sb = document.getElementById("pv-status");
+        if (sb) {
+            sb.className = "alert alert-success d-flex align-items-center mb-3";
+            sb.innerHTML = '<i class="fas fa-check-circle me-2"></i><div>Reporte generado correctamente.</div>';
         }
 
-        // Actualizar KPIs con animación simple o directa
-        document.getElementById("kpi-total-pedidos").innerText = formatNumber(kpis.total_pedidos);
-        document.getElementById("kpi-clientes-atendidos").innerText = formatNumber(kpis.clientes_atendidos);
-        document.getElementById("kpi-clientes-nuevos").innerText = formatNumber(kpis.clientes_nuevos);
-        document.getElementById("kpi-valor-total").innerText = formatCurrency(kpis.valor_total);
-        document.getElementById("kpi-valor-promedio").innerText = formatCurrency(kpis.valor_promedio);
-        document.getElementById("kpi-tiempo-promedio").innerText = kpis.tiempo_promedio;
-        document.getElementById("kpi-programados").innerText = formatNumber(kpis.programados || 0);
-        document.getElementById("kpi-eficiencia").innerText = formatPercent(kpis.eficiencia_pct || 0);
-        document.getElementById("kpi-efectividad").innerText = formatPercent(kpis.efectividad_pct || 0);
-        document.getElementById("kpi-clientes-pedido").innerText = formatNumber(kpis.clientes_con_pedido || 0);
-        document.getElementById("kpi-no-compra").innerText = formatNumber(kpis.clientes_no_compra || 0);
+        // Descarga
+        if (result.file_name) {
+            var dlBox = document.getElementById("download_file");
+            if (dlBox) { dlBox.className = 'd-flex mt-3'; }
+            var link = document.querySelector("#download_file a");
+            if (link) link.href = "/media/" + result.file_name;
+        }
 
-        // Renderizar Matriz
+        // Poblar filtros
+        populateFilters(_fullMatrix);
+
+        // Render inicial (sin filtros)
+        applyFiltersAndRender();
+    }
+
+    // --- Filtros ---
+    function populateFilters(matrix) {
+        // Macrozonas unicas
+        var mzSet = {};
+        var vdSet = {};
+        matrix.forEach(function(r){
+            var mz = String(r.macrozona_id || "").trim();
+            if (mz) mzSet[mz] = true;
+            var vd = String(r.codigo_agente || "").trim();
+            if (vd) vdSet[vd] = true;
+        });
+        var mzArr = Object.keys(mzSet).sort();
+        var vdArr = Object.keys(vdSet).sort(function(a,b){ return parseInt(a)-parseInt(b) || a.localeCompare(b); });
+
+        var mzSel = document.getElementById("filterMacrozona");
+        mzSel.innerHTML = '<option value="">-- Todas --</option>';
+        mzArr.forEach(function(mz){
+            var opt = document.createElement("option");
+            opt.value = mz; opt.textContent = mz;
+            mzSel.appendChild(opt);
+        });
+
+        var vdSel = document.getElementById("filterVendedor");
+        vdSel.innerHTML = '<option value="">-- Todos --</option>';
+        vdArr.forEach(function(vd){
+            // Buscar zona_nm del primer registro con este vendedor
+            var label = vd;
+            for (var i = 0; i < matrix.length; i++) {
+                if (String(matrix[i].codigo_agente || "") === vd) {
+                    label = vd + " - " + (matrix[i].zona_nm || matrix[i].Zona || "");
+                    break;
+                }
+            }
+            var opt = document.createElement("option");
+            opt.value = vd; opt.textContent = label;
+            vdSel.appendChild(opt);
+        });
+    }
+
+    document.getElementById("filterMacrozona").addEventListener("change", applyFiltersAndRender);
+    document.getElementById("filterVendedor").addEventListener("change", applyFiltersAndRender);
+    document.getElementById("btnClearFilters").addEventListener("click", function(){
+        document.getElementById("filterMacrozona").value = "";
+        document.getElementById("filterVendedor").value = "";
+        applyFiltersAndRender();
+    });
+
+    function applyFiltersAndRender() {
+        var mzVal = document.getElementById("filterMacrozona").value;
+        var vdVal = document.getElementById("filterVendedor").value;
+
+        var filtered = _fullMatrix.filter(function(r){
+            if (mzVal && String(r.macrozona_id || "") !== mzVal) return false;
+            if (vdVal && String(r.codigo_agente || "") !== vdVal) return false;
+            return true;
+        });
+
+        // Indicador de filtro
+        var fStatus = document.getElementById("filterStatus");
+        if (mzVal || vdVal) {
+            var parts = [];
+            if (mzVal) parts.push("MZ: " + mzVal);
+            if (vdVal) parts.push("Vend: " + vdVal);
+            fStatus.textContent = parts.join(" | ") + " (" + filtered.length + " registros)";
+            fStatus.className = "badge bg-danger text-white small";
+        } else {
+            fStatus.textContent = "Sin filtros aplicados";
+            fStatus.className = "badge bg-light text-dark small";
+        }
+
+        // Recalcular KPIs del subset filtrado
+        var kpis = calcKpisFromMatrix(filtered);
+        updateKpis(kpis);
+
+        // Render tabla
+        renderMatrix(filtered);
+    }
+
+    // --- Calculo de KPIs desde matriz filtrada ---
+    function calcKpisFromMatrix(matrix) {
+        if (!matrix.length) {
+            return {
+                total_pedidos: 0, clientes_atendidos: 0, clientes_con_pedido: 0,
+                clientes_no_compra: 0, programados: 0, clientes_nuevos: 0,
+                valor_total: 0, valor_promedio: 0, tiempo_promedio: "00:00",
+                eficiencia_pct: 0, efectividad_pct: 0
+            };
+        }
+        var ped = 0, aten = 0, clPed = 0, noc = 0, prog = 0, nuevos = 0;
+        var valT = 0, pRuta = 0, pend = 0;
+
+        matrix.forEach(function(r){
+            ped += pf(r['Pedidos Totales']);
+            aten += pf(r['Atendidos']);
+            clPed += pf(r['Clientes Pedido']);
+            noc += pf(r['No Compra']);
+            prog += pf(r['Programados']);
+            nuevos += pf(r['Cl. Nuevos'] || r.pednuevo);
+            valT += pf(r['Valor Total']);
+            pRuta += pf(r['Pedidos Ruta']);
+            pend += pf(r['Pendientes']);
+        });
+
+        var eficiencia = prog > 0 ? ((noc + pRuta) / prog * 100) : 0;
+        var efectividad = prog > 0 ? ((prog - pend) / prog * 100) : 0;
+        var ticket = ped > 0 ? (valT / ped) : 0;
+
+        return {
+            total_pedidos: ped,
+            clientes_atendidos: aten,
+            clientes_con_pedido: clPed,
+            clientes_no_compra: noc,
+            programados: prog,
+            clientes_nuevos: nuevos,
+            valor_total: valT,
+            valor_promedio: ticket,
+            tiempo_promedio: _fullKpis.tiempo_promedio || "00:00",
+            eficiencia_pct: eficiencia,
+            efectividad_pct: efectividad
+        };
+    }
+
+    function pf(v) { return parseFloat(v) || 0; }
+
+    // --- Render KPIs ---
+    function updateKpis(k) {
+        document.getElementById("kpi-total-pedidos").innerText = formatNumber(k.total_pedidos);
+        document.getElementById("kpi-clientes-atendidos").innerText = formatNumber(k.clientes_atendidos);
+        document.getElementById("kpi-clientes-nuevos").innerText = formatNumber(k.clientes_nuevos);
+        document.getElementById("kpi-valor-total").innerText = formatCurrency(k.valor_total);
+        document.getElementById("kpi-valor-promedio").innerText = formatCurrency(k.valor_promedio);
+        document.getElementById("kpi-tiempo-promedio").innerText = k.tiempo_promedio;
+        document.getElementById("kpi-programados").innerText = formatNumber(k.programados || 0);
+        document.getElementById("kpi-eficiencia").innerText = formatPercent(k.eficiencia_pct || 0);
+        document.getElementById("kpi-efectividad").innerText = formatPercent(k.efectividad_pct || 0);
+        document.getElementById("kpi-clientes-pedido").innerText = formatNumber(k.clientes_con_pedido || 0);
+        document.getElementById("kpi-no-compra").innerText = formatNumber(k.clientes_no_compra || 0);
+    }
+
+    // --- Render Matriz ---
+    function pctClass(val) {
+        if (val >= 80) return "pct-high";
+        if (val >= 50) return "pct-mid";
+        return "pct-low";
+    }
+
+    function renderMatrix(matrix) {
         var tbody = document.getElementById("matrixBody");
         tbody.innerHTML = "";
-        
-        var totals = { prog: 0, aten: 0, clped: 0, noc: 0, ped: 0, vto: 0, vca: 0, pru: 0, pex: 0, pen: 0 };
+
+        var totals = { prog:0, aten:0, clped:0, noc:0, ped:0, vto:0, vca:0, pru:0, pex:0, pen:0 };
         var totalRows = 0;
         var lastDate = "";
 
-        matrix.forEach(row => {
+        matrix.forEach(function(row){
             totalRows++;
-            // Seguridad nulos
             var hIni = row['Hora Inicio'] || '-';
             var hFin = row['Hora Fin'] || '-';
-            var prog = parseFloat(row.Programados) || 0;
-            var aten = parseFloat(row.Atendidos) || 0;
-            var clPedido = parseFloat(row['Clientes Pedido']) || 0;
-            var noCompra = parseFloat(row['No Compra']) || 0;
-            var cobertura = parseFloat(row['Cobertura %']) || 0;
-            var eficiencia = parseFloat(row['Eficiencia %']) || 0;
-            var efectividad = parseFloat(row['Efectividad %']) || 0;
-            var ticket = parseFloat(row.TicketPromedio) || 0;
+            var prog = pf(row.Programados);
+            var aten = pf(row.Atendidos);
+            var clPedido = pf(row['Clientes Pedido']);
+            var noCompra = pf(row['No Compra']);
+            var cobertura = pf(row['Cobertura %']);
+            var eficiencia = pf(row['Eficiencia %']);
+            var efectividad = pf(row['Efectividad %']);
+            var ticket = pf(row.TicketPromedio);
             var currentFecha = row.FechaDisplay || "General";
 
-            // Insertar separador de día
+            // Separador de dia
             if (currentFecha !== lastDate) {
-                var trHeader = document.createElement("tr");
-                // Estilo distintivo para el separador
-                trHeader.innerHTML = `
-                    <td colspan="16" class="fw-bold ps-4 text-start bg-secondary text-white border-top border-bottom py-2">
-                       📅 ${currentFecha}
-                    </td>
-                `;
-                tbody.appendChild(trHeader);
+                var trH = document.createElement("tr");
+                trH.className = "date-separator";
+                trH.innerHTML = '<td colspan="18" class="fw-bold ps-3 py-2">' + currentFecha + '</td>';
+                tbody.appendChild(trH);
                 lastDate = currentFecha;
             }
-            
+
             var tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td class="ps-4 fw-bold text-nowrap">${row.Zona}</td>
-                <td class="text-center small">${hIni}</td>
-                <td class="text-center small">${hFin}</td>
-                <td class="text-center small fw-bold">${row['Tiempo Total'] || '-'}</td>
-                <td class="text-center">${prog}</td>
-                <td class="text-center">${aten}</td>
-                <td class="text-center">${clPedido}</td>
-                <td class="text-center">${noCompra}</td>
-                <td class="text-center">${cobertura.toFixed(1)}%</td>
-                <td class="text-center">${eficiencia.toFixed(1)}%</td>
-                <td class="text-center">${efectividad.toFixed(1)}%</td>
-                <td class="text-center fw-bold">${row['Pedidos Totales'] || 0}</td>
-                <td class="text-center text-muted">${formatCurrency(ticket)}</td>
-                <td class="text-center">${formatCurrency(row['Valor Total'] || 0)}</td>
-                <td class="text-center text-danger">${formatCurrency(row['Valor Cambio'] || 0)}</td>
-                <td class="text-center">${row['Pedidos Ruta'] || 0}</td>
-                <td class="text-center font-weight-bold text-primary">${row['P. Extra Ruta'] || 0}</td>
-                <td class="text-center pe-4">${row.Pendientes || 0}</td>
-            `;
+            tr.innerHTML =
+                '<td class="ps-3 fw-semibold text-nowrap">' + (row.Zona || '') + '</td>' +
+                '<td class="text-center text-muted">' + hIni + '</td>' +
+                '<td class="text-center text-muted">' + hFin + '</td>' +
+                '<td class="text-center fw-bold">' + (row['Tiempo Total'] || '-') + '</td>' +
+                '<td class="text-center">' + prog + '</td>' +
+                '<td class="text-center">' + aten + '</td>' +
+                '<td class="text-center">' + clPedido + '</td>' +
+                '<td class="text-center">' + noCompra + '</td>' +
+                '<td class="text-center ' + pctClass(cobertura) + '">' + cobertura.toFixed(1) + '%</td>' +
+                '<td class="text-center ' + pctClass(eficiencia) + '">' + eficiencia.toFixed(1) + '%</td>' +
+                '<td class="text-center ' + pctClass(efectividad) + '">' + efectividad.toFixed(1) + '%</td>' +
+                '<td class="text-center fw-bold">' + (row['Pedidos Totales'] || 0) + '</td>' +
+                '<td class="text-center text-muted">' + formatCurrency(ticket) + '</td>' +
+                '<td class="text-center">' + formatCurrency(pf(row['Valor Total'])) + '</td>' +
+                '<td class="text-center text-danger">' + formatCurrency(pf(row['Valor Cambio'])) + '</td>' +
+                '<td class="text-center">' + (row['Pedidos Ruta'] || 0) + '</td>' +
+                '<td class="text-center text-primary fw-bold">' + (row['P. Extra Ruta'] || 0) + '</td>' +
+                '<td class="text-center pe-3">' + (row.Pendientes || 0) + '</td>';
             tbody.appendChild(tr);
 
-            totals.prog += (parseFloat(prog) || 0);
-            totals.aten += (parseFloat(aten) || 0);
-            totals.clped += (parseFloat(clPedido) || 0);
-            totals.noc += (parseFloat(noCompra) || 0);
-            totals.ped += (parseFloat(row['Pedidos Totales']) || 0);
-            totals.vto += (parseFloat(row['Valor Total']) || 0);
-            totals.vca += (parseFloat(row['Valor Cambio']) || 0);
-            totals.pru += (parseFloat(row['Pedidos Ruta']) || 0);
-            totals.pex += (parseFloat(row['P. Extra Ruta']) || 0);
-            totals.pen += (parseFloat(row.Pendientes) || 0);
+            totals.prog += prog;
+            totals.aten += aten;
+            totals.clped += clPedido;
+            totals.noc += noCompra;
+            totals.ped += pf(row['Pedidos Totales']);
+            totals.vto += pf(row['Valor Total']);
+            totals.vca += pf(row['Valor Cambio']);
+            totals.pru += pf(row['Pedidos Ruta']);
+            totals.pex += pf(row['P. Extra Ruta']);
+            totals.pen += pf(row.Pendientes);
         });
 
-        // Totales Footer
+        // Footer totales
         var totalCobertura = totals.prog > 0 ? (totals.aten / totals.prog * 100) : 0;
-        var totalEficiencia = totals.prog > 0 ? (((totals.noc) + totals.pru) / totals.prog * 100) : 0;
-        var totalEfectividad = totals.prog > 0 ? (((totals.prog - totals.pen) / totals.prog) * 100) : 0;
+        var totalEficiencia = totals.prog > 0 ? ((totals.noc + totals.pru) / totals.prog * 100) : 0;
+        var totalEfectividad = totals.prog > 0 ? ((totals.prog - totals.pen) / totals.prog * 100) : 0;
         var totalTicket = totals.ped > 0 ? (totals.vto / totals.ped) : 0;
 
-        document.getElementById("matrixFooter").innerHTML = `
-            <tr>
-                <td class="ps-4">TOTALES (${totalRows})</td>
-                <td class="text-center">-</td>
-                <td class="text-center">-</td>
-                <td class="text-center">-</td>
-                <td class="text-center">${formatNumber(totals.prog)}</td>
-                <td class="text-center">${formatNumber(totals.aten)}</td>
-                <td class="text-center">${formatNumber(totals.clped)}</td>
-                <td class="text-center">${formatNumber(totals.noc)}</td>
-                <td class="text-center fw-bold">${formatPercent(totalCobertura)}</td>
-                <td class="text-center fw-bold">${formatPercent(totalEficiencia)}</td>
-                <td class="text-center fw-bold">${formatPercent(totalEfectividad)}</td>
-                <td class="text-center">${formatNumber(totals.ped)}</td>
-                <td class="text-center">${formatCurrency(totalTicket)}</td>
-                <td class="text-center">${formatCurrency(totals.vto)}</td>
-                <td class="text-center">${formatCurrency(totals.vca)}</td>
-                <td class="text-center">${formatNumber(totals.pru)}</td>
-                <td class="text-center">${formatNumber(totals.pex)}</td>
-                <td class="text-center pe-4">${formatNumber(totals.pen)}</td>
-            </tr>
-        `;
+        document.getElementById("matrixFooter").innerHTML =
+            '<tr>' +
+            '<td class="ps-3">TOTALES (' + totalRows + ')</td>' +
+            '<td class="text-center">-</td><td class="text-center">-</td><td class="text-center">-</td>' +
+            '<td class="text-center">' + formatNumber(totals.prog) + '</td>' +
+            '<td class="text-center">' + formatNumber(totals.aten) + '</td>' +
+            '<td class="text-center">' + formatNumber(totals.clped) + '</td>' +
+            '<td class="text-center">' + formatNumber(totals.noc) + '</td>' +
+            '<td class="text-center">' + formatPercent(totalCobertura) + '</td>' +
+            '<td class="text-center">' + formatPercent(totalEficiencia) + '</td>' +
+            '<td class="text-center">' + formatPercent(totalEfectividad) + '</td>' +
+            '<td class="text-center">' + formatNumber(totals.ped) + '</td>' +
+            '<td class="text-center">' + formatCurrency(totalTicket) + '</td>' +
+            '<td class="text-center">' + formatCurrency(totals.vto) + '</td>' +
+            '<td class="text-center">' + formatCurrency(totals.vca) + '</td>' +
+            '<td class="text-center">' + formatNumber(totals.pru) + '</td>' +
+            '<td class="text-center">' + formatNumber(totals.pex) + '</td>' +
+            '<td class="text-center pe-3">' + formatNumber(totals.pen) + '</td>' +
+            '</tr>';
 
-        // Mostrar botón descarga si hay archivo
-        if (result.file_name) {
-            document.getElementById("download_file").className = 'd-flex mt-3';
-            var link = document.querySelector("#download_file a");
-            if(link) link.href = "/media/" + result.file_name;
-        }
+        // Contador
+        document.getElementById("matrixCount").textContent = totalRows + " registros";
     }
 
+    // --- UI de progreso ---
     function startMonitoringUI() {
         document.getElementById("submitBtnPreventa").disabled = true;
         bsProcessingModal.show();
@@ -512,16 +688,17 @@ Informe de Preventa
         if (errorMsg) alert(errorMsg);
     }
 
-    function updateProgressBar(val, text) {
+    function updateProgressBar(val, txt) {
         progressBar.style.width = val + "%";
         progressBar.textContent = val + "%";
-        document.getElementById("progress-stage").textContent = text;
+        document.getElementById("progress-stage").textContent = txt;
     }
 
     function updateTime() {
         var diff = Math.floor((new Date().getTime() - startTime) / 1000);
         document.getElementById("time-info").textContent = "Tiempo: " + diff + "s";
     }
+
+})();
 </script>
 {% endblock script %}
-

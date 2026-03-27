@@ -500,18 +500,12 @@ def cubo_ventas_task(
     else:
         update_job_progress(job_id, 100, status="failed", meta={"stage": "Fallido"})
 
-    # Obtener muestra de datos para previsualización (solo si el proceso fue exitoso)
+    # Preview ya viene incluida en result_data desde CuboVentas.run()
+    # (se extrae antes de la limpieza de SQLite para evitar tabla inexistente)
     if result_data.get("success"):
-        try:
-            preview = cubo_processor.get_data(start_row=0, chunk_size=100)
-            headers = preview.get("headers", [])
-            rows = preview.get("rows", [])
-            muestra = [dict(zip(headers, row)) for row in rows]
-            result_data["preview_headers"] = headers
-            result_data["preview_sample"] = muestra
-        except Exception as e:
-            logger.warning(f"No se pudo obtener previsualización: {e}")
+        if "preview_headers" not in result_data:
             result_data["preview_headers"] = []
+        if "preview_sample" not in result_data:
             result_data["preview_sample"] = []
 
     logger.info("[cubo_ventas_task] RESULTADO: %s", result_data)
@@ -1584,8 +1578,27 @@ def _add_dashboard_supervisor_sheet(
         "  AND h.nbAnno = YEAR(CURDATE())"
     )
 
+    # Facturas FV con devolución total (DT): contar por zona las FV cuyo
+    # nbFactura aparece en un FD/NC con idmotivo DT*, para restarlas del
+    # num_facturas.  Se usa IN con subquery materializada: ~0.5 s.
+    sql_nf_dt = (
+        "SELECT cv.nbZona AS zona, COUNT(DISTINCT cv.nbFactura) AS nf_dt "
+        "FROM cuboventas cv "
+        "WHERE cv.td = 'FV' "
+        "  AND cv.dtContabilizacion BETWEEN :fi AND :ff "
+        f"  AND cv.macrozona_id IN ({placeholders}) "
+        "  AND cv.nbFactura IN ("
+        "    SELECT DISTINCT nbFactura FROM cuboventas "
+        "    WHERE td IN ('FD','NC') AND idmotivo LIKE :dt_prefix "
+        "    AND dtContabilizacion BETWEEN :fi AND :ff "
+        f"    AND macrozona_id IN ({placeholders})"
+        "  ) "
+        "GROUP BY cv.nbZona"
+    )
+
     try:
         params = {"fi": fecha_ini, "ff": fecha_fin}
+        params_dt = {**params, "dt_prefix": "DT%"}
         with engine.connect() as conn:
             rows = conn.execute(sa_text(sql_kpis), params).mappings().all()
             falt_rows = conn.execute(sa_text(sql_faltantes), params).mappings().all()
@@ -1595,6 +1608,13 @@ def _add_dashboard_supervisor_sheet(
             except Exception:
                 cl_act_rows = []
                 logger.info("Tabla rutas no disponible, omitiendo cl. activos.")
+
+            # Facturas FV con devolucion total (DT) por zona
+            try:
+                nf_dt_rows = conn.execute(sa_text(sql_nf_dt), params_dt).mappings().all()
+            except Exception:
+                nf_dt_rows = []
+                logger.info("No se pudo obtener facturas DT, se omite exclusion.")
 
             # Dias habiles y proyeccion
             dias_habiles = 0
@@ -1618,6 +1638,7 @@ def _add_dashboard_supervisor_sheet(
         falt_map = {str(r["zona"]): float(r["faltantes"] or 0) for r in falt_rows}
         cl_act_map = {str(r["zona"]): int(r["cl_activos"] or 0) for r in cl_act_rows}
         imp_map = {str(r["zona"]): int(r["impactos"] or 0) for r in imp_rows}
+        nf_dt_map = {str(r["zona"]): int(r["nf_dt"] or 0) for r in nf_dt_rows}
 
         # ── Métricas por zona ──
         zones = []
@@ -1630,7 +1651,8 @@ def _add_dashboard_supervisor_sheet(
             dev = float(r["devoluciones"] or 0)
             vn = vb - dev                          # venta neta real (FV - FD - NC)
             cam = float(r["cambios"] or 0)
-            nf = int(r["num_facturas"] or 0)
+            nf_raw = int(r["num_facturas"] or 0)
+            nf = max(nf_raw - nf_dt_map.get(str(r["zona"]), 0), 0)  # excluir DT
             fd = int(r["fact_dev"] or 0)
             fc = int(r["fact_cam"] or 0)
             ci = imp_map.get(str(r["zona"]), 0)
@@ -2686,6 +2708,7 @@ def trazabilidad_task(
         IdtReporteFin,
         user_id,
         progress_callback=rq_update_progress,
+        batch_size=batch_size,
     )
 
     result_data = extractor.run()

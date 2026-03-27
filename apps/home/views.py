@@ -356,6 +356,7 @@ class HomePanelCuboPage(BaseView):
                 ultima_fv = ventas_mes["ultima_fv"] if ventas_mes else None
 
                 # Impactos: clientes con venta neta > 0 en el mes
+                # Nota: HAVING SUM > 0 ya excluye DT naturalmente (FV+FD neto = 0)
                 impactos_row = conn.execute(
                     text(
                         f"SELECT COUNT(*) AS impactos FROM ("
@@ -2022,6 +2023,14 @@ class ReporteGenericoPage(BaseView):
                 },
                 status=400,
             )
+        if IdtReporteIni > IdtReporteFin:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error_message": "La fecha inicial no puede ser mayor que la fecha final.",
+                },
+                status=400,
+            )
         try:
             # Limpiar cachÃ© de configuraciÃ³n para esta base de datos antes de encolar
             # Esto asegura que la tarea use la configuraciÃ³n mÃ¡s reciente
@@ -2444,8 +2453,10 @@ class TrazabilidadPage(ReporteGenericoPage):
         return super().dispatch(request, *args, **kwargs)
 
 
-class TrazabilidadDataAjaxView(View):
+class TrazabilidadDataAjaxView(LoginRequiredMixin, View):
     """AJAX endpoint para DataTables server-side del reporte de trazabilidad."""
+
+    login_url = reverse_lazy("users_app:user-login")
 
     def get(self, request, *args, **kwargs):
         try:
@@ -2467,6 +2478,14 @@ class TrazabilidadDataAjaxView(View):
                     "recordsFiltered": 0, "data": [],
                 })
 
+            # Validar acceso del usuario a esta empresa
+            if not request.user.conf_empresas.filter(name=database_name).exists():
+                return JsonResponse({
+                    "draw": draw, "recordsTotal": 0,
+                    "recordsFiltered": 0, "data": [],
+                    "error": "Acceso no autorizado a esta base de datos.",
+                }, status=403)
+
             result = TrazabilidadExtractor.get_data(
                 database_name, fecha_ini, fecha_fin, user_id,
                 agrupacion=agrupacion, start=start, length=length, search=search_value,
@@ -2487,8 +2506,10 @@ class TrazabilidadDataAjaxView(View):
             }, status=500)
 
 
-class TrazabilidadKpisAjaxView(View):
+class TrazabilidadKpisAjaxView(LoginRequiredMixin, View):
     """AJAX endpoint para KPIs del reporte de trazabilidad."""
+
+    login_url = reverse_lazy("users_app:user-login")
 
     def get(self, request, *args, **kwargs):
         try:
@@ -2501,6 +2522,10 @@ class TrazabilidadKpisAjaxView(View):
 
             if not all([database_name, fecha_ini, fecha_fin]):
                 return JsonResponse({"success": False, "error_message": "Faltan parametros."}, status=400)
+
+            # Validar acceso del usuario a esta empresa
+            if not request.user.conf_empresas.filter(name=database_name).exists():
+                return JsonResponse({"success": False, "error_message": "Acceso no autorizado a esta base de datos."}, status=403)
 
             kpis = TrazabilidadExtractor.get_kpis(database_name, fecha_ini, fecha_fin, user_id)
             return JsonResponse({"success": True, "kpis": kpis})

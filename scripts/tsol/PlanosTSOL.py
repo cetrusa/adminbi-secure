@@ -287,7 +287,7 @@ class PlanosTSOL:
         # Columnas posibles de bodega/sede
         columnas_bodega = [
             "Codigo bodega", "Código de bodega", "Código Sede",
-            "codigo_bodega", "nbAlmacen", "Bodega",
+            "Codigo Sede", "codigo_bodega", "nbAlmacen", "Bodega",
         ]
 
         for nm_reporte, df in self.datos.items():
@@ -327,7 +327,7 @@ class PlanosTSOL:
         columnas: Optional[List[str]] = None,
     ) -> str:
         """
-        Escribe DataFrame como TXT delimitado por '{' con cabecera.
+        Escribe DataFrame como TXT delimitado por '|' (pipeline) con cabecera.
         Retorna la ruta completa del archivo generado.
         """
         filepath = os.path.join(self.output_dir, nombre_archivo)
@@ -336,11 +336,12 @@ class PlanosTSOL:
             cols_disponibles = [c for c in columnas if c in df.columns]
             df = df[cols_disponibles]
 
-        header = "{".join(df.columns)
+        sep = "{"
+        header = sep.join(df.columns)
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(header + "\n")
             for _, row in df.iterrows():
-                f.write("{".join(str(v) for v in row.values) + "\n")
+                f.write(sep.join(str(v) for v in row.values) + "\n")
 
         logger.info("Archivo generado: %s (%d registros)", nombre_archivo, len(df))
         return filepath
@@ -429,6 +430,15 @@ class PlanosTSOL:
         if "Codigo" in df.columns:
             df["Codigo"] = df["Codigo"].apply(self._formatear_codigo_producto)
 
+        # Mapear bodega/sede
+        if "Codigo Sede" in df.columns:
+            df["Codigo Sede"] = df["Codigo Sede"].apply(
+                self._normalizar_codigo_bodega
+            )
+            df["Nombre Sede"] = df["Codigo Sede"].apply(
+                self._obtener_nombre_sede
+            )
+
         columnas = [
             "Codigo", "Nombre", "Tipo Referencia", "Tipo De Unidad",
             "Codigo De Barras", "Codigo Categoria", "Nombre Categoria",
@@ -449,6 +459,15 @@ class PlanosTSOL:
         if "Codigo" in df.columns:
             df["Codigo"] = (
                 df["Codigo"].astype(str).str.strip().str.replace("-", "999", regex=False)
+            )
+
+        # Mapear bodega/sede
+        if "Codigo Sede" in df.columns:
+            df["Codigo Sede"] = df["Codigo Sede"].apply(
+                self._normalizar_codigo_bodega
+            )
+            df["Nombre Sede"] = df["Codigo Sede"].apply(
+                self._obtener_nombre_sede
             )
 
         columnas = [
@@ -493,6 +512,15 @@ class PlanosTSOL:
         if df is None or df.empty:
             logger.warning("Sin datos para supervisores_tsol.")
             return None
+
+        # Mapear bodega/sede
+        if "Codigo Sede" in df.columns:
+            df["Codigo Sede"] = df["Codigo Sede"].apply(
+                self._normalizar_codigo_bodega
+            )
+            df["Nombre Sede"] = df["Codigo Sede"].apply(
+                self._obtener_nombre_sede
+            )
 
         columnas = ["Codigo", "Nombre", "Codigo Sede", "Nombre Sede"]
         return self._escribir_txt_tsol(df, "Supervisores.txt", columnas)

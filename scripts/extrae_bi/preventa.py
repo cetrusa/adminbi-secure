@@ -110,6 +110,27 @@ class PreventaReport:
                 "matrix": []
             }
 
+        # Enriquecer con macrozona_id si no viene del SP
+        if 'macrozona_id' not in df.columns and 'zona_id' in df.columns:
+            try:
+                if self.engine_mysql:
+                    with self.engine_mysql.connect() as conn:
+                        zona_map = pd.read_sql(
+                            text("SELECT zona_id, macrozona_id FROM zona "
+                                 "WHERE macrozona_id IS NOT NULL"),
+                            conn,
+                        )
+                    if not zona_map.empty:
+                        zona_map['zona_id'] = zona_map['zona_id'].astype(str)
+                        df['zona_id'] = df['zona_id'].astype(str)
+                        df = df.merge(zona_map, on='zona_id', how='left')
+                        df['macrozona_id'] = df['macrozona_id'].fillna('')
+                    else:
+                        df['macrozona_id'] = ''
+            except Exception as exc:
+                logger.warning("No se pudo enriquecer con macrozona_id: %s", exc)
+                df['macrozona_id'] = ''
+
         # Totales Globales
         # Normalizar a numérico para evitar strings y NaN
         num_cols = [

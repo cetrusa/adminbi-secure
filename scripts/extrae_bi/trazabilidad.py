@@ -7,7 +7,7 @@ import uuid
 import pathlib
 
 import pandas as pd
-from sqlalchemy import text, create_engine
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from openpyxl import Workbook
 
@@ -51,12 +51,13 @@ _GROUPING_QUERIES = {
         ORDER BY zona_id
     """,
     "macrozona": f"""
-        SELECT zona_id, {_AGG_COLUMNS}
-        FROM trazabilidad_preventa
-        WHERE dt_entrega BETWEEN :fi AND :ff
+        SELECT z.macrozona_id, MAX(z.macro) AS nmMacrozona, {_AGG_COLUMNS}
+        FROM trazabilidad_preventa tp
+        INNER JOIN zona z ON tp.zona_id = z.zona_id
+        WHERE tp.dt_entrega BETWEEN :fi AND :ff
         -- FILTERS_HERE
-        GROUP BY zona_id
-        ORDER BY zona_id
+        GROUP BY z.macrozona_id
+        ORDER BY z.macrozona_id
     """,
     "producto": f"""
         SELECT producto_id, MAX(nmProducto) AS nmProducto, {_AGG_COLUMNS}
@@ -171,12 +172,13 @@ class TrazabilidadExtractor:
     `trazabilidad_preventa` en la BD BI. También genera Excel de salida.
     """
 
-    def __init__(self, database_name, fecha_ini, fecha_fin, user_id, progress_callback=None):
+    def __init__(self, database_name, fecha_ini, fecha_fin, user_id, progress_callback=None, batch_size=15000):
         self.database_name = database_name
         self.fecha_ini = fecha_ini
         self.fecha_fin = fecha_fin
         self.user_id = user_id
         self.progress_callback = progress_callback
+        self.batch_size = max(1000, int(batch_size))
         self.start_time = time.time()
 
         self.config = {}
@@ -245,7 +247,9 @@ class TrazabilidadExtractor:
             deleted = result.rowcount
         logger.info(f"Eliminados {deleted:,} registros del periodo {self.fecha_ini} - {self.fecha_fin}.")
 
-    def _extraer_datos(self, chunksize=15000):
+    def _extraer_datos(self, chunksize=None):
+        if chunksize is None:
+            chunksize = self.batch_size
         self._update_progress("Extrayendo datos de SIDIS", 10)
         sql_text = SQL_FILE.read_text(encoding="utf-8")
         # Quitar ORDER BY para la extracción masiva (optimización)
@@ -356,7 +360,7 @@ class TrazabilidadExtractor:
             ws.append(headers)
 
             while True:
-                rows = result.fetchmany(10000)
+                rows = result.fetchmany(self.batch_size)
                 if not rows:
                     break
                 for row in rows:

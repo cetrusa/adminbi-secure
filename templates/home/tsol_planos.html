@@ -89,7 +89,11 @@ Planos TSOL
       </form>
 
       <div class="mt-3">
-        {% include 'includes/download_file.html' %}
+        <span id="download_file" class="card text-center d-none">
+          <a id="download_link" class="btn btn-success" href="#">
+            <i class="fas fa-download me-2"></i> Descargar ZIP
+          </a>
+        </span>
       </div>
     </div>
   </div>
@@ -182,7 +186,7 @@ Planos TSOL
     csrfToken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
     modalTitle: 'Procesando Planos TSOL...',
     onComplete: function(result) {
-      var meta = result.metadata || {};
+      var meta = (result.result && result.result.metadata) || result.meta || {};
       $('#tsolResultado').show();
       $('#kpiVentas').text((meta.total_ventas || 0).toLocaleString());
       $('#kpiClientes').text((meta.total_clientes || 0).toLocaleString());
@@ -202,6 +206,14 @@ Planos TSOL
         archivos.forEach(function(a) { html += '<li>' + a + '</li>'; });
         html += '</ul>';
         $('#tsolArchivos').html(html);
+      }
+
+      // Actualizar link de descarga al ZIP de TSOL
+      if (meta.envio_id) {
+        var downloadLink = document.getElementById('download_link');
+        if (downloadLink) {
+          downloadLink.href = '{% url "home_app:tsol_download" 0 %}'.replace('/0/', '/' + meta.envio_id + '/');
+        }
       }
     }
   });

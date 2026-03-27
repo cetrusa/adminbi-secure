@@ -272,9 +272,21 @@ Trazabilidad Preventa
         {data: 'agotados_parcial', title: 'Agotados Parcial', render: fmtNum},
         {data: 'total_lineas', title: 'Lineas', render: fmtNum}
       ];
-    } else if (agrupacion === 'zona' || agrupacion === 'macrozona') {
+    } else if (agrupacion === 'zona') {
       return [
         {data: 'zona_id', title: 'Zona'},
+        {data: 'cant_pedida_campo', title: 'Cant. Pedida', render: fmtNum},
+        {data: 'cant_asignada_factura', title: 'Cant. Asignada', render: fmtNum},
+        {data: 'cant_faltante', title: 'Cant. Faltante', render: fmtNum},
+        {data: 'vl_brecha_total', title: 'Valor Brecha', render: fmtMoney},
+        {data: 'agotados_total', title: 'Agotados Total', render: fmtNum},
+        {data: 'agotados_parcial', title: 'Agotados Parcial', render: fmtNum},
+        {data: 'total_lineas', title: 'Lineas', render: fmtNum}
+      ];
+    } else if (agrupacion === 'macrozona') {
+      return [
+        {data: 'macrozona_id', title: 'ID Macrozona'},
+        {data: 'nmMacrozona', title: 'Macrozona'},
         {data: 'cant_pedida_campo', title: 'Cant. Pedida', render: fmtNum},
         {data: 'cant_asignada_factura', title: 'Cant. Asignada', render: fmtNum},
         {data: 'cant_faltante', title: 'Cant. Faltante', render: fmtNum},

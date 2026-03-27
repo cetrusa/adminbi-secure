@@ -1,5 +1,7 @@
 # scripts/extrae_bi/cubo.py
 import os
+import sqlite3
+import decimal
 import pandas as pd
 import time
 import gc
@@ -13,6 +15,9 @@ from scripts.config import ConfigBasic
 from apps.home.models import Reporte
 import psutil
 from scripts.text_cleaner import TextCleaner
+
+# Registrar adaptador para que sqlite3 acepte decimal.Decimal (lo convierte a float)
+sqlite3.register_adapter(decimal.Decimal, float)
 
 logger = logging.getLogger(__name__)
 
@@ -500,19 +505,39 @@ class CuboVentas:
             raise
 
     def _cleanup(self):
-        """Limpia recursos como la tabla SQLite temporal."""
+        """Limpia recursos como la tabla SQLite temporal y el archivo .db."""
         logger.info(f"Limpiando tabla temporal SQLite: {self.sqlite_table_name}")
+        db_path = None
         try:
             if self.engine_sqlite:
-                with self.engine_sqlite.connect() as conn:
-                    conn.execute(text(f"DROP TABLE IF EXISTS {self.sqlite_table_name}"))
-                logger.info("Tabla temporal eliminada.")
-                # Si SQLite era un archivo, eliminarlo:
-                # if "///" in str(self.engine_sqlite.url): # Es archivo
-                #     db_path = str(self.engine_sqlite.url).split("///")[1]
-                #     if os.path.exists(db_path):
-                #         os.remove(db_path)
-                #         logger.info(f"Archivo DB temporal eliminado: {db_path}")
+                try:
+                    with self.engine_sqlite.connect() as conn:
+                        conn.execute(text(f"DROP TABLE IF EXISTS {self.sqlite_table_name}"))
+                    logger.info("Tabla temporal eliminada.")
+                except Exception as drop_err:
+                    logger.warning("No se pudo DROP TABLE: %s", drop_err)
+
+                # Obtener ruta del archivo antes de dispose
+                sqlite_url = str(self.engine_sqlite.url)
+                if "///" in sqlite_url:
+                    db_path = sqlite_url.split("///")[1]
+
+                # Cerrar todas las conexiones del pool
+                self.engine_sqlite.dispose()
+                self.engine_sqlite = None
+
+                # Eliminar archivo SQLite (con reintento para Windows file locks)
+                if db_path and os.path.exists(db_path):
+                    for attempt in range(3):
+                        try:
+                            os.remove(db_path)
+                            logger.info(f"Archivo DB temporal eliminado: {db_path}")
+                            break
+                        except PermissionError:
+                            if attempt < 2:
+                                time.sleep(0.5)
+                            else:
+                                logger.warning(f"No se pudo eliminar {db_path} tras 3 intentos (file lock)")
         except Exception as e:
             logger.warning(f"Error durante la limpieza de SQLite: {e}", exc_info=True)
 
@@ -597,8 +622,18 @@ class CuboVentas:
             hoja_nombre = reporte.nombre or "CuboVentas"
             self._generate_output_file(hoja_nombre)
 
-            # 5. Limpieza
-            self._cleanup()
+            # 5. Extraer preview ANTES de limpiar la tabla SQLite
+            preview_data = {}
+            try:
+                preview = self.get_data(start_row=0, chunk_size=100)
+                headers = preview.get("headers", [])
+                rows = preview.get("rows", [])
+                preview_data["preview_headers"] = headers
+                preview_data["preview_sample"] = [dict(zip(headers, row)) for row in rows]
+            except Exception as e:
+                logger.warning("No se pudo extraer preview antes de cleanup: %s", e)
+                preview_data["preview_headers"] = []
+                preview_data["preview_sample"] = []
 
             # 6. Finalizar y Reportar
             execution_time = time.time() - self.start_time
@@ -609,7 +644,7 @@ class CuboVentas:
             logger.info("INFORME DE RENDIMIENTO:\n" + performance_report)
             self._update_progress("Completado", 100, self.total_records_processed)
 
-            return {
+            result = {
                 "success": True,
                 "message": f"Cubo de ventas generado exitosamente en {execution_time:.2f} segundos.",
                 "file_path": self.file_path,
@@ -620,6 +655,8 @@ class CuboVentas:
                     "performance_report": performance_report,
                 },
             }
+            result.update(preview_data)
+            return result
 
         except Exception as e:
             execution_time = time.time() - self.start_time
@@ -636,6 +673,12 @@ class CuboVentas:
                 "execution_time": execution_time,
                 "metadata": {"total_records": self.total_records_processed},
             }
+        finally:
+            # Garantizar limpieza de recursos SQLite en todos los paths (éxito y error)
+            try:
+                self._cleanup()
+            except Exception as cleanup_err:
+                logger.warning("Error en cleanup final: %s", cleanup_err)
 
     # --- Métodos Adicionales (Mantenidos de la versión original si son necesarios) ---
 
