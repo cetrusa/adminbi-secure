@@ -235,7 +235,35 @@ class TrazabilidadExtractor:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def get_kpis(database_name, fecha_ini, fecha_fin, user_id):
+    def _build_filter_clause(params, zona_id="", causa_brecha="",
+                             origen_registro="", estado_item="", prefix=""):
+        """Construye clausulas WHERE dinamicas a partir de filtros.
+
+        Args:
+            params: dict de parametros enlazados (se modifica in-place).
+            prefix: prefijo de tabla para columnas (ej. "tp." para joins).
+
+        Returns:
+            str con clausulas AND (puede estar vacio).
+        """
+        clauses = []
+        if zona_id:
+            clauses.append(f" AND {prefix}zona_id = :f_zona")
+            params["f_zona"] = zona_id
+        if causa_brecha:
+            clauses.append(f" AND {prefix}causa_brecha = :f_causa")
+            params["f_causa"] = causa_brecha
+        if origen_registro:
+            clauses.append(f" AND {prefix}origen_registro = :f_origen")
+            params["f_origen"] = origen_registro
+        if estado_item:
+            clauses.append(f" AND {prefix}nm_estado_item = :f_estado")
+            params["f_estado"] = estado_item
+        return "".join(clauses)
+
+    @staticmethod
+    def get_kpis(database_name, fecha_ini, fecha_fin, user_id,
+                 zona_id="", causa_brecha="", origen_registro="", estado_item=""):
         """Calcula KPIs desde la tabla trazabilidad_preventa en BD BI."""
         config = ConfigBasic(database_name, user_id).config
         engine = con.ConexionMariadb3(
@@ -243,7 +271,11 @@ class TrazabilidadExtractor:
             str(config["hostServerIn"]), int(config["portServerIn"]),
             str(config["dbBi"]),
         )
-        kpi_sql = text("""
+        params = {"fi": fecha_ini, "ff": fecha_fin}
+        filter_clause = TrazabilidadExtractor._build_filter_clause(
+            params, zona_id, causa_brecha, origen_registro, estado_item,
+        )
+        kpi_sql = text(f"""
             SELECT
                 COUNT(*)                                     AS total_registros,
                 SUM(bo_faltante_total)                       AS agotados_total,
@@ -259,9 +291,10 @@ class TrazabilidadExtractor:
             FROM trazabilidad_preventa
             WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00')
               AND dt_entrega <= CONCAT(:ff, ' 23:59:59')
+              {filter_clause}
         """)
         with engine.connect() as conn:
-            row = conn.execute(kpi_sql, {"fi": fecha_ini, "ff": fecha_fin}).fetchone()
+            row = conn.execute(kpi_sql, params).fetchone()
 
         if not row:
             return {}
@@ -280,8 +313,71 @@ class TrazabilidadExtractor:
         }
 
     @staticmethod
+    def get_filter_options(database_name, fecha_ini, fecha_fin, user_id):
+        """Retorna valores unicos de columnas filtrables para el periodo."""
+        config = ConfigBasic(database_name, user_id).config
+        engine = con.ConexionMariadb3(
+            str(config["nmUsrIn"]), str(config["txPassIn"]),
+            str(config["hostServerIn"]), int(config["portServerIn"]),
+            str(config["dbBi"]),
+        )
+        sql = text("""
+            SELECT
+                IFNULL(zona_id, '') AS val,
+                'zona' AS tipo
+            FROM trazabilidad_preventa
+            WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00')
+              AND dt_entrega <= CONCAT(:ff, ' 23:59:59')
+            GROUP BY zona_id
+
+            UNION ALL
+
+            SELECT
+                IFNULL(causa_brecha, '') AS val,
+                'causa' AS tipo
+            FROM trazabilidad_preventa
+            WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00')
+              AND dt_entrega <= CONCAT(:ff, ' 23:59:59')
+            GROUP BY causa_brecha
+
+            UNION ALL
+
+            SELECT
+                IFNULL(origen_registro, '') AS val,
+                'origen' AS tipo
+            FROM trazabilidad_preventa
+            WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00')
+              AND dt_entrega <= CONCAT(:ff, ' 23:59:59')
+            GROUP BY origen_registro
+
+            UNION ALL
+
+            SELECT
+                IFNULL(nm_estado_item, '') AS val,
+                'estado' AS tipo
+            FROM trazabilidad_preventa
+            WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00')
+              AND dt_entrega <= CONCAT(:ff, ' 23:59:59')
+            GROUP BY nm_estado_item
+        """)
+        params = {"fi": fecha_ini, "ff": fecha_fin}
+        result = {"zonas": [], "causas": [], "origenes": [], "estados": []}
+        mapping = {"zona": "zonas", "causa": "causas", "origen": "origenes", "estado": "estados"}
+
+        with engine.connect() as conn:
+            for row in conn.execute(sql, params).fetchall():
+                val, tipo = row[0], row[1]
+                if val and tipo in mapping:
+                    result[mapping[tipo]].append(val)
+
+        for key in result:
+            result[key].sort()
+        return result
+
+    @staticmethod
     def get_data(database_name, fecha_ini, fecha_fin, user_id,
-                 agrupacion="detalle", start=0, length=100, search=""):
+                 agrupacion="detalle", start=0, length=100, search="",
+                 zona_id="", causa_brecha="", origen_registro="", estado_item=""):
         """
         Consulta datos para DataTables server-side.
 
@@ -298,21 +394,32 @@ class TrazabilidadExtractor:
         params = {"fi": fecha_ini, "ff": fecha_fin}
 
         if agrupacion == "detalle":
+            filter_clause = TrazabilidadExtractor._build_filter_clause(
+                params, zona_id, causa_brecha, origen_registro, estado_item,
+            )
             base_sql = (
                 "SELECT * FROM trazabilidad_preventa "
                 "WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00') "
                 "  AND dt_entrega <= CONCAT(:ff, ' 23:59:59')"
+                + filter_clause
             )
             count_sql = (
                 "SELECT COUNT(*) FROM trazabilidad_preventa "
                 "WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00') "
                 "  AND dt_entrega <= CONCAT(:ff, ' 23:59:59')"
+                + filter_clause
             )
         else:
             group_query = _GROUPING_QUERIES.get(agrupacion)
             if not group_query:
                 group_query = _GROUPING_QUERIES["total"]
-            base_sql = group_query.replace("-- FILTERS_HERE", "")
+            # Para macrozona el prefijo de tabla es "tp."
+            prefix = "tp." if agrupacion == "macrozona" else ""
+            filter_clause = TrazabilidadExtractor._build_filter_clause(
+                params, zona_id, causa_brecha, origen_registro, estado_item,
+                prefix=prefix,
+            )
+            base_sql = group_query.replace("-- FILTERS_HERE", filter_clause)
             count_sql = f"SELECT COUNT(*) FROM ({base_sql}) AS sub"
 
         # Search filter
@@ -327,9 +434,10 @@ class TrazabilidadExtractor:
             )
             params["search"] = f"%{search}%"
 
-        # Count total (sin filtro de search)
+        # Count total (sin filtro de search pero con filtros de columna)
+        params_count = {k: v for k, v in params.items() if k != "search"}
         with engine.connect() as conn:
-            total_records = conn.execute(text(count_sql), {"fi": fecha_ini, "ff": fecha_fin}).scalar() or 0
+            total_records = conn.execute(text(count_sql), params_count).scalar() or 0
 
         # Count filtrado (con search)
         if search_clause:

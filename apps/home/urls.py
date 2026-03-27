@@ -129,6 +129,7 @@ urlpatterns = [
     path("trazabilidad/", views.TrazabilidadPage.as_view(), name="trazabilidad"),
     path("trazabilidad/data/", views.TrazabilidadDataAjaxView.as_view(), name="trazabilidad_data_ajax"),
     path("trazabilidad/kpis/", views.TrazabilidadKpisAjaxView.as_view(), name="trazabilidad_kpis_ajax"),
+    path("trazabilidad/filters/", views.TrazabilidadFilterOptionsView.as_view(), name="trazabilidad_filters_ajax"),
     # --- CDT (Planos para proveedores) ---
     path("cdt/", views.CdtPage.as_view(), name="cdt_planos"),
     path("cdt/historial/", views.CdtHistorialPage.as_view(), name="cdt_historial"),

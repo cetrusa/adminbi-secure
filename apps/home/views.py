@@ -2486,9 +2486,17 @@ class TrazabilidadDataAjaxView(LoginRequiredMixin, View):
                     "error": "Acceso no autorizado a esta base de datos.",
                 }, status=403)
 
+            # Filtros de columna
+            f_zona = request.GET.get("zona_id", "")
+            f_causa = request.GET.get("causa_brecha", "")
+            f_origen = request.GET.get("origen_registro", "")
+            f_estado = request.GET.get("estado_item", "")
+
             result = TrazabilidadExtractor.get_data(
                 database_name, fecha_ini, fecha_fin, user_id,
                 agrupacion=agrupacion, start=start, length=length, search=search_value,
+                zona_id=f_zona, causa_brecha=f_causa,
+                origen_registro=f_origen, estado_item=f_estado,
             )
 
             return JsonResponse({
@@ -2527,10 +2535,47 @@ class TrazabilidadKpisAjaxView(LoginRequiredMixin, View):
             if not request.user.conf_empresas.filter(name=database_name).exists():
                 return JsonResponse({"success": False, "error_message": "Acceso no autorizado a esta base de datos."}, status=403)
 
-            kpis = TrazabilidadExtractor.get_kpis(database_name, fecha_ini, fecha_fin, user_id)
+            # Filtros de columna
+            f_zona = request.GET.get("zona_id", "")
+            f_causa = request.GET.get("causa_brecha", "")
+            f_origen = request.GET.get("origen_registro", "")
+            f_estado = request.GET.get("estado_item", "")
+
+            kpis = TrazabilidadExtractor.get_kpis(
+                database_name, fecha_ini, fecha_fin, user_id,
+                zona_id=f_zona, causa_brecha=f_causa,
+                origen_registro=f_origen, estado_item=f_estado,
+            )
             return JsonResponse({"success": True, "kpis": kpis})
         except Exception as e:
             logger.error(f"[TrazabilidadKpisAjaxView] Error: {e}", exc_info=True)
+            return JsonResponse({"success": False, "error_message": str(e)}, status=500)
+
+
+class TrazabilidadFilterOptionsView(LoginRequiredMixin, View):
+    """AJAX endpoint para opciones de filtros de trazabilidad."""
+
+    login_url = reverse_lazy("users_app:user-login")
+
+    def get(self, request, *args, **kwargs):
+        try:
+            from scripts.extrae_bi.trazabilidad import TrazabilidadExtractor
+
+            database_name = request.GET.get("database_select") or request.session.get("database_name")
+            fecha_ini = request.GET.get("IdtReporteIni")
+            fecha_fin = request.GET.get("IdtReporteFin")
+            user_id = request.user.id
+
+            if not all([database_name, fecha_ini, fecha_fin]):
+                return JsonResponse({"success": False, "error_message": "Faltan parametros."}, status=400)
+
+            if not request.user.conf_empresas.filter(name=database_name).exists():
+                return JsonResponse({"success": False, "error_message": "Acceso no autorizado."}, status=403)
+
+            options = TrazabilidadExtractor.get_filter_options(database_name, fecha_ini, fecha_fin, user_id)
+            return JsonResponse({"success": True, "options": options})
+        except Exception as e:
+            logger.error(f"[TrazabilidadFilterOptionsView] Error: {e}", exc_info=True)
             return JsonResponse({"success": False, "error_message": str(e)}, status=500)
 
 

@@ -20,56 +20,88 @@ Trazabilidad Preventa
     <p class="text-muted small mb-0">Analisis de diferencias entre la preventa y la facturacion/entrega.</p>
   </div>
 
-  <!-- KPIs -->
-  <div class="row mb-4 g-3" id="kpiRow" style="display:none;">
-    <div class="col-md-6 col-lg-3">
-      <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
-        <div class="card-body py-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-secondary small fw-bold text-uppercase mb-1">Total Registros</div>
-              <div class="h5 mb-0 fw-bold text-info" id="kpi_total_registros">-</div>
-            </div>
-            <div class="fs-2 text-info opacity-25"><i class="fas fa-database"></i></div>
+  <!-- KPIs (2 filas de 5) -->
+  <div id="kpiRow" style="display:none;">
+    <div class="row mb-2 g-2">
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-info">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Registros</div>
+            <div class="h6 mb-0 fw-bold text-info" id="kpi_total_registros">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-danger">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Agotados Total</div>
+            <div class="h6 mb-0 fw-bold text-danger" id="kpi_agotados_total">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-warning">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Agotados Parcial</div>
+            <div class="h6 mb-0 fw-bold text-warning" id="kpi_agotados_parcial">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-dark">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">% Agotamiento</div>
+            <div class="h6 mb-0 fw-bold" id="kpi_pct_agotamiento">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-success">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Valor Brecha</div>
+            <div class="h6 mb-0 fw-bold text-success" id="kpi_valor_brecha">-</div>
           </div>
         </div>
       </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-      <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
-        <div class="card-body py-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-secondary small fw-bold text-uppercase mb-1">Agotados Total</div>
-              <div class="h5 mb-0 fw-bold text-danger" id="kpi_agotados_total">-</div>
-            </div>
-            <div class="fs-2 text-danger opacity-25"><i class="fas fa-times-circle"></i></div>
+    <div class="row mb-3 g-2">
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-secondary">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Vlr Faltante</div>
+            <div class="h6 mb-0 fw-bold text-secondary" id="kpi_valor_faltante">-</div>
           </div>
         </div>
       </div>
-    </div>
-    <div class="col-md-6 col-lg-3">
-      <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
-        <div class="card-body py-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-secondary small fw-bold text-uppercase mb-1">% Agotamiento</div>
-              <div class="h5 mb-0 fw-bold text-warning" id="kpi_pct_agotamiento">-</div>
-            </div>
-            <div class="fs-2 text-warning opacity-25"><i class="fas fa-percent"></i></div>
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-primary">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Vlr Pedido</div>
+            <div class="h6 mb-0 fw-bold text-primary" id="kpi_valor_pedido">-</div>
           </div>
         </div>
       </div>
-    </div>
-    <div class="col-md-6 col-lg-3">
-      <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
-        <div class="card-body py-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-secondary small fw-bold text-uppercase mb-1">Valor Brecha Total</div>
-              <div class="h5 mb-0 fw-bold text-success" id="kpi_valor_brecha">-</div>
-            </div>
-            <div class="fs-2 text-success opacity-25"><i class="fas fa-dollar-sign"></i></div>
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-info">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Productos</div>
+            <div class="h6 mb-0 fw-bold text-info" id="kpi_productos">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-success">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Clientes</div>
+            <div class="h6 mb-0 fw-bold text-success" id="kpi_clientes">-</div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card border-0 shadow-sm h-100 border-start border-3 border-warning">
+          <div class="card-body py-2 px-3">
+            <div class="text-secondary small fw-bold text-uppercase mb-1">Zonas</div>
+            <div class="h6 mb-0 fw-bold text-warning" id="kpi_zonas">-</div>
           </div>
         </div>
       </div>
@@ -105,12 +137,14 @@ Trazabilidad Preventa
           </div>
         </div>
 
-        <button id="submitBtnTrazabilidad" type="submit" class="btn btn-info w-100" data-submitted="false">
-          <i class="fas fa-file-excel me-2"></i> Generar Reporte Excel
-        </button>
-        <button id="btnConsultar" type="button" class="btn btn-outline-info w-100 mt-2">
-          <i class="fas fa-search me-2"></i> Consultar Datos Existentes
-        </button>
+        <div class="d-flex gap-2">
+          <button id="submitBtnTrazabilidad" type="submit" class="btn btn-info flex-grow-1" data-submitted="false">
+            <i class="fas fa-file-excel me-2"></i> Generar Reporte Excel
+          </button>
+          <button id="btnConsultar" type="button" class="btn btn-outline-info flex-grow-1">
+            <i class="fas fa-search me-2"></i> Consultar Datos
+          </button>
+        </div>
       </form>
 
       <div class="mt-3">
@@ -121,21 +155,59 @@ Trazabilidad Preventa
 
   <!-- Consulta de datos -->
   <div class="card shadow-sm border-0 mb-3 mt-3" id="consultaCard" style="display:none;">
-    <div class="card-header d-flex align-items-center justify-content-between">
-      <h6 class="fw-bold mb-0 text-info"><i class="fas fa-table me-2"></i>Consulta de Datos</h6>
-      <div class="d-flex align-items-center gap-2">
-        <label for="agrupacion" class="form-label small fw-semibold text-muted mb-0">Agrupar por:</label>
-        <select class="form-select form-select-sm" id="agrupacion" style="width: auto;">
-          <option value="detalle" selected>Detalle (todas las filas)</option>
-          <option value="cliente">Por Cliente</option>
-          <option value="zona">Por Zona</option>
-          <option value="macrozona">Por Macrozona</option>
-          <option value="producto">Por Producto</option>
-          <option value="total">Total Empresa</option>
-        </select>
-        <button class="btn btn-sm btn-outline-info" id="btnRefreshData" title="Recargar datos">
-          <i class="fas fa-sync-alt"></i>
-        </button>
+    <div class="card-header">
+      <!-- Fila 1: Titulo + Agrupacion + Refresh -->
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 class="fw-bold mb-0 text-info"><i class="fas fa-table me-2"></i>Consulta de Datos</h6>
+        <div class="d-flex align-items-center gap-2">
+          <label for="agrupacion" class="form-label small fw-semibold text-muted mb-0">Agrupar por:</label>
+          <select class="form-select form-select-sm" id="agrupacion" style="width: auto;">
+            <option value="detalle" selected>Detalle (todas las filas)</option>
+            <option value="cliente">Por Cliente</option>
+            <option value="zona">Por Zona</option>
+            <option value="macrozona">Por Macrozona</option>
+            <option value="producto">Por Producto</option>
+            <option value="total">Total Empresa</option>
+          </select>
+          <button class="btn btn-sm btn-outline-info" id="btnRefreshData" title="Recargar datos">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </div>
+      </div>
+      <!-- Fila 2: Filtros -->
+      <div class="d-flex align-items-end gap-2 flex-wrap" id="filterRow">
+        <div class="flex-fill" style="min-width: 120px;">
+          <label class="form-label small text-muted mb-0">Zona</label>
+          <select class="form-select form-select-sm" id="filterZona">
+            <option value="">-- Todas --</option>
+          </select>
+        </div>
+        <div class="flex-fill" style="min-width: 140px;">
+          <label class="form-label small text-muted mb-0">Causa Brecha</label>
+          <select class="form-select form-select-sm" id="filterCausa">
+            <option value="">-- Todas --</option>
+          </select>
+        </div>
+        <div class="flex-fill" style="min-width: 120px;">
+          <label class="form-label small text-muted mb-0">Origen</label>
+          <select class="form-select form-select-sm" id="filterOrigen">
+            <option value="">-- Todos --</option>
+          </select>
+        </div>
+        <div class="flex-fill" style="min-width: 120px;">
+          <label class="form-label small text-muted mb-0">Estado Item</label>
+          <select class="form-select form-select-sm" id="filterEstado">
+            <option value="">-- Todos --</option>
+          </select>
+        </div>
+        <div class="d-flex gap-1">
+          <button class="btn btn-sm btn-info" id="btnApplyFilters" title="Aplicar filtros">
+            <i class="fas fa-filter"></i> Aplicar
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" id="btnClearFilters" title="Limpiar filtros">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
       </div>
     </div>
     <div class="card-body p-0">
@@ -183,9 +255,9 @@ Trazabilidad Preventa
   'use strict';
 
   var dataTable = null;
-  var reportReady = false;
+  var consultaActiva = false;
 
-  // ---- TaskMonitor ----
+  // ---- TaskMonitor (solo para Excel) ----
   var monitor = new TaskMonitor({
     taskType: 'trazabilidad',
     submitBtnId: 'submitBtnTrazabilidad',
@@ -194,14 +266,14 @@ Trazabilidad Preventa
     csrfToken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
     modalTitle: 'Procesando Trazabilidad...',
     onComplete: function(response) {
-      reportReady = true;
-      loadKpis();
-      showConsultaCard();
-      initOrReloadDataTable();
+      // Si no estaba consultando, abrir la consulta
+      if (!consultaActiva) {
+        activarConsulta();
+      }
     }
   });
 
-  // ---- Formateo de numeros ----
+  // ---- Formateo ----
   function fmtNum(val) {
     if (val === null || val === undefined || val === '') return '-';
     var n = Number(val);
@@ -216,17 +288,81 @@ Trazabilidad Preventa
     return '$ ' + n.toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   }
 
+  // ---- Parametros comunes ----
+  function getBaseParams() {
+    return {
+      db: window.sessionStorage.getItem('database_name'),
+      fi: document.getElementById('IdtReporteIni').value,
+      ff: document.getElementById('IdtReporteFin').value
+    };
+  }
+
+  function getFilterParams() {
+    return {
+      zona_id: document.getElementById('filterZona').value,
+      causa_brecha: document.getElementById('filterCausa').value,
+      origen_registro: document.getElementById('filterOrigen').value,
+      estado_item: document.getElementById('filterEstado').value
+    };
+  }
+
+  function buildQueryString(base, filters) {
+    var qs = 'database_select=' + encodeURIComponent(base.db) +
+             '&IdtReporteIni=' + encodeURIComponent(base.fi) +
+             '&IdtReporteFin=' + encodeURIComponent(base.ff);
+    if (filters) {
+      Object.keys(filters).forEach(function(k) {
+        if (filters[k]) qs += '&' + k + '=' + encodeURIComponent(filters[k]);
+      });
+    }
+    return qs;
+  }
+
+  // ---- Poblar filtros ----
+  function populateFilterDropdowns() {
+    var base = getBaseParams();
+    if (!base.db || !base.fi || !base.ff) return;
+
+    var url = '{% url "home_app:trazabilidad_filters_ajax" %}?' + buildQueryString(base);
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success || !data.options) return;
+        var opts = data.options;
+        fillSelect('filterZona', opts.zonas, '-- Todas --');
+        fillSelect('filterCausa', opts.causas, '-- Todas --');
+        fillSelect('filterOrigen', opts.origenes, '-- Todos --');
+        fillSelect('filterEstado', opts.estados, '-- Todos --');
+      })
+      .catch(function(err) { console.error('Error cargando filtros:', err); });
+  }
+
+  function fillSelect(selectId, values, placeholder) {
+    var sel = document.getElementById(selectId);
+    var currentVal = sel.value;
+    sel.innerHTML = '<option value="">' + placeholder + '</option>';
+    (values || []).forEach(function(v) {
+      var opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      sel.appendChild(opt);
+    });
+    // Restaurar valor si aun existe
+    if (currentVal) {
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === currentVal) { sel.value = currentVal; break; }
+      }
+    }
+  }
+
   // ---- KPIs ----
   function loadKpis() {
-    var db = window.sessionStorage.getItem('database_name');
-    var fi = document.getElementById('IdtReporteIni').value;
-    var ff = document.getElementById('IdtReporteFin').value;
-    if (!db || !fi || !ff) return;
+    var base = getBaseParams();
+    if (!base.db || !base.fi || !base.ff) return;
 
-    var url = '{% url "home_app:trazabilidad_kpis_ajax" %}' +
-      '?database_select=' + encodeURIComponent(db) +
-      '&IdtReporteIni=' + encodeURIComponent(fi) +
-      '&IdtReporteFin=' + encodeURIComponent(ff);
+    var filters = getFilterParams();
+    var url = '{% url "home_app:trazabilidad_kpis_ajax" %}?' + buildQueryString(base, filters);
 
     fetch(url)
       .then(function(r) { return r.json(); })
@@ -235,19 +371,21 @@ Trazabilidad Preventa
           var k = data.kpis;
           document.getElementById('kpi_total_registros').textContent = fmtNum(k.total_registros);
           document.getElementById('kpi_agotados_total').textContent = fmtNum(k.agotados_total);
+          document.getElementById('kpi_agotados_parcial').textContent = fmtNum(k.agotados_parcial);
           document.getElementById('kpi_pct_agotamiento').textContent = (k.pct_agotamiento || 0) + '%';
           document.getElementById('kpi_valor_brecha').textContent = fmtMoney(k.valor_brecha_total);
-          document.getElementById('kpiRow').style.display = 'flex';
+          document.getElementById('kpi_valor_faltante').textContent = fmtMoney(k.valor_faltante_cantidad);
+          document.getElementById('kpi_valor_pedido').textContent = fmtMoney(k.valor_pedido_total);
+          document.getElementById('kpi_productos').textContent = fmtNum(k.productos_unicos);
+          document.getElementById('kpi_clientes').textContent = fmtNum(k.clientes_unicos);
+          document.getElementById('kpi_zonas').textContent = fmtNum(k.zonas_unicas);
+          document.getElementById('kpiRow').style.display = 'block';
         }
       })
       .catch(function(err) { console.error('Error cargando KPIs:', err); });
   }
 
   // ---- DataTables ----
-  function showConsultaCard() {
-    document.getElementById('consultaCard').style.display = 'block';
-  }
-
   function getColumns(agrupacion) {
     if (agrupacion === 'cliente') {
       return [
@@ -333,11 +471,8 @@ Trazabilidad Preventa
 
   function initOrReloadDataTable() {
     var agrupacion = document.getElementById('agrupacion').value;
-    var db = window.sessionStorage.getItem('database_name');
-    var fi = document.getElementById('IdtReporteIni').value;
-    var ff = document.getElementById('IdtReporteFin').value;
-
-    if (!db || !fi || !ff) return;
+    var base = getBaseParams();
+    if (!base.db || !base.fi || !base.ff) return;
 
     // Destruir tabla anterior si existe
     if (dataTable) {
@@ -364,10 +499,17 @@ Trazabilidad Preventa
         url: '{% url "home_app:trazabilidad_data_ajax" %}',
         type: 'GET',
         data: function(d) {
+          var base = getBaseParams();
+          var filters = getFilterParams();
           d.agrupacion = document.getElementById('agrupacion').value;
-          d.database_select = window.sessionStorage.getItem('database_name');
-          d.IdtReporteIni = document.getElementById('IdtReporteIni').value;
-          d.IdtReporteFin = document.getElementById('IdtReporteFin').value;
+          d.database_select = base.db;
+          d.IdtReporteIni = base.fi;
+          d.IdtReporteFin = base.ff;
+          // Filtros de columna
+          if (filters.zona_id) d.zona_id = filters.zona_id;
+          if (filters.causa_brecha) d.causa_brecha = filters.causa_brecha;
+          if (filters.origen_registro) d.origen_registro = filters.origen_registro;
+          if (filters.estado_item) d.estado_item = filters.estado_item;
         }
       },
       columns: columns,
@@ -387,22 +529,39 @@ Trazabilidad Preventa
       buttons: [
         {extend: 'copy', text: '<i class="fas fa-copy"></i> Copiar', className: 'btn btn-sm btn-outline-secondary'},
         {extend: 'csv', text: '<i class="fas fa-file-csv"></i> CSV', className: 'btn btn-sm btn-outline-secondary'},
-        {extend: 'excel', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-sm btn-outline-secondary'}
+        {extend: 'excel', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-sm btn-outline-secondary'},
+        {extend: 'pdfHtml5', text: '<i class="fas fa-file-pdf"></i> PDF', className: 'btn btn-sm btn-outline-secondary'},
+        {extend: 'print', text: '<i class="fas fa-print"></i> Imprimir', className: 'btn btn-sm btn-outline-secondary'}
       ],
       order: [],
       scrollX: true
     });
   }
 
+  // ---- Activar consulta ----
+  function activarConsulta() {
+    consultaActiva = true;
+    document.getElementById('consultaCard').style.display = 'block';
+    populateFilterDropdowns();
+    loadKpis();
+    initOrReloadDataTable();
+  }
+
+  // ---- Aplicar filtros (recarga KPIs + tabla) ----
+  function aplicarFiltros() {
+    if (!consultaActiva) return;
+    loadKpis();
+    initOrReloadDataTable();
+  }
+
   // ---- Eventos ----
   document.getElementById('agrupacion').addEventListener('change', function() {
-    if (reportReady) {
-      initOrReloadDataTable();
-    }
+    if (consultaActiva) initOrReloadDataTable();
   });
 
   document.getElementById('btnRefreshData').addEventListener('click', function() {
-    if (reportReady) {
+    if (consultaActiva) {
+      populateFilterDropdowns();
       loadKpis();
       initOrReloadDataTable();
     }
@@ -415,10 +574,19 @@ Trazabilidad Preventa
       alert('Seleccione un rango de fechas');
       return;
     }
-    reportReady = true;
-    loadKpis();
-    showConsultaCard();
-    initOrReloadDataTable();
+    activarConsulta();
+  });
+
+  document.getElementById('btnApplyFilters').addEventListener('click', function() {
+    aplicarFiltros();
+  });
+
+  document.getElementById('btnClearFilters').addEventListener('click', function() {
+    document.getElementById('filterZona').value = '';
+    document.getElementById('filterCausa').value = '';
+    document.getElementById('filterOrigen').value = '';
+    document.getElementById('filterEstado').value = '';
+    aplicarFiltros();
   });
 
 })();
