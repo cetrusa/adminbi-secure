@@ -407,6 +407,38 @@ def _post_process_faltantes_consolidado(file_path):
 from django.db import connection
 
 
+def _enrich_preventa_with_macrozona(result_data, database_name, user_id):
+    """Agrega macrozona_id al preview de preventa (report_id=5)."""
+    from scripts.conexion import Conexion as con
+    from sqlalchemy import text as sa_text
+
+    preview_sample = result_data.get("preview_sample", [])
+    preview_headers = result_data.get("preview_headers", [])
+    if not preview_sample or "zona_id" not in preview_headers:
+        return
+
+    config = ConfigBasic(database_name, user_id).config
+    engine = con.ConexionMariadb3(
+        str(config["nmUsrIn"]), str(config["txPassIn"]),
+        str(config["hostServerIn"]), int(config["portServerIn"]),
+        str(config["dbBi"]),
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sa_text("SELECT zona_id, macrozona_id FROM zona WHERE macrozona_id IS NOT NULL")
+        ).fetchall()
+    zona_map = {str(r[0]): str(r[1]) for r in rows}
+
+    for row in preview_sample:
+        zona = str(row.get("zona_id", ""))
+        row["macrozona_id"] = zona_map.get(zona, "")
+
+    if "macrozona_id" not in preview_headers:
+        idx = preview_headers.index("zona_id") + 1
+        preview_headers.insert(idx, "macrozona_id")
+    logger.info("[cubo_ventas_task] Preventa enriquecida con macrozona_id")
+
+
 @job(
     "default", timeout=DEFAULT_TIMEOUT, result_ttl=3600
 )  # Usar cola 'default' o una específica, resultado se mantiene 1h
@@ -507,6 +539,13 @@ def cubo_ventas_task(
             result_data["preview_headers"] = []
         if "preview_sample" not in result_data:
             result_data["preview_sample"] = []
+
+    # Post-procesamiento: Preventa (report_id=5) → enriquecer preview con macrozona
+    if result_data.get("success") and report_id == 5:
+        try:
+            _enrich_preventa_with_macrozona(result_data, database_name, user_id)
+        except Exception as e:
+            logger.warning(f"Error enriqueciendo preventa con macrozona: {e}")
 
     logger.info("[cubo_ventas_task] RESULTADO: %s", result_data)
 

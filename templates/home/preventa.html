@@ -119,10 +119,6 @@ Informe Preventa
           <span class="form-text small">Ajuste segun el rendimiento de su sistema.</span>
         </div>
 
-        <div class="alert alert-info py-2 small mb-3">
-          <i class="fas fa-info-circle me-1"></i> Incluye columnas de pedidos facturados, valor facturado (td=FV), valor faltantes y diferencia ValorC vs facturado por zona.
-        </div>
-
         <button id="submitBtnPreventa" type="submit" class="btn w-100" style="background-color: #6f42c1; color: white;" data-submitted="false">
           <i class="fas fa-play me-2"></i> Generar Informe de Preventa
         </button>
@@ -136,14 +132,16 @@ Informe Preventa
 
   <!-- Vista previa de datos -->
   <div class="card shadow-sm border-0 mb-3 mt-3" id="previewCard" style="display:none;">
-    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-      <h5 class="mb-0 fw-bold" style="color: #6f42c1;"><i class="fas fa-list me-2"></i>Vista Previa - Preventa</h5>
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h6 class="fw-bold mb-0" style="color: #6f42c1;">
+        <i class="fas fa-table me-2"></i>Vista Previa - Preventa
+      </h6>
       <small class="text-muted" id="preview-info"></small>
     </div>
     <div class="card-body p-0">
-      <div class="table-responsive" id="previewTableWrapper" style="max-height: 550px; overflow-y: auto;">
-        <table class="table table-hover table-sm small align-middle" id="previewTable">
-          <thead class="table-light sticky-top" style="z-index:1;">
+      <div class="table-responsive">
+        <table class="table table-hover table-sm small align-middle" id="previewTable" style="width:100%;">
+          <thead class="table-light">
             <tr id="previewHead"></tr>
           </thead>
           <tbody id="previewBody"></tbody>
@@ -180,8 +178,110 @@ Informe Preventa
 {% block script %}
 {{ block.super }}
 <script src="{% static 'js/task-monitor.js' %}"></script>
-<script src="{% static 'js/render-preview.js' %}"></script>
 <script>
+(function() {
+  'use strict';
+
+  var dataTable = null;
+
+  function fmtNum(val) {
+    if (val === null || val === undefined || val === '') return '-';
+    var n = Number(val);
+    if (isNaN(n)) return String(val);
+    return n.toLocaleString('es-CO', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+  }
+
+  function fmtMoney(val) {
+    if (val === null || val === undefined || val === '') return '-';
+    var n = Number(val);
+    if (isNaN(n)) return String(val);
+    return '$ ' + n.toLocaleString('es-CO', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+  }
+
+  // Columnas de dinero para formatear automaticamente
+  var moneyCols = ['vlrAntesIva', 'vlrDcto', 'vlrIva', 'vlrNeto', 'vlrDevolucion',
+                   'vlrVentaNeta', 'ValorT', 'ValorC', 'valor_total', 'valor_cambio',
+                   'vl_pedido_campo', 'vl_faltante_cantidad', 'vl_brecha_total',
+                   'vlrFacturado', 'vlrFaltante', 'vlrDiferencia'];
+  var numCols = ['cantAsignada', 'cantDevuelta', 'cantPedida', 'cantFaltante',
+                 'programados', 'atendidos', 'totalpedidos', 'totalpedD', 'totalpa',
+                 'pedidos_ruta', 'pedidos_extraruta', 'totalpendientes', 'pednuevo'];
+
+  function buildColumns(headers) {
+    return headers.map(function(h) {
+      var col = {data: h, title: h, defaultContent: '-'};
+      if (moneyCols.indexOf(h) >= 0) {
+        col.render = function(data) { return fmtMoney(data); };
+        col.className = 'text-end';
+      } else if (numCols.indexOf(h) >= 0) {
+        col.render = function(data) { return fmtNum(data); };
+        col.className = 'text-end';
+      }
+      return col;
+    });
+  }
+
+  function renderDataTable(headers, rows) {
+    var card = document.getElementById('previewCard');
+    var headRow = document.getElementById('previewHead');
+    var info = document.getElementById('preview-info');
+
+    if (!headers || headers.length === 0 || !rows || rows.length === 0) {
+      card.style.display = 'none';
+      return;
+    }
+
+    // Destruir DataTable anterior si existe
+    if (dataTable) {
+      dataTable.destroy();
+      headRow.innerHTML = '';
+      document.getElementById('previewBody').innerHTML = '';
+    }
+
+    // Crear headers
+    headRow.innerHTML = '';
+    headers.forEach(function(h) {
+      var th = document.createElement('th');
+      th.textContent = h;
+      headRow.appendChild(th);
+    });
+
+    var columns = buildColumns(headers);
+
+    dataTable = $('#previewTable').DataTable({
+      data: rows,
+      columns: columns,
+      pageLength: 25,
+      lengthMenu: [10, 25, 50, 100],
+      language: {
+        processing: 'Cargando...',
+        lengthMenu: 'Mostrar _MENU_ registros',
+        zeroRecords: 'No se encontraron registros',
+        info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+        infoEmpty: 'Sin registros',
+        infoFiltered: '(filtrado de _MAX_ total)',
+        search: 'Buscar:',
+        paginate: {first: 'Primero', last: 'Ultimo', next: 'Sig.', previous: 'Ant.'}
+      },
+      dom: 'Bfrtip',
+      buttons: [
+        {extend: 'copy', text: '<i class="fas fa-copy"></i> Copiar', className: 'btn btn-sm btn-outline-secondary'},
+        {extend: 'csv', text: '<i class="fas fa-file-csv"></i> CSV', className: 'btn btn-sm btn-outline-secondary'},
+        {extend: 'excel', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-sm btn-outline-secondary'},
+        {extend: 'pdfHtml5', text: '<i class="fas fa-file-pdf"></i> PDF', className: 'btn btn-sm btn-outline-secondary'},
+        {extend: 'print', text: '<i class="fas fa-print"></i> Imprimir', className: 'btn btn-sm btn-outline-secondary'}
+      ],
+      order: [],
+      scrollX: true
+    });
+
+    if (info) {
+      info.textContent = rows.length + ' registros cargados';
+    }
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   var monitor = new TaskMonitor({
     taskType: 'preventa',
     submitBtnId: 'submitBtnPreventa',
@@ -193,8 +293,10 @@ Informe Preventa
       var result = response.result || {};
       var headers = result.preview_headers || [];
       var rows = result.preview_sample || [];
-      renderPreview(headers, rows);
+      renderDataTable(headers, rows);
     }
   });
+
+})();
 </script>
 {% endblock script %}

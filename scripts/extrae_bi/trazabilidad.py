@@ -30,7 +30,8 @@ _GROUPING_QUERIES = {
         SELECT establecimiento_id, MAX(nmPuntoVenta) AS nmPuntoVenta,
                MAX(zona_id) AS zona_id, {_AGG_COLUMNS}
         FROM trazabilidad_preventa
-        WHERE dt_entrega BETWEEN :fi AND :ff
+        WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00')
+          AND dt_entrega <= CONCAT(:ff, ' 23:59:59')
         -- FILTERS_HERE
         GROUP BY establecimiento_id
         ORDER BY establecimiento_id
@@ -38,7 +39,8 @@ _GROUPING_QUERIES = {
     "zona": f"""
         SELECT zona_id, {_AGG_COLUMNS}
         FROM trazabilidad_preventa
-        WHERE dt_entrega BETWEEN :fi AND :ff
+        WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00')
+          AND dt_entrega <= CONCAT(:ff, ' 23:59:59')
         -- FILTERS_HERE
         GROUP BY zona_id
         ORDER BY zona_id
@@ -47,7 +49,8 @@ _GROUPING_QUERIES = {
         SELECT z.macrozona_id, MAX(z.macro) AS nmMacrozona, {_AGG_COLUMNS}
         FROM trazabilidad_preventa tp
         INNER JOIN zona z ON tp.zona_id = z.zona_id
-        WHERE tp.dt_entrega BETWEEN :fi AND :ff
+        WHERE tp.dt_entrega >= CONCAT(:fi, ' 00:00:00')
+          AND tp.dt_entrega <= CONCAT(:ff, ' 23:59:59')
         -- FILTERS_HERE
         GROUP BY z.macrozona_id
         ORDER BY z.macrozona_id
@@ -55,7 +58,8 @@ _GROUPING_QUERIES = {
     "producto": f"""
         SELECT producto_id, MAX(nmProducto) AS nmProducto, {_AGG_COLUMNS}
         FROM trazabilidad_preventa
-        WHERE dt_entrega BETWEEN :fi AND :ff
+        WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00')
+          AND dt_entrega <= CONCAT(:ff, ' 23:59:59')
         -- FILTERS_HERE
         GROUP BY producto_id
         ORDER BY producto_id
@@ -63,7 +67,8 @@ _GROUPING_QUERIES = {
     "total": f"""
         SELECT 'TOTAL' AS nivel, {_AGG_COLUMNS}
         FROM trazabilidad_preventa
-        WHERE dt_entrega BETWEEN :fi AND :ff
+        WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00')
+          AND dt_entrega <= CONCAT(:ff, ' 23:59:59')
         -- FILTERS_HERE
     """,
 }
@@ -127,7 +132,8 @@ class TrazabilidadExtractor:
         self._update_progress("Verificando datos", 10)
         count_sql = text(
             "SELECT COUNT(*) FROM trazabilidad_preventa "
-            "WHERE dt_entrega BETWEEN :fi AND :ff"
+            "WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00') "
+            "  AND dt_entrega <= CONCAT(:ff, ' 23:59:59')"
         )
         with self.engine_mysql_bi.connect() as conn:
             total = conn.execute(
@@ -150,7 +156,8 @@ class TrazabilidadExtractor:
 
         query = text(
             "SELECT * FROM trazabilidad_preventa "
-            "WHERE dt_entrega BETWEEN :fi AND :ff "
+            "WHERE dt_entrega >= CONCAT(:fi, ' 00:00:00') "
+            "  AND dt_entrega <= CONCAT(:ff, ' 23:59:59') "
             "ORDER BY zona_id, establecimiento_id, dt_pedido, producto_id"
         )
         params = {"fi": self.fecha_ini, "ff": self.fecha_fin}
