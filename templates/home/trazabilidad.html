@@ -20,7 +20,7 @@ Trazabilidad Preventa
     <p class="text-muted small mb-0">Analisis de diferencias entre la preventa y la facturacion/entrega.</p>
   </div>
 
-  <!-- KPIs (se cargan via AJAX despues del ETL) -->
+  <!-- KPIs -->
   <div class="row mb-4 g-3" id="kpiRow" style="display:none;">
     <div class="col-md-6 col-lg-3">
       <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
@@ -105,18 +105,8 @@ Trazabilidad Preventa
           </div>
         </div>
 
-        <div class="mb-3">
-          <label for="batch_size" class="form-label small fw-semibold text-muted">Tamano de lote</label>
-          <select class="form-select form-select-sm" id="batch_size" name="batch_size">
-            <option value="10000">10,000 (Recursos limitados)</option>
-            <option value="20000">20,000</option>
-            <option value="50000" selected>50,000 (Estandar)</option>
-            <option value="100000">100,000 (Datos grandes)</option>
-          </select>
-        </div>
-
         <button id="submitBtnTrazabilidad" type="submit" class="btn btn-info w-100" data-submitted="false">
-          <i class="fas fa-play me-2"></i> Extraer y Generar Trazabilidad
+          <i class="fas fa-file-excel me-2"></i> Generar Reporte Excel
         </button>
         <button id="btnConsultar" type="button" class="btn btn-outline-info w-100 mt-2">
           <i class="fas fa-search me-2"></i> Consultar Datos Existentes
@@ -129,7 +119,7 @@ Trazabilidad Preventa
     </div>
   </div>
 
-  <!-- Consulta de datos (se muestra despues del ETL) -->
+  <!-- Consulta de datos -->
   <div class="card shadow-sm border-0 mb-3 mt-3" id="consultaCard" style="display:none;">
     <div class="card-header d-flex align-items-center justify-content-between">
       <h6 class="fw-bold mb-0 text-info"><i class="fas fa-table me-2"></i>Consulta de Datos</h6>
@@ -171,7 +161,7 @@ Trazabilidad Preventa
           </h5>
         </div>
         <div class="modal-body">
-          <div id="progress-stage" class="mb-3 fw-semibold">Por favor, espere mientras se extraen los datos...</div>
+          <div id="progress-stage" class="mb-3 fw-semibold">Generando reporte de trazabilidad...</div>
           <div class="progress" style="height: 20px;">
             <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-info"
               role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
@@ -193,9 +183,9 @@ Trazabilidad Preventa
   'use strict';
 
   var dataTable = null;
-  var etlCompleted = false;
+  var reportReady = false;
 
-  // ---- TaskMonitor para el ETL ----
+  // ---- TaskMonitor ----
   var monitor = new TaskMonitor({
     taskType: 'trazabilidad',
     submitBtnId: 'submitBtnTrazabilidad',
@@ -204,7 +194,7 @@ Trazabilidad Preventa
     csrfToken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
     modalTitle: 'Procesando Trazabilidad...',
     onComplete: function(response) {
-      etlCompleted = true;
+      reportReady = true;
       loadKpis();
       showConsultaCard();
       initOrReloadDataTable();
@@ -406,13 +396,13 @@ Trazabilidad Preventa
 
   // ---- Eventos ----
   document.getElementById('agrupacion').addEventListener('change', function() {
-    if (etlCompleted) {
+    if (reportReady) {
       initOrReloadDataTable();
     }
   });
 
   document.getElementById('btnRefreshData').addEventListener('click', function() {
-    if (etlCompleted) {
+    if (reportReady) {
       loadKpis();
       initOrReloadDataTable();
     }
@@ -425,7 +415,7 @@ Trazabilidad Preventa
       alert('Seleccione un rango de fechas');
       return;
     }
-    etlCompleted = true;
+    reportReady = true;
     loadKpis();
     showConsultaCard();
     initOrReloadDataTable();

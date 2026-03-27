@@ -2679,8 +2679,8 @@ def trazabilidad_task(
     batch_size=DEFAULT_BATCH_SIZE,
 ):
     """
-    Tarea RQ para generar el reporte de Trazabilidad Preventa vs Facturación.
-    Extrae datos de SIDIS y los carga en trazabilidad_preventa (BD BI).
+    Tarea RQ para generar el reporte de Trazabilidad Preventa vs Facturacion.
+    Lee datos de la tabla trazabilidad_preventa (BD BI) y genera Excel.
     """
     try:
         connection.close()
