@@ -116,6 +116,7 @@ class InterfacePlano:
 
     def _ejecutar_query_mysql_chunked(self, query, table_name, chunksize=50000):
         # Elimina la tabla si existe
+        rows_inserted = False
         with self.engine_sqlite.connect() as conn:
             conn.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
             # Desactivar restricciones y optimizar PRAGMAs para inserción masiva
@@ -135,6 +136,11 @@ class InterfacePlano:
                         method="multi",  # Inserta múltiples filas por statement
                         chunksize=1000,   # Ajusta según memoria
                     )
+                    rows_inserted = True
+        # Si MySQL no retornó filas, la tabla SQLite no existe
+        if not rows_inserted:
+            logger.info(f"Query no retornó datos para {table_name}")
+            return 0
         # Crear índice solo si existe una columna de fecha relevante
         with self.engine_sqlite.connect() as conn:
             try:
@@ -321,6 +327,7 @@ class InterfacePlano:
         self._generar_nombre_archivo()
         hoja_idx = 0
         hojas_con_datos = 0
+        hojas_sin_datos = []
         with zipfile.ZipFile(self.file_path, "w") as zf:
             for hoja in hojas:
                 hoja_idx += 1
@@ -336,11 +343,14 @@ class InterfacePlano:
                         total_hojas=total_hojas,
                     )
                     if result is not True:
-                        if isinstance(result, dict) and "No hay datos" in result.get(
-                            "error_message", ""
-                        ):
-                            continue
-                        return result, hojas_con_datos
+                        # Hoja sin datos o con error: registrar y continuar
+                        # con las demás hojas en vez de abortar
+                        hojas_sin_datos.append(hoja)
+                        logger.info(
+                            f"Hoja {hoja} omitida: %s",
+                            result.get("error_message", "sin datos") if isinstance(result, dict) else result,
+                        )
+                        continue
                     else:
                         hojas_con_datos += 1
                 self._call_progress(

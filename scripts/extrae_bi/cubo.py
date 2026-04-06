@@ -132,8 +132,12 @@ class CuboVentas:
         try:
             config_basic = ConfigBasic(self.database_name, self.user_id)
             self.config = config_basic.config
-            self.proveedores = self.config.get("proveedores", [])
-            self.macrozonas = self.config.get("macrozonas", [])
+            # Solo cargar proveedores/macrozonas del config si no fueron
+            # inyectados externamente (ej. enviar_reportes_email_task)
+            if not self.proveedores:
+                self.proveedores = self.config.get("proveedores", [])
+            if not self.macrozonas:
+                self.macrozonas = self.config.get("macrozonas", [])
 
             # Validar configuración de conexión MySQL/MariaDB
             required_keys = [

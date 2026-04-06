@@ -1437,6 +1437,31 @@ def cargue_tabla_individual_task(database_name, nombre_tabla):
 # Tareas de envio de reportes por correo
 # ---------------------------------------------------------------------------
 
+
+def _safe_save_workbook(wb, file_path):
+    """Guarda un workbook a un archivo temporal y luego renombra atomicamente.
+
+    Previene corrupcion del archivo original si wb.save() falla a mitad
+    de la escritura (ZipFile trunca el destino al abrir en modo 'w').
+    """
+    import tempfile
+    import shutil
+
+    dir_name = os.path.dirname(file_path) or "."
+    fd, tmp_path = tempfile.mkstemp(suffix=".xlsx", dir=dir_name)
+    os.close(fd)
+    try:
+        wb.save(tmp_path)
+        shutil.move(tmp_path, file_path)
+    except Exception:
+        # Limpiar temporal si falla
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 def _send_report_email(subject, recipients, file_path, body_html):
     """Helper: envia un correo con archivo Excel adjunto."""
     from django.core.mail import EmailMessage
@@ -1448,6 +1473,13 @@ def _send_report_email(subject, recipients, file_path, body_html):
     )
     msg.content_subtype = "html"
     if file_path and os.path.exists(file_path):
+        # Validar que el archivo no este vacio/corrupto antes de adjuntar
+        file_size = os.path.getsize(file_path)
+        if file_size < 500:
+            logger.warning(
+                "Archivo adjunto sospechosamente pequeno (%d bytes): %s",
+                file_size, file_path,
+            )
         msg.attach_file(file_path)
     msg.send(fail_silently=False)
 
@@ -1522,7 +1554,7 @@ def _add_inventario_sheet(file_path, engine, proveedor_ids=None, macrozonas=None
                 for v in row
             )
             ws.append(cleaned)
-        wb.save(file_path)
+        _safe_save_workbook(wb, file_path)
         logger.info("Hoja Inventario agregada: %d filas", len(rows))
     except Exception as exc:
         logger.error("Error agregando hoja Inventario: %s", exc, exc_info=True)
@@ -1539,6 +1571,7 @@ def _add_dashboard_supervisor_sheet(
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
     from sqlalchemy import text as sa_text
+    from scripts.text_cleaner import TextCleaner
 
     if not file_path or not os.path.exists(file_path) or not file_path.endswith(".xlsx"):
         return
@@ -1699,10 +1732,12 @@ def _add_dashboard_supervisor_sheet(
             falt = falt_map.get(str(r["zona"]), 0)
             proy = (vn / dias_transcurridos) * dias_habiles if dias_transcurridos > 0 and dias_habiles > 0 else 0
 
+            _tc = TextCleaner.clean_for_excel
             zones.append({
-                "zona": r["zona"], "nombre": r["nombre_zona"],
-                "macrozona": r["macrozona"] or "",
-                "almacen": r["almacen"] or r["bodega"] or "",
+                "zona": _tc(r["zona"]) if isinstance(r["zona"], str) else r["zona"],
+                "nombre": _tc(r["nombre_zona"] or ""),
+                "macrozona": _tc(r["macrozona"] or ""),
+                "almacen": _tc(r["almacen"] or r["bodega"] or ""),
                 "vb": vb, "vn": vn, "dev": dev, "cam": cam,
                 "nf": nf, "fd": fd, "fc": fc,
                 "ca": ca, "ci": ci, "falt": falt, "proy": proy,
@@ -1850,7 +1885,7 @@ def _add_dashboard_supervisor_sheet(
         for i, w in enumerate(widths, 1):
             ws.column_dimensions[get_column_letter(i)].width = w
 
-        wb.save(file_path)
+        _safe_save_workbook(wb, file_path)
         logger.info("Hoja Dashboard agregada con %d zonas", len(zones))
 
     except Exception as exc:
@@ -1966,7 +2001,7 @@ def _add_devoluciones_dia_sheet(file_path, engine, macrozonas):
         for i, w in enumerate(widths, 1):
             ws.column_dimensions[get_column_letter(i)].width = w
 
-        wb.save(file_path)
+        _safe_save_workbook(wb, file_path)
         logger.info("Hoja Devoluciones Dia agregada: %d filas", len(rows))
 
     except Exception as exc:
@@ -1986,6 +2021,7 @@ def _add_vendedor_proveedor_sheet(
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
     from sqlalchemy import text as sa_text
+    from scripts.text_cleaner import TextCleaner
 
     if not file_path or not os.path.exists(file_path) or not file_path.endswith(".xlsx"):
         return
@@ -2082,10 +2118,11 @@ def _add_vendedor_proveedor_sheet(
             total_cl = cl_map.get(str(r["zona"]), 0)
             proy = pres_map.get((str(r["zona"]), str(r["id_proveedor"])), 0)
 
+            _tc = TextCleaner.clean_for_excel
             data.append({
-                "zona": r["zona"],
-                "vendedor": r["vendedor"],
-                "proveedor": r["proveedor"],
+                "zona": _tc(r["zona"]) if isinstance(r["zona"], str) else r["zona"],
+                "vendedor": _tc(r["vendedor"] or ""),
+                "proveedor": _tc(r["proveedor"] or ""),
                 "venta_neta": venta_neta,
                 "proyeccion": proy,
                 "pct_cumpl": venta_neta / proy if proy > 0 else 0,
@@ -2182,7 +2219,7 @@ def _add_vendedor_proveedor_sheet(
         for i, w in enumerate(widths, 1):
             ws.column_dimensions[get_column_letter(i)].width = w
 
-        wb.save(file_path)
+        _safe_save_workbook(wb, file_path)
         logger.info("Hoja Vendedor×Proveedor agregada: %d filas", len(data))
 
     except Exception as exc:
