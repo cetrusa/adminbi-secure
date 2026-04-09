@@ -17,8 +17,11 @@ from scripts.config import ConfigBasic
 from sqlalchemy import create_engine, text
 
 from pywinauto.application import Application
+from pywinauto import Desktop
 import pywinauto
 import threading
+import re
+import ctypes
 
 
 class DataBaseConnection:
@@ -117,11 +120,19 @@ class CompiUpdate:
             raise
 
     def setup_logging(self):
+        import sys
+        # Ruta del log junto al ejecutable (funciona tanto en .py como en .exe)
+        base_dir = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
+        log_path = os.path.join(base_dir, "process.log")
         logging.basicConfig(
             level=logging.INFO,
-            filename="process.log",
-            format="%(asctime)s - %(levelname)s - %(message)s",
+            filename=log_path,
+            filemode="w",
+            format="%(asctime)s %(levelname)s %(message)s",
+            force=True,
         )
+        logging.info(f"Log iniciado en: {log_path}")
+
 
     def find_file(self, file_paths):
         for path in file_paths:
@@ -165,59 +176,349 @@ class CompiUpdate:
         else:
             logging.error("Proceso terminado debido a la falta del archivo requerido.")
 
-    def handle_microsoft_login_window(self):
-        logging.info(
-            "[LOGIN] Iniciando monitoreo de ventana de inicio de sesión de Microsoft..."
-        )
-        max_wait = 180  # segundos
-        waited = 0
-        while not self.login_window_handled and waited < max_wait:
-            try:
-                logging.info(
-                    f"[LOGIN] Buscando ventana de Microsoft... (esperado: 'Cesar Trujillo') Esperado: {waited}s de {max_wait}s"
-                )
-                app = Application(backend="uia").connect(
-                    title_re=".*Microsoft.*", timeout=5
-                )
-                dialog = app.window(title_re=".*Microsoft.*")
-                dialog.wait("visible", timeout=5)
-                logging.info(
-                    "[LOGIN] Ventana de Microsoft detectada, buscando control de cuenta..."
-                )
-                account_control = dialog.child_window(
-                    title="Cesar Trujillo", control_type="Text"
-                )
-                account_control.wait("ready", timeout=5)
-                account_control.click_input()
-                self.login_window_handled = True
-                logging.info(
-                    "[LOGIN] La cuenta de Microsoft ha sido seleccionada exitosamente."
-                )
-            except pywinauto.timings.TimeoutError:
-                logging.info(
-                    "[LOGIN] Timeout esperando ventana de Microsoft. Reintentando..."
-                )
-                time.sleep(5)
-                waited += 5
-            except Exception as e:
-                logging.error(
-                    f"[LOGIN] Ocurrió un error al manejar la ventana de inicio de sesión de Microsoft: {e}"
-                )
-                break  # Rompe el ciclo si ocurre un error inesperado.
-        if not self.login_window_handled:
-            logging.error(
-                f"[LOGIN] No se pudo seleccionar la cuenta de Microsoft tras {max_wait} segundos. Continuando sin login automático."
-            )
+    def _find_window_hwnd(self, title_patterns):
+        """
+        Busca la ventana del diálogo de login por título Y por clase de ventana.
+        Retorna (hwnd, title) si la encuentra, o (None, None).
+        """
+        import win32gui
+        import re
 
-    def monitor_login_window(self):
-        self.login_window_handled = False
-        self.handle_microsoft_login_window()
+        # Clases de ventana que usa Microsoft para el diálogo de cuenta
+        # (WebView2 usa Chrome_WidgetWin_1, el shell puede ser diferentes clases)
+        TARGET_CLASSES = {
+            "Chrome_WidgetWin_1",     # WebView2 / Edge embedded
+            "#32770",                  # Dialog box estándar Win32
+            "NativeHWNDHost",          # Host de WebView2 en aplicaciones nativas
+        }
+
+        found = []
+
+        def enum_cb(hwnd, _):
+            if not win32gui.IsWindowVisible(hwnd):
+                return
+            title = win32gui.GetWindowText(hwnd) or ""
+            wclass = win32gui.GetClassName(hwnd) or ""
+
+            # Buscar por título
+            for pattern in title_patterns:
+                if re.search(pattern, title, re.IGNORECASE):
+                    found.append((hwnd, title, wclass, "title_match"))
+                    return
+
+            # Buscar por clase (WebView2 puede tener título vacío o no coincidente)
+            if wclass in TARGET_CLASSES and title in ("", "Default IME"):
+                # Comprobar si algún hijo tiene el título buscado
+                try:
+                    child_titles = []
+                    def child_cb(child_hwnd, _):
+                        ct = win32gui.GetWindowText(child_hwnd) or ""
+                        if ct:
+                            child_titles.append(ct)
+                    win32gui.EnumChildWindows(hwnd, child_cb, None)
+                    for ct in child_titles:
+                        for pattern in title_patterns:
+                            if re.search(pattern, ct, re.IGNORECASE):
+                                found.append((hwnd, ct, wclass, "child_title_match"))
+                                return
+                except Exception:
+                    pass
+
+        try:
+            win32gui.EnumWindows(enum_cb, None)
+        except Exception as e:
+            logging.warning(f"[LOGIN][find] EnumWindows error: {e}")
+
+        if found:
+            hwnd, title, wclass, match_type = found[0]
+            logging.info(
+                f"[LOGIN][find] hwnd={hwnd} title='{title}' "
+                f"class='{wclass}' match={match_type}"
+            )
+            return hwnd, title
+
+        return None, None
+
+    def _log_all_visible_windows(self):
+        """Vuelca todas las ventanas visibles al log para diagnóstico."""
+        import win32gui
+        try:
+            lines = []
+            def cb(hwnd, _):
+                if win32gui.IsWindowVisible(hwnd):
+                    t = win32gui.GetWindowText(hwnd) or ""
+                    c = win32gui.GetClassName(hwnd) or ""
+                    r = win32gui.GetWindowRect(hwnd)
+                    if t or c not in ("", "WorkerW", "Progman"):
+                        lines.append(f"  hwnd={hwnd:<10} class={c:<30} rect={r} title='{t}'")
+            win32gui.EnumWindows(cb, None)
+            logging.info("[LOGIN][AllWindows]\n" + "\n".join(lines))
+        except Exception as e:
+            logging.warning(f"[LOGIN][AllWindows] Error: {e}")
+
+    def handle_microsoft_login_window(self):
+        """
+        Monitorea y maneja automáticamente la ventana 'Pick an account' de Microsoft.
+        Estrategias en orden de prioridad:
+          A. SendInput teclado ENTER — el tile de cuenta está pre-enfocado.
+          B. TAB + ENTER — mueve foco y confirma.
+          C. pywinauto UIA — UI Automation nativa, funciona con WebView2.
+          D. SendInput mouse (DPI-aware) — reemplaza el deprecated mouse_event.
+          E. PostMessage a Chrome_WidgetWin_1 — último recurso.
+        """
+        import win32gui
+        import win32con
+        import win32api
+        import ctypes
+
+        logging.info("[LOGIN] Iniciando monitoreo de login 'Pick an account'...")
+
+        max_wait = 180
+        waited = 0
+
+        # Patrones ESTRICTOS — sin 'Microsoft' genérico para evitar falsos positivos
+        title_patterns = [
+            r"Pick an account",
+            r"Seleccionar.*cuenta",
+            r"Elige.*cuenta",
+            r"Iniciar sesi",
+        ]
+
+        # ── Estructuras para SendInput (teclado) ─────────────────────────────
+        INPUT_KEYBOARD = 1
+        INPUT_MOUSE = 0
+        KEYEVENTF_KEYUP = 0x0002
+        VK_RETURN = 0x0D
+        VK_TAB = 0x09
+
+        class KEYBDINPUT(ctypes.Structure):
+            _fields_ = [
+                ("wVk", ctypes.c_ushort), ("wScan", ctypes.c_ushort),
+                ("dwFlags", ctypes.c_ulong), ("time", ctypes.c_ulong),
+                ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+            ]
+
+        class MOUSEINPUT(ctypes.Structure):
+            _fields_ = [
+                ("dx", ctypes.c_long), ("dy", ctypes.c_long),
+                ("mouseData", ctypes.c_ulong), ("dwFlags", ctypes.c_ulong),
+                ("time", ctypes.c_ulong), ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+            ]
+
+        class _INPUT_UNION(ctypes.Union):
+            _fields_ = [("ki", KEYBDINPUT), ("mi", MOUSEINPUT)]
+
+        class INPUT(ctypes.Structure):
+            _fields_ = [("type", ctypes.c_ulong), ("_u", _INPUT_UNION)]
+
+        def send_key(vk):
+            """Envía una tecla completa (down + up) vía SendInput."""
+            inp_down = INPUT(type=INPUT_KEYBOARD)
+            inp_down._u.ki.wVk = vk
+            inp_up = INPUT(type=INPUT_KEYBOARD)
+            inp_up._u.ki.wVk = vk
+            inp_up._u.ki.dwFlags = KEYEVENTF_KEYUP
+            ctypes.windll.user32.SendInput(1, ctypes.byref(inp_down), ctypes.sizeof(INPUT))
+            time.sleep(0.05)
+            ctypes.windll.user32.SendInput(1, ctypes.byref(inp_up), ctypes.sizeof(INPUT))
+
+        def send_mouse_click(px, py):
+            """Clic de mouse vía SendInput con coordenadas absolutas (0-65535)."""
+            MOUSEEVENTF_MOVE = 0x0001
+            MOUSEEVENTF_LEFTDOWN = 0x0002
+            MOUSEEVENTF_LEFTUP = 0x0004
+            MOUSEEVENTF_ABSOLUTE = 0x8000
+
+            for flags, data in [
+                (MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, 0),
+                (MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_ABSOLUTE, 0),
+                (MOUSEEVENTF_LEFTUP | MOUSEEVENTF_ABSOLUTE, 0),
+            ]:
+                inp = INPUT(type=INPUT_MOUSE)
+                inp._u.mi.dx = px
+                inp._u.mi.dy = py
+                inp._u.mi.dwFlags = flags
+                ctypes.windll.user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
+                time.sleep(0.05)
+
+        # Dimensiones físicas del monitor para coordenadas absolutas DPI-aware
+        SM_W = ctypes.windll.user32.GetSystemMetrics(0)
+        SM_H = ctypes.windll.user32.GetSystemMetrics(1)
+
+        while not self.login_window_handled and waited < max_wait:
+            logging.info(f"[LOGIN] Buscando ventana ({waited}s/{max_wait}s)...")
+            self._log_all_visible_windows()
+
+            hwnd, win_title = self._find_window_hwnd(title_patterns)
+
+            if hwnd is None:
+                logging.info("[LOGIN] Ventana no encontrada. Reintentando en 3s...")
+                time.sleep(3)
+                waited += 3
+                continue
+
+            # ── Obtener rect de la ventana ────────────────────────────────────
+            try:
+                wx, wy, wx2, wy2 = win32gui.GetWindowRect(hwnd)
+                ww, wh = wx2 - wx, wy2 - wy
+                logging.info(f"[LOGIN] hwnd={hwnd} '{win_title}' rect=({wx},{wy})->({wx2},{wy2}) w={ww} h={wh}")
+            except Exception as e:
+                logging.warning(f"[LOGIN] GetWindowRect: {e}")
+                time.sleep(3); waited += 3; continue
+
+            # ── Traer al frente ───────────────────────────────────────────────
+            try:
+                ctypes.windll.user32.AllowSetForegroundWindow(-1)
+                win32gui.SetForegroundWindow(hwnd)
+                time.sleep(0.7)
+            except Exception:
+                pass
+
+            clicked = False
+
+            # ── Estrategia A: SendInput ENTER (tile pre-enfocado) ─────────────
+            logging.info("[LOGIN][A] Enviando ENTER via SendInput...")
+            try:
+                send_key(VK_RETURN)
+                time.sleep(1.5)
+                hwnd_check, _ = self._find_window_hwnd(title_patterns)
+                if hwnd_check is None:
+                    logging.info("[LOGIN][A] ✅ Ventana cerrada con ENTER.")
+                    self.login_window_handled = True
+                    clicked = True
+            except Exception as e:
+                logging.warning(f"[LOGIN][A] Error: {e}")
+
+            # ── Estrategia B: TAB + ENTER ─────────────────────────────────────
+            if not clicked:
+                logging.info("[LOGIN][B] Enviando TAB+ENTER via SendInput...")
+                try:
+                    send_key(VK_TAB)
+                    time.sleep(0.2)
+                    send_key(VK_RETURN)
+                    time.sleep(1.5)
+                    hwnd_check, _ = self._find_window_hwnd(title_patterns)
+                    if hwnd_check is None:
+                        logging.info("[LOGIN][B] ✅ Ventana cerrada con TAB+ENTER.")
+                        self.login_window_handled = True
+                        clicked = True
+                except Exception as e:
+                    logging.warning(f"[LOGIN][B] Error: {e}")
+
+            # ── Estrategia C: pywinauto UIA (UI Automation nativa) ────────────
+            if not clicked:
+                logging.info("[LOGIN][C] Intentando pywinauto UIA backend...")
+                try:
+                    # Desktop y Application ya importados al nivel del módulo
+                    desk = Desktop(backend='uia')
+                    # Buscar la ventana del diálogo por título
+                    dlg_windows = desk.windows(title_re=r'Pick an account|Seleccionar.*cuenta|Elige.*cuenta|Iniciar sesi')
+                    if not dlg_windows:
+                        # Intentar buscar el hwnd directamente
+                        app = Application(backend='uia').connect(handle=hwnd)
+                        dlg_windows = [app.top_window()]
+                    if dlg_windows:
+                        dlg = dlg_windows[0]
+                        logging.info(f"[LOGIN][C] Diálogo UIA encontrado: {dlg}")
+                        # Intentar hacer clic en el primer elemento de lista (tile de cuenta)
+                        try:
+                            account_item = dlg.child_window(control_type='ListItem')
+                            account_item.click_input()
+                            logging.info("[LOGIN][C] Click en ListItem (cuenta).")
+                        except Exception:
+                            # Fallback: click en el primer Button dentro del diálogo
+                            try:
+                                btn = dlg.child_window(control_type='Button')
+                                btn.click_input()
+                                logging.info("[LOGIN][C] Click en Button.")
+                            except Exception as e2:
+                                logging.warning(f"[LOGIN][C] No se encontró control: {e2}")
+                        time.sleep(1.5)
+                        hwnd_check, _ = self._find_window_hwnd(title_patterns)
+                        if hwnd_check is None:
+                            logging.info("[LOGIN][C] ✅ Ventana cerrada con pywinauto UIA.")
+                            self.login_window_handled = True
+                            clicked = True
+                except Exception as e:
+                    logging.warning(f"[LOGIN][C] pywinauto UIA error: {e}")
+
+            # ── Estrategia D: SendInput mouse (DPI-aware) ─────────────────────
+            if not clicked:
+                click_x = wx + ww // 2
+                logging.info("[LOGIN][D] Iniciando clicks con SendInput mouse...")
+                for y_off in [245, 260, 230, 275, 210, 195, 300, 180, 320]:
+                    click_y = wy + y_off
+                    if not (wy < click_y < wy2):
+                        continue
+                    ax = int(click_x * 65535 / SM_W)
+                    ay = int(click_y * 65535 / SM_H)
+                    logging.info(f"[LOGIN][D] SendInput ({click_x},{click_y}) abs=({ax},{ay}) y_off={y_off}")
+                    try:
+                        send_mouse_click(ax, ay)
+                        time.sleep(1.5)
+                        hwnd_check, _ = self._find_window_hwnd(title_patterns)
+                        if hwnd_check is None:
+                            logging.info(f"[LOGIN][D] ✅ Cerrada. y_off={y_off} funcionó.")
+                            self.login_window_handled = True
+                            clicked = True
+                            break
+                        logging.info(f"[LOGIN][D] Ventana sigue visible (y_off={y_off}).")
+                    except Exception as e:
+                        logging.warning(f"[LOGIN][D] y_off={y_off}: {e}")
+
+            # ── Estrategia E: PostMessage a hijos Chrome_WidgetWin_1 ──────────
+            if not clicked:
+                logging.info("[LOGIN][E] Probando PostMessage a hijos Chrome_WidgetWin_1...")
+                try:
+                    children = []
+                    def child_cb(ch, _):
+                        try:
+                            if win32gui.GetClassName(ch) == "Chrome_WidgetWin_1":
+                                children.append(ch)
+                        except Exception:
+                            pass
+                    win32gui.EnumChildWindows(hwnd, child_cb, None)
+                    logging.info(f"[LOGIN][E] Hijos Chrome_WidgetWin_1 encontrados: {children}")
+                    for ch in children:
+                        for y_off in [245, 260, 230]:
+                            lp = (y_off << 16) | (ww // 2 & 0xFFFF)
+                            win32api.PostMessage(ch, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lp)
+                            time.sleep(0.1)
+                            win32api.PostMessage(ch, win32con.WM_LBUTTONUP, 0, lp)
+                            time.sleep(1.0)
+                            hwnd_check, _ = self._find_window_hwnd(title_patterns)
+                            if hwnd_check is None:
+                                logging.info(f"[LOGIN][E] ✅ Cerrada. ch={ch} y_off={y_off}.")
+                                self.login_window_handled = True
+                                clicked = True
+                                break
+                        if clicked:
+                            break
+                except Exception as e:
+                    logging.warning(f"[LOGIN][E] Error: {e}")
+
+            if not clicked:
+                logging.warning("[LOGIN] Ninguna estrategia funcionó. Reintentando en 3s...")
+                time.sleep(3)
+                waited += 3
+
+        if not self.login_window_handled:
+            logging.warning(f"[LOGIN] No manejado tras {max_wait}s.")
+
 
     def _open_and_process_excel(self):
         excel = win32com.client.Dispatch("Excel.Application")
         try:
             logging.info("[EXCEL] Abriendo Excel y archivo: %s", self.file_path)
             excel.Visible = True
+
+            # El diálogo 'Pick an account' puede aparecer durante Workbooks.Open,
+            # durante la asignación del slicer (VisibleSlicerItemsList) o durante
+            # connection.Refresh() — arrancamos el hilo antes de cualquier operación.
+            logging.info("[EXCEL] Iniciando hilo de monitoreo de login window...")
+            self.login_window_handled = False
+            threading.Thread(target=self.handle_microsoft_login_window, daemon=True).start()
+
             workbook = excel.Workbooks.Open(self.file_path)
 
             current_date = datetime.datetime.now()
@@ -233,11 +534,6 @@ class CompiUpdate:
                 f"[EXCEL] VisibleSlicerItemsList actual: {slicer_cache.VisibleSlicerItemsList}"
             )
 
-            # Si quieres login automático, descomenta las siguientes dos líneas:
-            # logging.info("[EXCEL] Iniciando hilo de monitoreo de login window...")
-            # threading.Thread(target=self.monitor_login_window, daemon=True).start()
-            # Por defecto, no se espera login_window_handled y se continúa siempre.
-
             current_month_value = f"[Calendario].[Período].&[{current_month_name}]"
 
             if slicer_cache.VisibleSlicerItemsList == [current_month_value]:
@@ -248,7 +544,7 @@ class CompiUpdate:
                     logging.info(f"[EXCEL] Refrescando conexión: {connection.Name}")
                     before_refresh = getattr(connection, 'RefreshDate', None)
                     connection.Refresh()
-                    self.wait_until_excel_ready(excel, timeout=90)
+                    self.wait_until_excel_ready(excel, timeout=180)
                     after_refresh = getattr(connection, 'RefreshDate', None)
                     logging.info(f"[EXCEL] Estado conexión: {connection.Name} | Antes: {before_refresh} | Después: {after_refresh}")
                     # Loguear errores OLEDB si existen
@@ -267,11 +563,12 @@ class CompiUpdate:
                 # slicer_cache.ClearAllFilters()
                 slicer_cache.VisibleSlicerItemsList = [current_month_value]
                 self.wait_until_excel_ready(excel, timeout=90)
+
                 for connection in workbook.Connections:
                     logging.info(f"[EXCEL] Refrescando conexión: {connection.Name}")
                     before_refresh = getattr(connection, 'RefreshDate', None)
                     connection.Refresh()
-                    self.wait_until_excel_ready(excel, timeout=90)
+                    self.wait_until_excel_ready(excel, timeout=180)
                     after_refresh = getattr(connection, 'RefreshDate', None)
                     logging.info(f"[EXCEL] Estado conexión: {connection.Name} | Antes: {before_refresh} | Después: {after_refresh}")
                     try:
