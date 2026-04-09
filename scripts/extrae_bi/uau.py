@@ -193,6 +193,7 @@ class CompiUpdate:
         }
 
         found = []
+        appframe_candidates = []  # Fallback: ApplicationFrameWindow por tamaño
 
         def enum_cb(hwnd, _):
             if not win32gui.IsWindowVisible(hwnd):
@@ -224,6 +225,20 @@ class CompiUpdate:
                 except Exception:
                     pass
 
+            # Fallback especial: ApplicationFrameWindow con título vacío y tamaño razonable.
+            # El diálogo "Pick an account" de Microsoft (WebView2 embebido en UWP) aparece
+            # como ApplicationFrameWindow sin título. El contenido WebView2 NO expone títulos
+            # de hijos via EnumChildWindows, por lo que usamos heurística de tamaño.
+            if wclass == "ApplicationFrameWindow" and not title:
+                try:
+                    rect = win32gui.GetWindowRect(hwnd)
+                    w = rect[2] - rect[0]
+                    h = rect[3] - rect[1]
+                    if w > 300 and h > 300:
+                        appframe_candidates.append((hwnd, "", wclass, "appframe_size_heuristic"))
+                except Exception:
+                    pass
+
         try:
             win32gui.EnumWindows(enum_cb, None)
         except Exception as e:
@@ -234,6 +249,23 @@ class CompiUpdate:
             logging.info(
                 f"[LOGIN][find] hwnd={hwnd} title='{title}' "
                 f"class='{wclass}' match={match_type}"
+            )
+            return hwnd, title
+
+        # Fallback: usar el ApplicationFrameWindow de mayor área si no encontramos por título
+        if appframe_candidates:
+            def _area(c):
+                try:
+                    r = win32gui.GetWindowRect(c[0])
+                    return (r[2] - r[0]) * (r[3] - r[1])
+                except Exception:
+                    return 0
+            appframe_candidates.sort(key=_area, reverse=True)
+            hwnd, title, wclass, match_type = appframe_candidates[0]
+            logging.info(
+                f"[LOGIN][find] FALLBACK hwnd={hwnd} "
+                f"class='{wclass}' match={match_type} "
+                f"(ApplicationFrameWindow sin título, heurística de tamaño)"
             )
             return hwnd, title
 
@@ -367,12 +399,37 @@ class CompiUpdate:
                 time.sleep(3); waited += 3; continue
 
             # ── Traer al frente ───────────────────────────────────────────────
+            # Buscar el hijo Chrome_WidgetWin_1 (WebView2) para enfocar directamente
+            webview_hwnd = None
+            try:
+                def _find_webview(ch, _):
+                    if webview_hwnd is None and win32gui.GetClassName(ch) in (
+                        "Chrome_WidgetWin_1", "NativeHWNDHost"
+                    ):
+                        # Guardamos en lista mutable para acceder desde closure
+                        _find_webview.result = ch
+                _find_webview.result = None
+                win32gui.EnumChildWindows(hwnd, _find_webview, None)
+                webview_hwnd = _find_webview.result
+                if webview_hwnd:
+                    logging.info(f"[LOGIN] WebView2 child hwnd={webview_hwnd} encontrado dentro del contenedor.")
+            except Exception as e:
+                logging.warning(f"[LOGIN] Búsqueda WebView2 child: {e}")
+
             try:
                 ctypes.windll.user32.AllowSetForegroundWindow(-1)
+                # Enfocar primero el contenedor y luego el child WebView2 si existe
                 win32gui.SetForegroundWindow(hwnd)
-                time.sleep(0.7)
+                time.sleep(0.3)
+                if webview_hwnd:
+                    try:
+                        win32gui.SetForegroundWindow(webview_hwnd)
+                        time.sleep(0.3)
+                    except Exception:
+                        pass
             except Exception:
                 pass
+            time.sleep(0.2)
 
             clicked = False
 
@@ -409,36 +466,34 @@ class CompiUpdate:
             if not clicked:
                 logging.info("[LOGIN][C] Intentando pywinauto UIA backend...")
                 try:
-                    # Desktop y Application ya importados al nivel del módulo
-                    desk = Desktop(backend='uia')
-                    # Buscar la ventana del diálogo por título
-                    dlg_windows = desk.windows(title_re=r'Pick an account|Seleccionar.*cuenta|Elige.*cuenta|Iniciar sesi')
-                    if not dlg_windows:
-                        # Intentar buscar el hwnd directamente
-                        app = Application(backend='uia').connect(handle=hwnd)
-                        dlg_windows = [app.top_window()]
-                    if dlg_windows:
-                        dlg = dlg_windows[0]
-                        logging.info(f"[LOGIN][C] Diálogo UIA encontrado: {dlg}")
-                        # Intentar hacer clic en el primer elemento de lista (tile de cuenta)
+                    # Conectar directamente por hwnd — el diálogo no expone título
+                    app = Application(backend='uia').connect(handle=hwnd)
+                    dlg = app.top_window()
+                    logging.info(f"[LOGIN][C] Conectado por hwnd={hwnd}: {dlg}")
+                    # Intentar hacer clic en el primer elemento de lista (tile de cuenta)
+                    control_clicked = False
+                    for ctype in ('ListItem', 'Button', 'DataItem'):
                         try:
-                            account_item = dlg.child_window(control_type='ListItem')
-                            account_item.click_input()
-                            logging.info("[LOGIN][C] Click en ListItem (cuenta).")
+                            ctrl = dlg.child_window(control_type=ctype, found_index=0)
+                            ctrl.click_input()
+                            logging.info(f"[LOGIN][C] Click en control_type='{ctype}'.")
+                            control_clicked = True
+                            break
+                        except Exception as ce:
+                            logging.warning(f"[LOGIN][C] No control_type='{ctype}': {ce}")
+                    if not control_clicked:
+                        # Último intento: listar todos los controles disponibles
+                        try:
+                            desc = dlg.print_control_identifiers()
+                            logging.info(f"[LOGIN][C] Árbol de controles: {desc}")
                         except Exception:
-                            # Fallback: click en el primer Button dentro del diálogo
-                            try:
-                                btn = dlg.child_window(control_type='Button')
-                                btn.click_input()
-                                logging.info("[LOGIN][C] Click en Button.")
-                            except Exception as e2:
-                                logging.warning(f"[LOGIN][C] No se encontró control: {e2}")
-                        time.sleep(1.5)
-                        hwnd_check, _ = self._find_window_hwnd(title_patterns)
-                        if hwnd_check is None:
-                            logging.info("[LOGIN][C] ✅ Ventana cerrada con pywinauto UIA.")
-                            self.login_window_handled = True
-                            clicked = True
+                            pass
+                    time.sleep(1.5)
+                    hwnd_check, _ = self._find_window_hwnd(title_patterns)
+                    if hwnd_check is None:
+                        logging.info("[LOGIN][C] ✅ Ventana cerrada con pywinauto UIA.")
+                        self.login_window_handled = True
+                        clicked = True
                 except Exception as e:
                     logging.warning(f"[LOGIN][C] pywinauto UIA error: {e}")
 
