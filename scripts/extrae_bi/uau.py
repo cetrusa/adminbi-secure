@@ -226,15 +226,18 @@ class CompiUpdate:
                     pass
 
             # Fallback especial: ApplicationFrameWindow con título vacío y tamaño razonable.
-            # El diálogo "Pick an account" de Microsoft (WebView2 embebido en UWP) aparece
-            # como ApplicationFrameWindow sin título. El contenido WebView2 NO expone títulos
-            # de hijos via EnumChildWindows, por lo que usamos heurística de tamaño.
+            # El diálogo "Pick an account" aparece como ApplicationFrameWindow sin título.
+            # CLAVE: tiene posición desplazada (ej: 459,118) — NO en (0,0) como las demás.
+            # Las ~50 ApplicationFrameWindow en background tienen rect=(0,0,1920,1040).
             if wclass == "ApplicationFrameWindow" and not title:
                 try:
                     rect = win32gui.GetWindowRect(hwnd)
-                    w = rect[2] - rect[0]
-                    h = rect[3] - rect[1]
-                    if w > 300 and h > 300:
+                    left, top, right, bottom = rect
+                    w = right - left
+                    h = bottom - top
+                    # El diálogo real NO empieza en (0,0): left>50 o top>50
+                    # y tiene tamaño razonable pero no ocupa toda la pantalla
+                    if (left > 50 or top > 50) and w > 300 and h > 300:
                         appframe_candidates.append((hwnd, "", wclass, "appframe_size_heuristic"))
                 except Exception:
                     pass
