@@ -884,7 +884,8 @@ class ExtraeBiExtractor:
             try:
                 step_start = time.perf_counter()
                 rows_deleted = self.consulta_sql_bi()
-                if rows_deleted == 0:
+                _is_call_stmt = (self.txSql or "").strip().upper().startswith("CALL")
+                if rows_deleted == 0 and not _is_call_stmt:
                     logging.warning(
                         "No se borraron filas en consulta_sql_bi, pero se continuará con la inserción de datos."
                     )
@@ -930,10 +931,19 @@ class ExtraeBiExtractor:
                             f"Proceso completado para {self.txTabla}: {extraction_result.get('total_rows', 0):,} filas en {elapsed:.2f}s."
                         )
                     else:
-                        logging.warning(
-                            "No se obtuvieron resultados en consulta_sql_out_extrae, inserción cancelada."
-                        )
-                        continue
+                        total_rows_read = extraction_result.get("total_rows", -1) if extraction_result else -1
+                        if total_rows_read == 0 and rows_deleted == 0:
+                            # Origen genuinamente sin datos para este período — no reintentar
+                            logging.info(
+                                f"Fuente sin datos para el período indicado en '{self.nmReporte}'. Proceso omitido."
+                            )
+                            break
+                        else:
+                            # Posible fallo transitorio (extraction_result=None) → reintentar
+                            logging.warning(
+                                "No se obtuvieron resultados en consulta_sql_out_extrae, inserción cancelada."
+                            )
+                            continue
                 else:
                     logging.warning(
                         "Se intentó insertar sin un SQL de extracción definido. Proceso cancelado."
@@ -1001,14 +1011,27 @@ class ExtraeBiExtractor:
                             sql_to_run, str(self.txTabla)
                         )
 
-                    sqldelete = text(sql_to_run)
+                    sql_upper = sql_to_run.strip().upper()
+                    is_call_stmt = sql_upper.startswith("CALL")
+                    is_truncate_stmt = sql_upper.startswith("TRUNCATE")
+
+                    stmt = text(sql_to_run)
                     result = connection.execute(
-                        sqldelete, {"fi": self.IdtReporteIni, "ff": self.IdtReporteFin}
+                        stmt, {"fi": self.IdtReporteIni, "ff": self.IdtReporteFin}
                     )
                     rows_deleted = result.rowcount
-                    logging.info(
-                        f"Datos borrados correctamente. Filas afectadas: {rows_deleted} {sql_to_run}"
-                    )
+                    if is_call_stmt:
+                        logging.info(
+                            f"Procedimiento ejecutado: {sql_to_run}. Filas afectadas: {rows_deleted}"
+                        )
+                    elif is_truncate_stmt:
+                        logging.info(
+                            f"Tabla truncada: {rows_deleted} filas. {sql_to_run}"
+                        )
+                    else:
+                        logging.info(
+                            f"Datos borrados correctamente. Filas afectadas: {rows_deleted} {sql_to_run}"
+                        )
                     return rows_deleted
             except Exception as e:
                 logging.error(
