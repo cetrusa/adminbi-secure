@@ -983,6 +983,12 @@ class ExtraeBiExtractor:
                 with self.engine_mysql_bi.connect().execution_options(
                     isolation_level="AUTOCOMMIT"
                 ) as connection:
+                    # Reducir lock wait timeout para fallar rápido en vez de esperar minutos
+                    try:
+                        connection.execute(text("SET innodb_lock_wait_timeout = 30"))
+                    except Exception:
+                        pass
+
                     sql_to_run = self.txSql
                     # Corrección obligatoria: nunca permitir SELECT ... ON DUPLICATE (inválido).
                     # Si llega un agregado en txSql, lo reescribimos a INSERT INTO ... SELECT ... ON DUPLICATE.
