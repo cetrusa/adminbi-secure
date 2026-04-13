@@ -98,7 +98,7 @@ SESSION_SAVE_EVERY_REQUEST = (
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://redis:6379/1",
+        "LOCATION": f"redis://{os.getenv('REDIS_HOST', 'redis')}:6379/1",
         "KEY_PREFIX": "adminbi",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -164,3 +164,5 @@ USE_TZ = True
 TIME_ZONE = "America/Bogota"
 
 USE_I18N = True
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

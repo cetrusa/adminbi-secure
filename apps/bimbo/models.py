@@ -71,6 +71,13 @@ class AgenciaBimbo(models.Model):
         verbose_name=_("ID Proveedor BIMBO"),
         help_text=_("idProveedor BIMBO en el SIDIS de esta agencia (resultado de Discovery)"),
     )
+    id_proveedor_fvp = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        verbose_name=_("ID Proveedor FVP"),
+        help_text=_("idProveedor FVP en el SIDIS de esta agencia (resultado de Discovery)"),
+    )
     fecha_alta = models.DateTimeField(
         blank=True,
         null=True,

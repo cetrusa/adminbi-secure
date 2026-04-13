@@ -43,7 +43,11 @@ else:
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": "db.sqlite3",
-        }
+        },
+        "bimbo": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": "db_bimbo.sqlite3",
+        },
     }
 
 DATABASE_ROUTERS = ["apps.bimbo.db_router.BimboRouter"]
@@ -69,6 +73,22 @@ EMAIL_PORT = 587
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+
+RQ_DEFAULT_TIMEOUT = int(os.getenv("RQ_DEFAULT_TIMEOUT", 28800))
+RQ_RESULT_TTL = int(os.getenv("RQ_RESULT_TTL", 86400))
+RQ_FAILURE_TTL = int(os.getenv("RQ_FAILURE_TTL", 86400))
+
+RQ_QUEUES = {
+    "default": {
+        "HOST": os.getenv("REDIS_HOST", "redis"),
+        "PORT": 6379,
+        "DB": 0,
+        "DEFAULT_TIMEOUT": RQ_DEFAULT_TIMEOUT,
+        "RESULT_TTL": RQ_RESULT_TTL,
+        "FAILURE_TTL": RQ_FAILURE_TTL,
+        "CONNECTION_TIMEOUT": 30,
+    },
+}
 
 sys.path.append(BASE_DIR.child("scripts"))
 sys.path.append(BASE_DIR.child("scripts", "extrae_bi"))

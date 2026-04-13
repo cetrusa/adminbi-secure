@@ -17,7 +17,7 @@ ALLOWED_HOSTS = [
     "10.0.61.101",
 ]
 
-RENDER_EXTERNAL_HOSTNAME = get_secret("RENDER_EXTERNAL_HOSTNAME")
+RENDER_EXTERNAL_HOSTNAME = get_secret("RENDER_EXTERNAL_HOSTNAME", default=None)
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -93,7 +93,11 @@ else:
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": "db.sqlite3",
-        }
+        },
+        "bimbo": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": "db_bimbo.sqlite3",
+        },
     }
 
 DATABASE_ROUTERS = ["apps.bimbo.db_router.BimboRouter"]
@@ -156,7 +160,7 @@ RQ_FAILURE_TTL = int(os.getenv("RQ_FAILURE_TTL", 86400))  # 24h
 
 RQ_QUEUES = {
     "default": {
-        "HOST": "redis",
+        "HOST": os.getenv("REDIS_HOST", "redis"),
         "PORT": 6379,
         "DB": 0,
         # Nota: Las tareas ya especifican timeout explícito (p.ej. 7200s). Este DEFAULT_TIMEOUT
@@ -170,7 +174,6 @@ RQ_QUEUES = {
 }
 
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 FILE_UPLOAD_MAX_MEMORY_SIZE = 200 * 1024 * 1024  # 200 MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 200 * 1024 * 1024  # 200 MB
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

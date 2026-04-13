@@ -17,6 +17,7 @@ class AgenciaBimboAdmin(admin.ModelAdmin):
         "estado_badge",
         "es_bimbo",
         "id_proveedor_bimbo",
+        "id_proveedor_fvp",
         "fecha_ultimo_snapshot",
     )
     list_display_links = ("CEVE", "Nombre")
@@ -37,6 +38,7 @@ class AgenciaBimboAdmin(admin.ModelAdmin):
                 "fields": (
                     "es_bimbo",
                     "id_proveedor_bimbo",
+                    "id_proveedor_fvp",
                     "db_powerbi",
                     "estado",
                 ),
