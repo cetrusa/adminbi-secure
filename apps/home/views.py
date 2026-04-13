@@ -2606,9 +2606,7 @@ class CdtPage(BaseView):
             try:
                 empresa = ConfEmpresas.objects.get(name=database_name)
                 context["empresa_cdt"] = empresa
-                context["cdt_configurado"] = bool(
-                    empresa.cdt_codigo_proveedor and empresa.planos_cdt
-                )
+                context["cdt_configurado"] = bool(empresa.planos_cdt)
             except ConfEmpresas.DoesNotExist:
                 context["cdt_configurado"] = False
         else:
@@ -2650,7 +2648,7 @@ class CdtPage(BaseView):
                 status=400,
             )
 
-        if not empresa.cdt_codigo_proveedor or not empresa.planos_cdt:
+        if not empresa.planos_cdt:
             return JsonResponse(
                 {"success": False, "error_message": "La empresa no tiene CDT configurado."},
                 status=400,

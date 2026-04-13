@@ -51,11 +51,15 @@ Informe de Preventa
                     <!-- Seleccion de Agencia (CEVE) -->
                     <div class="col-md-6">
                         <label for="ceves_code" class="form-label fw-semibold">Agencia (CEVE):</label>
-                        <select class="form-select form-select-sm" id="ceves_code" name="ceves_code" required>
+                        <select class="form-select form-select-sm" id="ceves_code" name="ceves_code" {% if not ceves_catalog %}disabled{% endif %} required>
+                            {% if ceves_catalog %}
                             <option value="" selected disabled>-- Seleccione una Agencia --</option>
                             {% for item in ceves_catalog %}
                             <option value="{{ item.id }}">{{ item.label }}</option>
                             {% endfor %}
+                            {% else %}
+                            <option value="" selected>Sin Agencias disponibles</option>
+                            {% endif %}
                         </select>
                     </div>
 

@@ -17,19 +17,41 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-def _is_admin(user):
+def _is_superadmin(user):
+    """Superusuario o admin global — acceso sin restricciones."""
     return user.is_superuser or user.has_perm("permisos.admin")
 
 
+def _can_manage_bimbo(user):
+    """Puede entrar al panel de permisos Bimbo (superadmin o admin_bimbo)."""
+    return _is_superadmin(user) or user.has_perm("permisos.admin_bimbo")
+
+
+def _get_agencia_ids_permitidas(user):
+    """
+    Retorna el conjunto de agencia_ids (de agencias_bimbo) que el usuario tiene
+    asignados. Para superadmin retorna None (sin restricción).
+    """
+    if _is_superadmin(user):
+        return None  # sin filtro
+    agencias = get_agencias_permitidas(user)
+    return {a["id"] for a in agencias}
+
+
 class BimboPermisosPage(BaseView):
-    """Pagina de gestion de permisos por agente BIMBO."""
+    """Pagina de gestion de permisos por agente BIMBO.
+
+    - Superadmin/admin: ve todos los usuarios es_bimbo y todas las agencias.
+    - admin_bimbo (staff): ve todos los usuarios es_bimbo pero solo las agencias
+      que él mismo tiene asignadas en get_agencias_permitidas().
+    """
 
     template_name = "bimbo/permisos.html"
     login_url = reverse_lazy("users_app:user-login")
 
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
-        if not _is_admin(request.user):
+        if not _can_manage_bimbo(request.user):
             return JsonResponse(
                 {"error": "No tiene permisos para acceder."}, status=403
             )
@@ -40,8 +62,9 @@ class BimboPermisosPage(BaseView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["es_superadmin"] = _is_superadmin(self.request.user)
 
-        # Usuarios BIMBO: campo es_bimbo en el modelo User
+        # Usuarios gestionables: todos los activos con es_bimbo=True
         context["usuarios_catalog"] = list(
             User.objects.filter(
                 is_active=True,
@@ -51,18 +74,35 @@ class BimboPermisosPage(BaseView):
             .values("id", "username", "nombres", "apellidos")
         )
 
-        # Agencias: via SQLAlchemy (powerbi_bimbo), superuser ve todas
+        # Agencias visibles según rol
+        agencia_ids = _get_agencia_ids_permitidas(self.request.user)
         try:
             engine = _get_bimbo_engine()
             with engine.connect() as conn:
-                rows = conn.execute(
-                    text(
-                        "SELECT id, CEVE, Nombre "
-                        "FROM powerbi_bimbo.agencias_bimbo "
-                        "WHERE es_bimbo = 1 "
-                        "ORDER BY CEVE"
-                    )
-                ).mappings().all()
+                if agencia_ids is None:
+                    # superadmin: todas
+                    rows = conn.execute(
+                        text(
+                            "SELECT id, CEVE, Nombre "
+                            "FROM powerbi_bimbo.agencias_bimbo "
+                            "WHERE es_bimbo = 1 "
+                            "ORDER BY CEVE"
+                        )
+                    ).mappings().all()
+                elif agencia_ids:
+                    placeholders = ", ".join(f":id_{i}" for i in range(len(agencia_ids)))
+                    params = {f"id_{i}": v for i, v in enumerate(agencia_ids)}
+                    rows = conn.execute(
+                        text(
+                            f"SELECT id, CEVE, Nombre "
+                            f"FROM powerbi_bimbo.agencias_bimbo "
+                            f"WHERE id IN ({placeholders}) "
+                            f"ORDER BY CEVE"
+                        ),
+                        params,
+                    ).mappings().all()
+                else:
+                    rows = []
             context["agencias_catalog"] = [
                 {"id": r["id"], "CEVE": r["CEVE"], "Nombre": r["Nombre"]}
                 for r in rows
@@ -79,7 +119,7 @@ class BimboPermisosDataView(View):
 
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
-        if not _is_admin(request.user):
+        if not _can_manage_bimbo(request.user):
             return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
@@ -96,9 +136,12 @@ class BimboPermisosDataView(View):
         except (ValueError, TypeError):
             page_size = 50
 
-        # PermisoBimboAgente.agencia_id es IntegerField (FK lógica).
-        # NO se puede usar select_related('agencia') ni ordenar por agencia__CEVE.
         qs = PermisoBimboAgente.objects.select_related("user").all()
+
+        # Staff: restringir a sus propios agencia_ids
+        agencia_ids_permitidas = _get_agencia_ids_permitidas(request.user)
+        if agencia_ids_permitidas is not None:
+            qs = qs.filter(agencia_id__in=agencia_ids_permitidas)
 
         if user_id:
             try:
@@ -115,10 +158,9 @@ class BimboPermisosDataView(View):
 
         total = qs.count()
         offset = (page - 1) * page_size
-        records = list(qs[offset : offset + page_size])
+        records = list(qs[offset: offset + page_size])
 
-        # Batch-lookup de agencias para esta página: una sola query, no N queries.
-        agencias_map: dict = {}  # id → {"CEVE": ..., "Nombre": ...}
+        agencias_map: dict = {}
         agencia_ids_pagina = list({p.agencia_id for p in records})
         if agencia_ids_pagina:
             try:
@@ -171,7 +213,7 @@ class BimboPermisoSaveView(View):
 
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
-        if not _is_admin(request.user):
+        if not _can_manage_bimbo(request.user):
             return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
@@ -193,6 +235,14 @@ class BimboPermisoSaveView(View):
         except (ValueError, TypeError):
             return JsonResponse(
                 {"success": False, "error": "IDs invalidos."}, status=400
+            )
+
+        # Staff: solo puede asignar agencias que él mismo tiene
+        agencia_ids_permitidas = _get_agencia_ids_permitidas(request.user)
+        if agencia_ids_permitidas is not None and agencia_id not in agencia_ids_permitidas:
+            return JsonResponse(
+                {"success": False, "error": "No puede asignar esta agencia."},
+                status=403,
             )
 
         if not User.objects.filter(id=user_id, is_active=True).exists():
@@ -230,7 +280,7 @@ class BimboPermisoDeleteView(View):
 
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
-        if not _is_admin(request.user):
+        if not _can_manage_bimbo(request.user):
             return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
@@ -251,10 +301,18 @@ class BimboPermisoDeleteView(View):
 
         try:
             obj = PermisoBimboAgente.objects.get(id=permiso_id)
-            obj.delete()
         except PermisoBimboAgente.DoesNotExist:
             return JsonResponse(
                 {"success": False, "error": "Permiso no encontrado."}, status=404
             )
 
+        # Staff: solo puede eliminar permisos de sus propias agencias
+        agencia_ids_permitidas = _get_agencia_ids_permitidas(request.user)
+        if agencia_ids_permitidas is not None and obj.agencia_id not in agencia_ids_permitidas:
+            return JsonResponse(
+                {"success": False, "error": "No puede eliminar este permiso."},
+                status=403,
+            )
+
+        obj.delete()
         return JsonResponse({"success": True, "message": "Permiso eliminado."})

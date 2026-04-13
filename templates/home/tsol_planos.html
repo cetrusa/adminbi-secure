@@ -203,7 +203,11 @@ Planos TSOL
       var archivos = meta.archivos || [];
       if (archivos.length > 0) {
         var html = '<strong>Archivos generados:</strong><ul class="mb-0 mt-1">';
-        archivos.forEach(function(a) { html += '<li>' + a + '</li>'; });
+        archivos.forEach(function(a) {
+          var nombre = (typeof a === 'object') ? (a.nombre || JSON.stringify(a)) : a;
+          var tamano = (typeof a === 'object' && a.tamaño) ? ' <small class="text-muted">(' + (a.tamaño / 1024).toFixed(1) + ' KB)</small>' : '';
+          html += '<li>' + nombre + tamano + '</li>';
+        });
         html += '</ul>';
         $('#tsolArchivos').html(html);
       }

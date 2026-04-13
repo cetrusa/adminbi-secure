@@ -8,7 +8,6 @@ import os
 import re
 import zipfile
 import ftplib
-import calendar
 from datetime import datetime
 from io import StringIO
 from typing import Dict, List, Optional
@@ -38,6 +37,7 @@ class PlanosTSOL:
         "inventario_tsol": "Inventario.txt",
         "tipos_negocio_tsol": "Tipos De Negocio.txt",
         "municipios_tsol": "Municipios.txt",
+        "barrios_tsol": "Barrios.txt",
         "rutas_tsol": "Rutas.txt",
         "facturas_tsol": "Listado de Facturas.txt",
         "totales_tsol": "Totales de Control.txt",
@@ -346,10 +346,10 @@ class PlanosTSOL:
         logger.info("Archivo generado: %s (%d registros)", nombre_archivo, len(df))
         return filepath
 
-    def _formatear_decimal_coma(self, valor, decimales=2) -> str:
+    def _formatear_decimal_coma(self, valor) -> str:
         """Formatea un número con coma como separador decimal."""
         try:
-            return f"{float(valor):.{decimales}f}".replace(".", ",")
+            return f"{float(valor):.2f}".replace(".", ",")
         except (ValueError, TypeError):
             return "0,00"
 
@@ -428,7 +428,10 @@ class PlanosTSOL:
             return None
 
         if "Codigo" in df.columns:
-            df["Codigo"] = df["Codigo"].apply(self._formatear_codigo_producto)
+            # .upper() para consistencia con ventas (códigos alfanuméricos)
+            df["Codigo"] = df["Codigo"].apply(
+                lambda x: self._formatear_codigo_producto(x).upper()
+            )
 
         # Mapear bodega/sede
         if "Codigo Sede" in df.columns:
@@ -444,7 +447,7 @@ class PlanosTSOL:
             "Codigo De Barras", "Codigo Categoria", "Nombre Categoria",
             "Codigo SubCategoria", "Nombre SubCategoria",
             "Factor Conversion Unidad", "Factor Peso",
-            "Codigo Sede", "Nombre Sede", "Proveedor",
+            "Codigo Sede", "Nombre Sede", "Proveedor", "Codigo Proveedor",
         ]
 
         return self._escribir_txt_tsol(df, "SKU (Productos).txt", columnas)
@@ -475,7 +478,7 @@ class PlanosTSOL:
             "Telefono", "Representante Legal", "Codigo Municipio",
             "Codigo Tipo Negocio", "Estrato", "Codigo Sede", "Nombre Sede",
             "Ubicacion longitud", "Ubicacion latitud",
-            "Identificador de sucursal",
+            "Identificador de sucursal", "Codigo Barrio",
         ]
 
         return self._escribir_txt_tsol(df, "Clientes.txt", columnas)
@@ -567,6 +570,16 @@ class PlanosTSOL:
 
         columnas = ["Codigo", "Nombre"]
         return self._escribir_txt_tsol(df, "Municipios.txt", columnas)
+
+    def generar_barrios(self) -> Optional[str]:
+        """Genera Barrios.txt (maestra de barrios con código municipio)."""
+        df = self.datos.get("barrios_tsol")
+        if df is None or df.empty:
+            logger.warning("Sin datos para barrios_tsol (omitiendo Barrios.txt).")
+            return None
+
+        columnas = ["Codigo", "Nombre", "Codigo Municipio"]
+        return self._escribir_txt_tsol(df, "Barrios.txt", columnas)
 
     def generar_rutas(self) -> Optional[str]:
         """Genera Rutas.txt."""
@@ -746,6 +759,7 @@ class PlanosTSOL:
                 ("inventario", self.generar_inventario),
                 ("tipos_negocio", self.generar_tipos_negocio),
                 ("municipios", self.generar_municipios),
+                ("barrios", self.generar_barrios),
                 ("rutas", self.generar_rutas),
                 ("facturas", self.generar_listado_facturas),
                 ("totales_control", self.generar_totales_control),

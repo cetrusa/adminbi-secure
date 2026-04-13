@@ -39,6 +39,7 @@ class PermisosBarra(models.Model):
             ("reportes", _("Puede ver Reportes")),
             ("reportes_bimbo", _("Puede ver Reportes Bimbo (Venta Cero, Ruteros)")),
             ("reporte_preventa_bimbo", _("Puede ver Reporte Preventa Bimbo")),
+            ("admin_bimbo", _("Administrador Bimbo (gestión de permisos por CEVE)")),
             ("cargue_infoventas", _("Cargar Archivo Infoventas")),
             ("cargue_maestras", _("Cargar Tablas Maestras")),
             ("cargue_infoproducto", _("Cargar Información de Producto")),

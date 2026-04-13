@@ -28,7 +28,11 @@
       "Bash(PYTHONIOENCODING=utf-8 python:*)",
       "Bash(awk:*)",
       "Bash(grep:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(docker info:*)",
+      "Bash(docker compose:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

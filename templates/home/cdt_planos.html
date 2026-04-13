@@ -89,7 +89,10 @@ Planos CDT
       </form>
 
       <div class="mt-3">
-        {% include 'includes/download_file.html' %}
+        <a id="download_file" href="#" class="btn btn-success d-none"
+           data-base-url="{% url 'home_app:cdt_download' envio_id=0 %}">
+          <i class="fas fa-download me-1"></i> Descargar archivo
+        </a>
       </div>
     </div>
   </div>
@@ -169,8 +172,8 @@ Planos CDT
     checkTaskUrl: '{% url "home_app:check_task_status" %}',
     csrfToken: document.getElementsByName('csrfmiddlewaretoken')[0].value,
     modalTitle: 'Procesando Planos CDT...',
-    onComplete: function(result) {
-      var meta = result.metadata || {};
+    onComplete: function(response) {
+      var meta = (response.result && response.result.metadata) || {};
       $('#cdtResultado').show();
       $('#kpiVentas').text((meta.total_ventas || 0).toLocaleString());
       $('#kpiClientes').text((meta.total_clientes || 0).toLocaleString());
@@ -188,6 +191,14 @@ Planos CDT
         archivos.forEach(function(a) { html += '<li>' + a + '</li>'; });
         html += '</ul>';
         $('#cdtArchivos').html(html);
+      }
+
+      // Configurar botón de descarga con URL correcta usando envio_id
+      if (meta.envio_id) {
+        var downloadBtn = document.getElementById('download_file');
+        var baseUrl = downloadBtn.getAttribute('data-base-url').replace('/0/', '/' + meta.envio_id + '/');
+        downloadBtn.href = baseUrl;
+        downloadBtn.className = 'btn btn-success';
       }
     }
   });

@@ -218,6 +218,18 @@ class RuteroPage(BaseView):
         context["database_name"] = database_name
         context["filter_types"] = getattr(self, "filter_types", [])
         context["batch_size_default"] = BATCH_SIZE_DEFAULT
+        if not context["ceves_catalog"]:
+            if self._ceves_catalog_error:
+                messages.error(
+                    self.request,
+                    f"No se pudo cargar el catálogo de agencias: {self._ceves_catalog_error}",
+                )
+            else:
+                messages.warning(
+                    self.request,
+                    "No tiene agencias BIMBO asignadas a su usuario. "
+                    "Contacte al administrador para solicitar acceso.",
+                )
         return context
 
 
@@ -973,12 +985,19 @@ class VentaCeroPage(BaseView):
         user_id = self.request.user.id
         if context["database_name"]:
             context["ceves_catalog"] = self._build_agent_catalog(context["database_name"], user_id)
-            if not context["ceves_catalog"] and self._ceves_catalog_error:
-                messages.error(
-                    self.request,
-                    "No se pudo cargar el catalogo de CEVES desde powerbi_bimbo.agencias_bimbo. "
-                    "Verifique permisos SELECT del usuario de conexion sobre ese esquema.",
-                )
+            if not context["ceves_catalog"]:
+                if self._ceves_catalog_error:
+                    messages.error(
+                        self.request,
+                        "No se pudo cargar el catálogo de agencias: "
+                        f"{self._ceves_catalog_error}",
+                    )
+                else:
+                    messages.warning(
+                        self.request,
+                        "No tiene agencias BIMBO asignadas a su usuario. "
+                        "Contacte al administrador para solicitar acceso.",
+                    )
         else:
             context["ceves_catalog"] = []
 

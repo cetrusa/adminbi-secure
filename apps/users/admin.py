@@ -12,6 +12,18 @@ from import_export import resources
 
 from .models import User, RegistroAuditoria, UserPermission
 from apps.permisos.models import ConfEmpresas
+from apps.bimbo.models import PermisoBimboAgente
+
+
+class PermisoBimboAgenteInline(admin.TabularInline):
+    """Inline: agencias BIMBO asignadas al usuario (CEVEs visibles + permisos de acción)."""
+
+    model = PermisoBimboAgente
+    extra = 0
+    fields = ("agencia_id", "puede_ejecutar", "puede_editar")
+    verbose_name = _("Agencia BIMBO asignada")
+    verbose_name_plural = _("Agencias BIMBO asignadas (CEVEs)")
+    can_delete = True
 
 
 class UserAdminForm(forms.ModelForm):
@@ -188,10 +200,26 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin):
         (
             _("Empresas"),
             {
-                "fields": ("select_all_empresas", "conf_empresas", "es_bimbo"),
+                "fields": ("select_all_empresas", "conf_empresas"),
                 "description": _(
-                    "Seleccione las empresas a las que este usuario tendrá acceso"
+                    "Seleccione las empresas a las que este usuario tendrá acceso."
                 ),
+            },
+        ),
+        (
+            _("Módulo BIMBO"),
+            {
+                "fields": ("es_bimbo",),
+                "description": _(
+                    "Marque 'Es BIMBO' para que el usuario aparezca en el panel de "
+                    "gestión de permisos Bimbo. Luego asigne los CEVEs visibles en la "
+                    "sección 'Agencias BIMBO asignadas' al final de esta página. "
+                    "Para que pueda entrar a los reportes, asigne el permiso "
+                    "'reportes_bimbo' en la sección Permisos arriba. "
+                    "Para que pueda gestionar otros usuarios Bimbo, asigne además "
+                    "'admin_bimbo'."
+                ),
+                "classes": ("collapse",),
             },
         ),
         (_("Seguridad"), {"fields": ("codregistro", "two_factor_enabled")}),
@@ -217,7 +245,13 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin):
         (
             _("Empresas"),
             {
-                "fields": ("select_all_empresas", "conf_empresas", "es_bimbo"),
+                "fields": ("select_all_empresas", "conf_empresas"),
+            },
+        ),
+        (
+            _("Módulo BIMBO"),
+            {
+                "fields": ("es_bimbo",),
             },
         ),
     )
@@ -225,6 +259,7 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin):
     # Campos con selección múltiple
     filter_horizontal = ("groups", "user_permissions")
     autocomplete_fields = ("conf_empresas",)
+    inlines = [PermisoBimboAgenteInline]
     list_per_page = 25
     show_full_result_count = False
 

@@ -64,7 +64,7 @@
     </li>
     {% endif %}
 
-    {% if user.is_superuser or perms.permisos.admin %}
+    {% if user.is_superuser or perms.permisos.admin or perms.permisos.admin_bimbo %}
     <li class="nav-item mt-2">
       <small class="text-uppercase text-muted px-2 fw-bold" style="font-size:0.7rem;letter-spacing:1px;">Admin</small>
     </li>
