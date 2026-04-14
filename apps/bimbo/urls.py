@@ -77,6 +77,36 @@ urlpatterns = [
         views.BimboPermisoDeleteView.as_view(),
         name="permisos_bimbo_delete",
     ),
+    path(
+        "descartados-bimbo/",
+        views.BimboDescartadosPage.as_view(),
+        name="descartados_bimbo",
+    ),
+    path(
+        "descartados-bimbo/data/",
+        views.BimboDescartadosDataView.as_view(),
+        name="descartados_data",
+    ),
+    path(
+        "descartados-bimbo/cuboventas/",
+        views.BimboDescartadosCuboventasView.as_view(),
+        name="descartados_cuboventas",
+    ),
+    path(
+        "descartados-bimbo/revisar/",
+        views.BimboDescartadosRevisarView.as_view(),
+        name="descartados_revisar",
+    ),
+    path(
+        "equivalencias-bimbo/import-mproductos/",
+        views.BimboImportMproductosPage.as_view(),
+        name="import_mproductos",
+    ),
+    path(
+        "equivalencias-bimbo/import-mproductos/execute/",
+        views.BimboImportExecuteView.as_view(),
+        name="import_mproductos_execute",
+    ),
     path("agregar-ceve/", views.AgregarCevePage.as_view(), name="agregar_ceve"),
     path(
         "agregar-ceve/empresas/",

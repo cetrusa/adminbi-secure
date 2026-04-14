@@ -1,0 +1,525 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Productos Descartados BIMBO{% endblock title %}
+{% block barra_lateral %}
+{% include 'bimbo/includes/sidebar.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<div class="container-fluid py-4 bg-light">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1 text-danger fw-bold">Productos Descartados por CEVE</h1>
+      <p class="text-muted small mb-0">
+        Productos filtrados durante el snapshot. Cruza con <code>cuboventas</code>
+        para identificar descartados sospechosos (con ventas históricas).
+      </p>
+    </div>
+  </div>
+
+  <!-- KPI Cards por agencia -->
+  {% if agencias_catalog %}
+  <div class="row g-3 mb-4" id="kpiRow">
+    {% for ag in agencias_catalog %}
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 kpi-card {% if ag.pendientes > 0 %}border-start border-4 border-warning{% endif %}"
+           style="cursor:pointer" onclick="filtrarAgencia({{ ag.id }}, '{{ ag.Nombre|escapejs }}')">
+        <div class="card-body py-2 px-3">
+          <div class="text-muted small">CEVE {{ ag.CEVE }}</div>
+          <div class="fw-bold text-truncate small">{{ ag.Nombre }}</div>
+          <div class="d-flex gap-2 mt-1">
+            <span class="badge bg-secondary">{{ ag.total_descartados }} total</span>
+            {% if ag.pendientes > 0 %}
+            <span class="badge bg-warning text-dark">{{ ag.pendientes }} pend.</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Filtros -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold mb-1">CEVE / Agencia</label>
+          <select class="form-select form-select-sm" id="filtroAgencia">
+            <option value="">Todas las agencias</option>
+            {% for ag in agencias_catalog %}
+            <option value="{{ ag.id }}">{{ ag.CEVE }} — {{ ag.Nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold mb-1">Estado revisión</label>
+          <select class="form-select form-select-sm" id="filtroRevisado">
+            <option value="">Todos</option>
+            <option value="0" selected>Pendientes</option>
+            <option value="1">Revisados</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold mb-1">Buscar</label>
+          <input type="text" class="form-control form-control-sm" id="filtroSearch"
+                 placeholder="Código, nombre, motivo...">
+        </div>
+        <div class="col-md-2">
+          <select class="form-select form-select-sm" id="filtroPageSize">
+            <option value="50">50 filas</option>
+            <option value="100">100 filas</option>
+            <option value="200">200 filas</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button class="btn btn-sm btn-danger flex-grow-1" id="btnBuscar">
+            <i class="fas fa-search me-1"></i>Buscar
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" id="btnLimpiar" title="Limpiar filtros">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botón cuboventas (visible al filtrar 1 agencia) -->
+  <div id="cuboventasBanner" class="d-none alert alert-info py-2 mb-3 d-flex align-items-center justify-content-between">
+    <span>
+      <i class="fas fa-chart-bar me-2"></i>
+      <strong id="cuboventasAgenciaNombre"></strong> —
+      Verifica cuáles descartados tienen ventas en <code>cuboventas</code>
+    </span>
+    <button class="btn btn-sm btn-info text-white" id="btnCuboventas">
+      <i class="fas fa-bolt me-1"></i>Cruzar con cuboventas
+    </button>
+  </div>
+
+  <!-- Tabla principal -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 fw-bold text-danger small">
+        <i class="fas fa-ban me-2"></i>Productos Descartados
+        <span id="totalBadge" class="badge bg-secondary ms-2">...</span>
+      </h6>
+      <div class="d-flex align-items-center gap-2">
+        <span id="paginaInfo" class="small text-muted"></span>
+        <button class="btn btn-sm btn-outline-secondary" id="btnPrev" disabled>‹</button>
+        <button class="btn btn-sm btn-outline-secondary" id="btnNext" disabled>›</button>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3">CEVE</th>
+              <th>Agencia</th>
+              <th>Cod. Producto</th>
+              <th>Nombre</th>
+              <th>idhml</th>
+              <th>Motivo descarte</th>
+              <th>Regla</th>
+              <th>Detectado</th>
+              <th class="text-center">Revisado</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaBody">
+            <tr><td colspan="10" class="text-center text-muted py-4">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal: Revisar producto -->
+<div class="modal fade" id="modalRevisar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold" id="modalRevisarTitle">Revisar producto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="small text-muted mb-1">Producto</div>
+          <div id="revisarProductoInfo" class="fw-semibold"></div>
+          <div id="revisarMotivoInfo" class="small text-muted mt-1"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Observación (opcional)</label>
+          <textarea class="form-control form-control-sm" id="revisarObservacion" rows="3"
+                    placeholder="Ej: Confirmado que es exhibidor, no es producto de venta"></textarea>
+        </div>
+        <input type="hidden" id="revisarId">
+        <input type="hidden" id="revisarAccion" value="revisar">
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger btn-sm" id="btnConfirmarRevisar">
+          <i class="fas fa-check me-1"></i>Confirmar revisión
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Resultado cuboventas -->
+<div class="modal fade" id="modalCuboventas" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold" id="modalCuboventasTitle">Cruce con cuboventas</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modalCuboventasBody">
+        <div class="text-center py-4">
+          <i class="fas fa-spinner fa-spin me-2"></i>Consultando SIDIS...
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script>
+const CSRF = document.getElementsByName("csrfmiddlewaretoken")[0]?.value
+  || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
+const urlData       = "{% url 'bimbo_app:descartados_data' %}";
+const urlCuboventas = "{% url 'bimbo_app:descartados_cuboventas' %}";
+const urlRevisar    = "{% url 'bimbo_app:descartados_revisar' %}";
+
+const bsRevisar    = new bootstrap.Modal(document.getElementById("modalRevisar"));
+const bsCuboventas = new bootstrap.Modal(document.getElementById("modalCuboventas"));
+
+let currentPage = 1;
+let totalRecords = 0;
+let currentAgenciaId = "";
+let cuboventasData = {};  // cache por agencia
+
+// ──────────────────────────────────────────────
+// Cargar datos
+// ──────────────────────────────────────────────
+function cargarDatos(page = 1) {
+  currentPage = page;
+  const id_ag    = document.getElementById("filtroAgencia").value;
+  const revisado = document.getElementById("filtroRevisado").value;
+  const search   = document.getElementById("filtroSearch").value.trim();
+  const pgSize   = document.getElementById("filtroPageSize").value;
+
+  const params = new URLSearchParams({page, page_size: pgSize});
+  if (id_ag)    params.append("id_agencia", id_ag);
+  if (revisado !== "") params.append("revisado", revisado);
+  if (search)   params.append("search", search);
+
+  document.getElementById("tablaBody").innerHTML =
+    '<tr><td colspan="10" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i>Cargando...</td></tr>';
+
+  fetch(urlData + "?" + params.toString())
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        document.getElementById("tablaBody").innerHTML =
+          `<tr><td colspan="10" class="text-center text-danger py-3">${data.error}</td></tr>`;
+        return;
+      }
+      totalRecords = data.total_records;
+      renderTabla(data.rows, data.page, data.page_size);
+    })
+    .catch(err => {
+      document.getElementById("tablaBody").innerHTML =
+        `<tr><td colspan="10" class="text-center text-danger py-3">Error de conexión</td></tr>`;
+    });
+}
+
+// ──────────────────────────────────────────────
+// Render tabla
+// ──────────────────────────────────────────────
+function renderTabla(rows, page, pageSize) {
+  document.getElementById("totalBadge").textContent = totalRecords + " registros";
+  const totalPags = Math.ceil(totalRecords / pageSize);
+  document.getElementById("paginaInfo").textContent = `Pág. ${page} / ${totalPags || 1}`;
+  document.getElementById("btnPrev").disabled = page <= 1;
+  document.getElementById("btnNext").disabled = page >= totalPags;
+
+  if (!rows.length) {
+    document.getElementById("tablaBody").innerHTML =
+      '<tr><td colspan="10" class="text-center text-muted py-4">No hay productos descartados con los filtros aplicados.</td></tr>';
+    return;
+  }
+
+  const tbody = rows.map(r => {
+    const revisadoBadge = r.revisado
+      ? `<span class="badge bg-success">Revisado</span>`
+      : `<span class="badge bg-warning text-dark">Pendiente</span>`;
+    const cuboTag = cuboventasData[r.id_agencia]?.en_ids?.includes(String(r.nbProducto))
+      ? `<span class="badge bg-danger ms-1" title="Tiene ventas en cuboventas"><i class="fas fa-exclamation-triangle"></i> Ventas</span>`
+      : "";
+    const fecha = r.fecha_deteccion ? r.fecha_deteccion.substring(0, 10) : "-";
+    const revBtn = r.revisado
+      ? `<button class="btn btn-xs btn-outline-secondary py-0 px-1 small" onclick="abrirRevisar(${r.id},'${escJs(r.nbProducto)}','${escJs(r.nmProducto || '')}','${escJs(r.motivo_descarte || '')}','reactivar')">
+           <i class="fas fa-undo me-1"></i>Reabrir</button>`
+      : `<button class="btn btn-xs btn-outline-success py-0 px-1 small" onclick="abrirRevisar(${r.id},'${escJs(r.nbProducto)}','${escJs(r.nmProducto || '')}','${escJs(r.motivo_descarte || '')}','revisar')">
+           <i class="fas fa-check me-1"></i>Revisar</button>`;
+
+    return `<tr class="${r.revisado ? 'table-light text-muted' : ''}">
+      <td class="ps-3 fw-semibold">${r.CEVE}</td>
+      <td class="text-truncate" style="max-width:120px" title="${r.agencia_nombre}">${r.agencia_nombre}</td>
+      <td><code>${r.nbProducto}</code></td>
+      <td class="text-truncate" style="max-width:180px" title="${r.nmProducto || ''}">${r.nmProducto || '-'}${cuboTag}</td>
+      <td><code class="text-muted">${r.idhml_original || '-'}</code></td>
+      <td class="text-truncate" style="max-width:200px" title="${r.motivo_descarte}">${r.motivo_descarte}</td>
+      <td><span class="badge bg-light text-dark border">${r.regla_aplicada || '-'}</span></td>
+      <td class="text-nowrap">${fecha}</td>
+      <td class="text-center">${revisadoBadge}</td>
+      <td class="text-center">${revBtn}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("tablaBody").innerHTML = tbody;
+}
+
+function escJs(s) {
+  return (s || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ──────────────────────────────────────────────
+// Filtrar por agencia desde KPI cards
+// ──────────────────────────────────────────────
+function filtrarAgencia(id, nombre) {
+  document.getElementById("filtroAgencia").value = id;
+  currentAgenciaId = id;
+  document.getElementById("cuboventasAgenciaNombre").textContent = nombre;
+  document.getElementById("cuboventasBanner").classList.remove("d-none");
+  cargarDatos(1);
+}
+
+document.getElementById("filtroAgencia").addEventListener("change", function() {
+  const id = this.value;
+  currentAgenciaId = id;
+  if (id) {
+    const opt = this.options[this.selectedIndex];
+    document.getElementById("cuboventasAgenciaNombre").textContent = opt.text;
+    document.getElementById("cuboventasBanner").classList.remove("d-none");
+  } else {
+    document.getElementById("cuboventasBanner").classList.add("d-none");
+  }
+});
+
+// ──────────────────────────────────────────────
+// Cruce cuboventas
+// ──────────────────────────────────────────────
+document.getElementById("btnCuboventas").addEventListener("click", function() {
+  if (!currentAgenciaId) return;
+  document.getElementById("modalCuboventasBody").innerHTML =
+    '<div class="text-center py-4"><i class="fas fa-spinner fa-spin me-2 text-danger"></i>Consultando SIDIS...</div>';
+  bsCuboventas.show();
+
+  fetch(urlCuboventas + "?id_agencia=" + currentAgenciaId)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        document.getElementById("modalCuboventasBody").innerHTML =
+          `<div class="alert alert-danger">${data.error}</div>`;
+        return;
+      }
+      // Cachear IDs con ventas para marcar en la tabla principal
+      cuboventasData[currentAgenciaId] = {
+        en_ids: data.en_cuboventas.map(r => String(r.nbProducto))
+      };
+      renderCuboventasModal(data);
+      // Re-render tabla para mostrar badges
+      cargarDatos(currentPage);
+    })
+    .catch(() => {
+      document.getElementById("modalCuboventasBody").innerHTML =
+        '<div class="alert alert-danger">Error de conexión al SIDIS.</div>';
+    });
+});
+
+function renderCuboventasModal(data) {
+  const title = document.getElementById("modalCuboventasTitle");
+  title.textContent = `CEVE ${data.CEVE} — ${data.agencia_nombre}: cruce con cuboventas`;
+
+  const provs = (data.proveedores_bimbo || []).join(", ") || "N/D";
+  let html = `
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <div class="card border-start border-4 border-secondary">
+          <div class="card-body py-2">
+            <div class="small text-muted">Total descartados</div>
+            <div class="h4 fw-bold">${data.total_descartados}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-start border-4 border-danger">
+          <div class="card-body py-2">
+            <div class="small text-muted">⚠ Con ventas (revisar)</div>
+            <div class="h4 fw-bold text-danger">${data.en_cuboventas.length}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-start border-4 border-success">
+          <div class="card-body py-2">
+            <div class="small text-muted">✓ Sin ventas (correcto)</div>
+            <div class="h4 fw-bold text-success">${data.sin_ventas.length}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-start border-4 border-info">
+          <div class="card-body py-2">
+            <div class="small text-muted">Proveedores Bimbo</div>
+            <div class="small fw-bold">${provs}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  if (data.warning) {
+    html += `<div class="alert alert-warning small py-2">${data.warning}</div>`;
+  }
+
+  if (data.en_cuboventas.length) {
+    html += `
+    <h6 class="fw-bold text-danger mb-2">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      Descartados con ventas en cuboventas — revisar si deben corregirse
+    </h6>
+    <div class="table-responsive mb-3">
+      <table class="table table-sm table-hover small table-bordered mb-0">
+        <thead class="table-danger">
+          <tr>
+            <th>Cod. Producto</th>
+            <th>Nombre (mproductos)</th>
+            <th>Nombre (cuboventas)</th>
+            <th>Motivo descarte</th>
+            <th class="text-center">Pedidos</th>
+            <th class="text-center">Cant. Asignada</th>
+            <th class="text-center">Cant. Entregada</th>
+            <th>Última venta</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.en_cuboventas.map(r => `
+            <tr>
+              <td><code>${r.nbProducto}</code></td>
+              <td>${r.nmProducto || '-'}</td>
+              <td class="text-muted">${r.nm_cuboventas || '-'}</td>
+              <td><small>${r.motivo_descarte}</small></td>
+              <td class="text-center">${r.num_pedidos}</td>
+              <td class="text-center fw-bold">${(r.cant_asignada || 0).toLocaleString()}</td>
+              <td class="text-center">${(r.cant_entregada || 0).toLocaleString()}</td>
+              <td class="text-nowrap">${r.ultima_fecha ? r.ultima_fecha.substring(0,10) : '-'}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  if (data.sin_ventas.length) {
+    html += `
+    <h6 class="fw-bold text-success mb-2">
+      <i class="fas fa-check-circle me-2"></i>
+      Descartados sin ventas — descarte probablemente correcto
+    </h6>
+    <div class="table-responsive">
+      <table class="table table-sm small table-bordered mb-0">
+        <thead class="table-success">
+          <tr><th>Cod. Producto</th><th>Nombre</th><th>Motivo descarte</th></tr>
+        </thead>
+        <tbody>
+          ${data.sin_ventas.map(r => `
+            <tr>
+              <td><code>${r.nbProducto}</code></td>
+              <td>${r.nmProducto || '-'}</td>
+              <td><small class="text-muted">${r.motivo_descarte}</small></td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  if (!data.en_cuboventas.length && !data.sin_ventas.length) {
+    html += '<div class="alert alert-success mb-0">No hay productos descartados para esta agencia.</div>';
+  }
+
+  document.getElementById("modalCuboventasBody").innerHTML = html;
+}
+
+// ──────────────────────────────────────────────
+// Revisar
+// ──────────────────────────────────────────────
+function abrirRevisar(id, nbProducto, nmProducto, motivo, accion) {
+  document.getElementById("revisarId").value = id;
+  document.getElementById("revisarAccion").value = accion;
+  document.getElementById("revisarProductoInfo").textContent =
+    `[${nbProducto}] ${nmProducto}`;
+  document.getElementById("revisarMotivoInfo").textContent = `Motivo: ${motivo}`;
+  document.getElementById("revisarObservacion").value = "";
+  document.getElementById("modalRevisarTitle").textContent =
+    accion === "reactivar" ? "Reabrir producto descartado" : "Marcar como revisado";
+  document.getElementById("btnConfirmarRevisar").textContent =
+    accion === "reactivar" ? "Reabrir" : "Confirmar revisión";
+  bsRevisar.show();
+}
+
+document.getElementById("btnConfirmarRevisar").addEventListener("click", function() {
+  const id_descarte = document.getElementById("revisarId").value;
+  const accion      = document.getElementById("revisarAccion").value;
+  const obs         = document.getElementById("revisarObservacion").value;
+
+  this.disabled = true;
+  const fd = new FormData();
+  fd.append("id_descarte", id_descarte);
+  fd.append("accion", accion);
+  fd.append("observacion", obs);
+
+  fetch(urlRevisar, {method: "POST", body: fd, headers: {"X-CSRFToken": CSRF}})
+    .then(r => r.json())
+    .then(data => {
+      this.disabled = false;
+      bsRevisar.hide();
+      if (data.success) {
+        cargarDatos(currentPage);
+      } else {
+        alert("Error: " + (data.error || "No se pudo guardar."));
+      }
+    })
+    .catch(() => { this.disabled = false; alert("Error de conexión."); });
+});
+
+// ──────────────────────────────────────────────
+// Controles
+// ──────────────────────────────────────────────
+document.getElementById("btnBuscar").addEventListener("click", () => cargarDatos(1));
+document.getElementById("filtroSearch").addEventListener("keydown", e => {
+  if (e.key === "Enter") cargarDatos(1);
+});
+document.getElementById("btnLimpiar").addEventListener("click", () => {
+  document.getElementById("filtroAgencia").value = "";
+  document.getElementById("filtroRevisado").value = "0";
+  document.getElementById("filtroSearch").value = "";
+  document.getElementById("cuboventasBanner").classList.add("d-none");
+  currentAgenciaId = "";
+  cargarDatos(1);
+});
+document.getElementById("btnPrev").addEventListener("click", () => cargarDatos(currentPage - 1));
+document.getElementById("btnNext").addEventListener("click", () => cargarDatos(currentPage + 1));
+
+// Carga inicial
+cargarDatos(1);
+</script>
+{% endblock script %}

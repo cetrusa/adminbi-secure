@@ -455,3 +455,95 @@ def bimbo_homologacion_task(
         pass
 
     return resultado
+
+
+@job("default", timeout=DEFAULT_TIMEOUT, result_ttl=3600)
+@task_handler
+def bimbo_import_mproductos_task(
+    excel_path: str,
+    database_name_bimbo: str,
+    agencias_seleccionadas=None,
+    usuario: str = "IMPORT_EXCEL",
+):
+    """
+    Tarea RQ: Aplica idhmlProdProv desde Excel al SIDIS para agencias seleccionadas.
+
+    Args:
+        excel_path: Ruta absoluta al archivo Excel (output/Bimbo.xlsx).
+        database_name_bimbo: database_name de cualquier agencia Bimbo activa
+                             (se usa solo para conectar a powerbi_bimbo).
+        agencias_seleccionadas: Lista de database_name a procesar.
+                                None = todas las hojas mapeadas.
+        usuario: Nombre del usuario que ejecuta (para logs de backup).
+    """
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    job_obj = get_current_job()
+    job_id = job_obj.id if job_obj else None
+    logger.info(
+        "bimbo_import_mproductos_task (Job %s) excel=%s agencias=%s",
+        job_id, excel_path, agencias_seleccionadas,
+    )
+
+    def rq_progress(stage, pct, *_args, **_kw):
+        update_job_progress(job_id, int(pct), "processing", meta={"stage": stage})
+
+    update_job_progress(job_id, 5, "processing", meta={"stage": "Cargando Excel..."})
+
+    from scripts.config import ConfigBasic
+    from scripts.conexion import Conexion as con
+    from scripts.bimbo.services.import_mproductos_service import ImportMproductosService
+
+    # Engine al BI (powerbi_bimbo) — igual que HomologacionConfig
+    config = ConfigBasic(database_name_bimbo).config
+    engine_bimbo = con.ConexionMariadb3(
+        str(config.get("nmUsrIn")),
+        str(config.get("txPassIn")),
+        str(config.get("hostServerIn")),
+        int(config.get("portServerIn")),
+        str(config.get("dbBi")),
+    )
+
+    svc = ImportMproductosService(excel_path, engine_bimbo)
+    resultado = svc.run_execute(
+        agencias_seleccionadas=agencias_seleccionadas,
+        usuario=usuario,
+        progress_callback=rq_progress,
+    )
+
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    # Serializar resultados (dataclasses → dicts)
+    resultados_dict = []
+    for r in resultado.get("resultados", []):
+        resultados_dict.append({
+            "database_name": r.database_name,
+            "agencia_nombre": r.agencia_nombre,
+            "actualizados": r.actualizados,
+            "sin_cambio": r.sin_cambio,
+            "no_encontrado": r.no_encontrado,
+            "sin_idhml": r.sin_idhml,
+            "errores": r.errores,
+            "error": r.error,
+            "backup_count": len(r.backup),
+        })
+
+    return {
+        "success": resultado.get("success", False),
+        "message": (
+            f"Import Excel: {resultado.get('total_actualizados', 0)} actualizados, "
+            f"{resultado.get('total_errores', 0)} errores en "
+            f"{resultado.get('duracion_seg', 0):.1f}s"
+        ),
+        "total_actualizados": resultado.get("total_actualizados", 0),
+        "total_errores": resultado.get("total_errores", 0),
+        "sin_mapeo": resultado.get("sin_mapeo", []),
+        "duracion_seg": resultado.get("duracion_seg", 0),
+        "resultados": resultados_dict,
+    }

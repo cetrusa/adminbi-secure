@@ -1,0 +1,47 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Django Dev Server (local)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["manage.py", "runserver", "8000"],
+      "port": 8000,
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "adminbi.settings.local"
+      }
+    },
+    {
+      "name": "Django Dev Server (prod settings)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["manage.py", "runserver", "8000"],
+      "port": 8000,
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "adminbi.settings.prod"
+      }
+    },
+    {
+      "name": "Gunicorn (puerto 4085)",
+      "runtimeExecutable": "gunicorn",
+      "runtimeArgs": ["--bind", "0.0.0.0:4085", "--timeout", "28800", "adminbi.wsgi:application"],
+      "port": 4085
+    },
+    {
+      "name": "Gunicorn (puerto 30000)",
+      "runtimeExecutable": "gunicorn",
+      "runtimeArgs": ["--bind", "0.0.0.0:30000", "--timeout", "28800", "adminbi.wsgi:application"],
+      "port": 30000
+    },
+    {
+      "name": "RQ Worker",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["manage.py", "rqworker", "default"],
+      "port": null
+    },
+    {
+      "name": "RQ Scheduler",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["manage.py", "rqscheduler"],
+      "port": null
+    }
+  ]
+}

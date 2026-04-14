@@ -1,0 +1,468 @@
+{% extends 'black.html' %}
+{% load static %}
+{% block title %}Importar Maestras Productos BIMBO{% endblock title %}
+{% block barra_lateral %}
+{% include 'bimbo/includes/sidebar.html' %}
+{% endblock barra_lateral %}
+{% block window %}
+<div class="container-fluid py-4 bg-light">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1 text-danger fw-bold">Importar Maestras Productos</h1>
+      <p class="text-muted small mb-0">
+        Carga el Excel de Bimbo y actualiza <code>idhmlProdProv</code> en el SIDIS de cada agencia.
+      </p>
+    </div>
+  </div>
+
+  <!-- Step 1: Upload -->
+  <div class="card border-0 shadow-sm mb-4" id="cardUpload">
+    <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-2">
+      <span class="badge bg-danger rounded-circle" style="width:24px;height:24px;line-height:16px">1</span>
+      <h6 class="mb-0 fw-bold">Seleccionar Excel</h6>
+    </div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">
+        El archivo debe contener hojas nombradas <code>mproductos_{agencia}</code> (ej. <code>mproductos_cima</code>).
+        Cada hoja debe incluir las columnas <code>nbProducto</code>, <code>idProveedor</code> e <code>idhmlProdProv</code>.
+      </p>
+      <form id="formUpload" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-3 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">Archivo Excel</label>
+            <input type="file" class="form-control" id="excelFile" name="excel_file" accept=".xlsx,.xls" required>
+            <div class="form-text">Máximo 30 MB · .xlsx / .xls</div>
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-danger w-100" id="btnPreview">
+              <i class="fas fa-search me-2"></i>Analizar cambios
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Step 2: Preview (oculto hasta subir) -->
+  <div id="sectionPreview" class="d-none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="fw-bold mb-0">
+        <span class="badge bg-danger rounded-circle me-2" style="width:24px;height:24px;line-height:16px">2</span>
+        Revisión de cambios
+      </h5>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" id="btnSelectAll">Seleccionar todo</button>
+        <button class="btn btn-sm btn-outline-secondary" id="btnDeselectAll">Deseleccionar</button>
+        <button class="btn btn-danger" id="btnExecute" disabled>
+          <i class="fas fa-bolt me-2"></i>Aplicar seleccionadas
+        </button>
+      </div>
+    </div>
+
+    <!-- Sin mapeo -->
+    <div id="sinMapeoAlert" class="d-none alert alert-warning small mb-3">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <strong>Hojas sin agencia mapeada:</strong> <span id="sinMapeoList"></span>
+    </div>
+
+    <!-- Acordeón por agencia -->
+    <div class="accordion" id="accordionAgencias"></div>
+  </div>
+
+</div>
+
+<!-- Modal progreso -->
+<div id="processingModal" class="modal fade" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-0 shadow">
+      <div class="modal-body text-center py-4">
+        <h5 id="progress-stage" class="mb-3">
+          <i class="fas fa-sync-alt fa-spin me-2 text-danger"></i>Iniciando...
+        </h5>
+        <div class="progress mb-2" style="height: 10px; background-color: rgba(255,255,255,0.2);">
+          <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger"
+               role="progressbar" style="width: 0%;">0%</div>
+        </div>
+        <div id="detailedStatus" class="small text-white-50 mb-2"></div>
+        <div id="timeInfo" class="small text-white-50">Tiempo: 0s</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal resultado -->
+<div id="resultModal" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="resultModalTitle">Resultado</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="resultModalBody"></div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock window %}
+
+{% block script %}
+{{ block.super }}
+<script>
+const CSRF = document.getElementsByName("csrfmiddlewaretoken")[0].value;
+const urlPreview  = "{% url 'bimbo_app:import_mproductos' %}";
+const urlExecute  = "{% url 'bimbo_app:import_mproductos_execute' %}";
+const urlStatus   = "{% url 'home_app:check_task_status' %}";
+
+const bsProgress  = new bootstrap.Modal(document.getElementById("processingModal"));
+const bsResult    = new bootstrap.Modal(document.getElementById("resultModal"));
+const progressBar = document.getElementById("progressBar");
+const progressStage = document.getElementById("progress-stage");
+
+let excelPathGuardado = "";
+let progressInterval  = null;
+let startTime = 0;
+
+// ────────────────────────────────────────────
+// Helpers UI
+// ────────────────────────────────────────────
+function setProgress(pct, stage) {
+  const v = Math.max(0, Math.min(100, Number(pct) || 0));
+  progressBar.style.width = v + "%";
+  progressBar.textContent = v + "%";
+  if (stage) progressStage.innerHTML =
+    '<i class="fas fa-sync-alt fa-spin me-2 text-danger"></i>' + stage;
+}
+
+function startTimer() {
+  startTime = Date.now();
+  if (progressInterval) clearInterval(progressInterval);
+  progressInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById("timeInfo").textContent =
+      "Tiempo: " + (s >= 60 ? Math.floor(s / 60) + "m " : "") + (s % 60) + "s";
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(progressInterval);
+}
+
+// ────────────────────────────────────────────
+// Estado badge
+// ────────────────────────────────────────────
+function estadoBadge(estado) {
+  const map = {
+    actualizar:    '<span class="badge bg-warning text-dark">Actualizar</span>',
+    sin_cambio:    '<span class="badge bg-success">Sin cambio</span>',
+    no_encontrado: '<span class="badge bg-secondary">No encontrado</span>',
+    sin_idhml:     '<span class="badge bg-light text-muted border">Sin idhml</span>',
+  };
+  return map[estado] || '<span class="badge bg-secondary">' + estado + '</span>';
+}
+
+// ────────────────────────────────────────────
+// Renderizar preview de agencias
+// ────────────────────────────────────────────
+function renderPreview(data) {
+  document.getElementById("sectionPreview").classList.remove("d-none");
+
+  // Sin mapeo
+  if (data.sin_mapeo && data.sin_mapeo.length) {
+    document.getElementById("sinMapeoAlert").classList.remove("d-none");
+    document.getElementById("sinMapeoList").textContent = data.sin_mapeo.join(", ");
+  }
+
+  const accordion = document.getElementById("accordionAgencias");
+  accordion.innerHTML = "";
+
+  data.agencias_mapeadas.forEach((ag, i) => {
+    const hasChanges = ag.actualizar > 0;
+    const hasError   = !!ag.error;
+    const canExec    = ag.puede_ejecutar;
+
+    const headerClass = hasError ? "bg-danger text-white"
+                       : hasChanges ? "bg-warning bg-opacity-25"
+                       : "bg-white";
+
+    const checkId = "chk_" + ag.database_name.replace(/[^a-z0-9]/gi, "_");
+    const bodyId  = "body_" + i;
+    const headId  = "head_" + i;
+
+    // Tabla de cambios
+    let tablaHtml = "";
+    if (ag.filas_cambio && ag.filas_cambio.length) {
+      tablaHtml = `
+        <div class="table-responsive mt-2">
+          <table class="table table-sm table-hover small mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>nbProducto</th>
+                <th>Nombre</th>
+                <th>idProveedor</th>
+                <th>idhml SIDIS</th>
+                <th>idhml Excel</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ag.filas_cambio.map(f => `
+                <tr>
+                  <td><code>${f.nbProducto}</code></td>
+                  <td>${f.nmProducto || '-'}</td>
+                  <td>${f.idProveedor}</td>
+                  <td><span class="text-muted">${f.idhml_sidis ?? 'NULL'}</span></td>
+                  <td><strong class="text-success">${f.idhml_excel}</strong></td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>`;
+    } else if (!hasError) {
+      tablaHtml = '<p class="text-muted small mt-2 mb-0">Sin cambios pendientes.</p>';
+    }
+
+    accordion.insertAdjacentHTML("beforeend", `
+      <div class="accordion-item border mb-2 rounded shadow-sm overflow-hidden">
+        <h2 class="accordion-header" id="${headId}">
+          <button class="accordion-button ${i > 0 ? 'collapsed' : ''} ${headerClass} d-flex justify-content-between align-items-center gap-2"
+                  type="button" data-bs-toggle="collapse" data-bs-target="#${bodyId}">
+            <span>
+              ${canExec && hasChanges ? `<input type="checkbox" class="form-check-input me-2 agencia-check"
+                id="${checkId}" value="${ag.database_name}" ${hasChanges ? 'checked' : ''}>` : ''}
+              <strong>${ag.agencia_nombre}</strong>
+              <small class="text-muted ms-2">${ag.database_name}</small>
+            </span>
+            <span class="d-flex gap-1 flex-wrap">
+              <span class="badge bg-warning text-dark">${ag.actualizar} a actualizar</span>
+              <span class="badge bg-success">${ag.sin_cambio} sin cambio</span>
+              ${ag.no_encontrado ? `<span class="badge bg-secondary">${ag.no_encontrado} no encontrado</span>` : ''}
+              ${ag.sin_idhml ? `<span class="badge bg-light text-muted border">${ag.sin_idhml} sin idhml</span>` : ''}
+              ${hasError ? `<span class="badge bg-danger">Error</span>` : ''}
+              ${!canExec ? `<span class="badge bg-secondary"><i class="fas fa-lock me-1"></i>Sin permiso</span>` : ''}
+            </span>
+          </button>
+        </h2>
+        <div id="${bodyId}" class="accordion-collapse collapse ${i === 0 ? 'show' : ''}"
+             data-bs-parent="#accordionAgencias">
+          <div class="accordion-body bg-white pt-2">
+            ${hasError ? `<div class="alert alert-danger small py-2">${ag.error}</div>` : ''}
+            ${tablaHtml}
+          </div>
+        </div>
+      </div>`);
+  });
+
+  updateExecuteBtn();
+}
+
+function updateExecuteBtn() {
+  const checked = document.querySelectorAll(".agencia-check:checked");
+  document.getElementById("btnExecute").disabled = checked.length === 0;
+}
+
+// ────────────────────────────────────────────
+// Seleccionar / Deseleccionar todo
+// ────────────────────────────────────────────
+document.getElementById("btnSelectAll").addEventListener("click", () => {
+  document.querySelectorAll(".agencia-check").forEach(c => c.checked = true);
+  updateExecuteBtn();
+});
+document.getElementById("btnDeselectAll").addEventListener("click", () => {
+  document.querySelectorAll(".agencia-check").forEach(c => c.checked = false);
+  updateExecuteBtn();
+});
+
+// Delegated: escuchar cambios en checkboxes dinámicos
+document.getElementById("accordionAgencias").addEventListener("change", e => {
+  if (e.target.classList.contains("agencia-check")) updateExecuteBtn();
+});
+
+// ────────────────────────────────────────────
+// Step 1: Subir y analizar
+// ────────────────────────────────────────────
+document.getElementById("formUpload").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const btn = document.getElementById("btnPreview");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analizando...';
+
+  const fd = new FormData(this);
+  fetch(urlPreview, {method: "POST", body: fd, headers: {"X-CSRFToken": CSRF}})
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-search me-2"></i>Analizar cambios';
+      if (!data.success) {
+        alert("Error: " + (data.error || "No se pudo analizar el archivo."));
+        return;
+      }
+      excelPathGuardado = data.excel_path;
+      renderPreview(data);
+      window.scrollTo({top: document.getElementById("sectionPreview").offsetTop - 80, behavior: "smooth"});
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-search me-2"></i>Analizar cambios';
+      alert("Error de conexión al analizar el archivo.");
+    });
+});
+
+// ────────────────────────────────────────────
+// Step 2: Ejecutar
+// ────────────────────────────────────────────
+document.getElementById("btnExecute").addEventListener("click", function() {
+  const agencias = Array.from(
+    document.querySelectorAll(".agencia-check:checked")
+  ).map(c => c.value);
+
+  if (!agencias.length) { alert("Selecciona al menos una agencia."); return; }
+  if (!excelPathGuardado) { alert("Vuelve a cargar el Excel."); return; }
+
+  if (!confirm(`¿Confirmas la actualización de idhmlProdProv para ${agencias.length} agencia(s)?`)) return;
+
+  this.disabled = true;
+  setProgress(0, "Iniciando...");
+  startTimer();
+  bsProgress.show();
+
+  const fd = new FormData();
+  fd.append("excel_path", excelPathGuardado);
+  fd.append("agencias_seleccionadas", JSON.stringify(agencias));
+
+  fetch(urlExecute, {method: "POST", body: fd, headers: {"X-CSRFToken": CSRF}})
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success || !data.job_id) {
+        bsProgress.hide();
+        stopTimer();
+        document.getElementById("btnExecute").disabled = false;
+        showResult(false, data.error || "No se pudo iniciar la tarea.");
+        return;
+      }
+      checkTaskStatus(data.job_id);
+    })
+    .catch(() => {
+      bsProgress.hide();
+      stopTimer();
+      document.getElementById("btnExecute").disabled = false;
+      showResult(false, "Error de conexión.");
+    });
+});
+
+// ────────────────────────────────────────────
+// Polling de estado
+// ────────────────────────────────────────────
+function checkTaskStatus(jobId) {
+  const fd = new FormData();
+  fd.append("task_id", jobId);
+  fetch(urlStatus, {method: "POST", body: fd, headers: {"X-CSRFToken": CSRF}})
+    .then(r => r.json())
+    .then(data => {
+      if (data.state === "COMPLETED" || data.status === "completed") {
+        setProgress(100, "Completado");
+        stopTimer();
+        setTimeout(() => {
+          bsProgress.hide();
+          document.getElementById("btnExecute").disabled = false;
+          const result = data.result || {};
+          showResult(result.success !== false, result);
+        }, 600);
+      } else if (data.state === "FAILED" || data.status === "failed") {
+        stopTimer();
+        bsProgress.hide();
+        document.getElementById("btnExecute").disabled = false;
+        showResult(false, "La tarea falló en el servidor.");
+      } else {
+        const meta = data.meta || {};
+        setProgress(meta.progress || data.progress || 10, meta.stage || "Procesando...");
+        setTimeout(() => checkTaskStatus(jobId), 3000);
+      }
+    })
+    .catch(() => setTimeout(() => checkTaskStatus(jobId), 5000));
+}
+
+// ────────────────────────────────────────────
+// Mostrar resultado
+// ────────────────────────────────────────────
+function showResult(success, resultOrMsg) {
+  const title = document.getElementById("resultModalTitle");
+  const body  = document.getElementById("resultModalBody");
+
+  if (!success) {
+    title.textContent = "Error";
+    body.innerHTML = `<div class="alert alert-danger mb-0">
+      <i class="fas fa-times-circle me-2"></i>${typeof resultOrMsg === 'string' ? resultOrMsg : (resultOrMsg.message || 'Error desconocido')}
+    </div>`;
+    bsResult.show();
+    return;
+  }
+
+  const r = typeof resultOrMsg === 'object' ? resultOrMsg : {};
+  const duracion = r.duracion_seg ? (r.duracion_seg + 's') : '';
+
+  let resumen = `
+    <div class="alert alert-success mb-3">
+      <i class="fas fa-check-circle me-2"></i>
+      <strong>Importación completada</strong>
+      ${duracion ? `<span class="text-muted small ms-2">(${duracion})</span>` : ''}
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-3">
+        <div class="card border-start border-4 border-success">
+          <div class="card-body py-2">
+            <div class="small text-muted">Actualizados</div>
+            <div class="h4 fw-bold text-success">${r.total_actualizados ?? 0}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card border-start border-4 border-danger">
+          <div class="card-body py-2">
+            <div class="small text-muted">Errores</div>
+            <div class="h4 fw-bold text-danger">${r.total_errores ?? 0}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // Detalle por agencia
+  if (r.resultados && r.resultados.length) {
+    resumen += `<table class="table table-sm table-hover small">
+      <thead class="table-light">
+        <tr>
+          <th>Agencia</th>
+          <th class="text-center">Actualizados</th>
+          <th class="text-center">Sin cambio</th>
+          <th class="text-center">No encontrado</th>
+          <th class="text-center">Errores</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${r.resultados.map(ag => `
+          <tr class="${ag.errores > 0 ? 'table-danger' : ag.actualizados > 0 ? 'table-warning' : ''}">
+            <td>${ag.agencia_nombre}<br><small class="text-muted">${ag.database_name}</small></td>
+            <td class="text-center fw-bold text-success">${ag.actualizados}</td>
+            <td class="text-center text-muted">${ag.sin_cambio}</td>
+            <td class="text-center text-secondary">${ag.no_encontrado}</td>
+            <td class="text-center text-danger">${ag.errores}</td>
+          </tr>`).join("")}
+      </tbody>
+    </table>`;
+  }
+
+  if (r.sin_mapeo && r.sin_mapeo.length) {
+    resumen += `<div class="alert alert-warning small mb-0 mt-2">
+      <i class="fas fa-exclamation-triangle me-1"></i>
+      Hojas sin agencia mapeada: <strong>${r.sin_mapeo.join(", ")}</strong>
+    </div>`;
+  }
+
+  title.textContent = "Resultado de Importación";
+  body.innerHTML = resumen;
+  bsResult.show();
+}
+</script>
+{% endblock script %}
