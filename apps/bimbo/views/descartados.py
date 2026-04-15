@@ -20,7 +20,7 @@ from django.utils.decorators import method_decorator
 from django.views.generic import View
 from sqlalchemy import text
 
-from apps.bimbo.permissions import _get_bimbo_engine
+from apps.bimbo.permissions import _get_bimbo_engine, get_agencias_permitidas
 from scripts.config import ConfigBasic
 from scripts.conexion import Conexion
 
@@ -97,24 +97,33 @@ class BimboDescartadosPage(View):
             messages.warning(request, "Seleccione una empresa antes de continuar.")
             return redirect("bimbo_app:panel_bimbo")
 
+        # Obtener IDs de agencias permitidas para filtrar el catálogo
+        agencias_permitidas = get_agencias_permitidas(request.user)
+        ids_permitidos = [a["id"] for a in agencias_permitidas]
+
         agencias_catalog = []
-        try:
-            engine = _get_engine_bi(database_name)
-            with engine.connect() as conn:
-                rows = conn.execute(
-                    text(
-                        "SELECT ab.id, ab.CEVE, ab.Nombre, "
-                        "(SELECT COUNT(*) FROM powerbi_bimbo.bi_productos_descartados d "
-                        " WHERE d.id_agencia = ab.id) AS total_descartados, "
-                        "(SELECT COUNT(*) FROM powerbi_bimbo.bi_productos_descartados d "
-                        " WHERE d.id_agencia = ab.id AND d.revisado = 0) AS pendientes "
-                        "FROM powerbi_bimbo.agencias_bimbo ab "
-                        "ORDER BY ab.CEVE"
-                    )
-                ).mappings().all()
-                agencias_catalog = [dict(r) for r in rows]
-        except Exception as exc:
-            logger.warning("No se pudo cargar catálogo agencias: %s", exc)
+        if ids_permitidos:
+            try:
+                engine = _get_engine_bi(database_name)
+                placeholders = ", ".join(f":id_{i}" for i in range(len(ids_permitidos)))
+                params = {f"id_{i}": v for i, v in enumerate(ids_permitidos)}
+                with engine.connect() as conn:
+                    rows = conn.execute(
+                        text(
+                            "SELECT ab.id, ab.CEVE, ab.Nombre, "
+                            "(SELECT COUNT(*) FROM powerbi_bimbo.bi_productos_descartados d "
+                            " WHERE d.id_agencia = ab.id) AS total_descartados, "
+                            "(SELECT COUNT(*) FROM powerbi_bimbo.bi_productos_descartados d "
+                            " WHERE d.id_agencia = ab.id AND d.revisado = 0) AS pendientes "
+                            "FROM powerbi_bimbo.agencias_bimbo ab "
+                            f"WHERE ab.id IN ({placeholders}) "
+                            "ORDER BY ab.CEVE"
+                        ),
+                        params,
+                    ).mappings().all()
+                    agencias_catalog = [dict(r) for r in rows]
+            except Exception as exc:
+                logger.warning("No se pudo cargar catálogo agencias: %s", exc)
 
         return render(request, self.template_name, {
             "agencias_catalog": agencias_catalog,

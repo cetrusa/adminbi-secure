@@ -224,6 +224,9 @@
   const btnClear = document.getElementById('btnClearFilters');
   const databaseSelectEl = document.getElementById('database_select');
 
+  // Ocultar botón de descarga hasta que haya un archivo disponible
+  document.getElementById('download_file').className = 'd-none';
+
   let progressInterval = null;
   let currentMeta = null;
   let startTime = 0;
@@ -361,6 +364,7 @@
         if (level === 'danger') {
           dashboardResults.style.display = 'none';
           emptyState.style.display = 'block';
+          document.getElementById('download_file').className = 'd-none';
         }
       }
       updateStatus(message, level);
@@ -419,12 +423,12 @@
       </tr>
     `;
     if (payload.file_name) {
-      const downloadContainer = document.getElementById('download_file');
-      if (downloadContainer) {
-        downloadContainer.classList.add('d-flex', 'mt-3', 'justify-content-end');
-        const link = downloadContainer.querySelector('a');
-        if (link) link.href = '/media/' + payload.file_name;
+      const downloadLink = document.getElementById('download_link');
+      if (downloadLink) {
+        downloadLink.href = "{% url 'home_app:download_file' %}?file_name=" + encodeURIComponent(payload.file_name);
       }
+      const downloadContainer = document.getElementById('download_file');
+      if (downloadContainer) downloadContainer.className = 'd-flex';
     }
     if (currentMeta) {
       updateSummary(currentMeta, payload.metadata && payload.metadata.total_records ? payload.metadata.total_records : (data.matrix || []).length);
