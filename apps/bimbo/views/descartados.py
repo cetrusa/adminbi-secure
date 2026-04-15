@@ -119,6 +119,7 @@ class BimboDescartadosPage(View):
         return render(request, self.template_name, {
             "agencias_catalog": agencias_catalog,
             "database_name": database_name,
+            "form_url": "bimbo_app:descartados_bimbo",
         })
 
 

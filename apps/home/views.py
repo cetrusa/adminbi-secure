@@ -2620,9 +2620,8 @@ class CdtPage(BaseView):
         fecha_ini = request.POST.get("IdtReporteIni")
         fecha_fin = request.POST.get("IdtReporteFin")
 
-        # Solo cambio de empresa (selector)
+        # Solo cambio de empresa (selector, sin fechas) — sesion ya actualizada por BaseView.dispatch
         if database_name and not (fecha_ini and fecha_fin):
-            request.session["database_name"] = database_name
             return JsonResponse({"success": True, "message": "Base de datos actualizada."})
 
         # Obtener empresa de la sesion
@@ -2828,9 +2827,8 @@ class TsolPage(BaseView):
         fecha_ini = request.POST.get("IdtReporteIni")
         fecha_fin = request.POST.get("IdtReporteFin")
 
-        # Solo cambio de empresa (selector)
+        # Solo cambio de empresa (selector, sin fechas) — sesion ya actualizada por BaseView.dispatch
         if database_name and not (fecha_ini and fecha_fin):
-            request.session["database_name"] = database_name
             return JsonResponse({"success": True, "message": "Base de datos actualizada."})
 
         # Obtener empresa de la sesion
@@ -3022,8 +3020,8 @@ class CosmosPage(BaseView):
         fecha_ini = request.POST.get("IdtReporteIni")
         fecha_fin = request.POST.get("IdtReporteFin")
 
+        # Solo cambio de empresa (selector, sin fechas) — sesion ya actualizada por BaseView.dispatch
         if database_name and not (fecha_ini and fecha_fin):
-            request.session["database_name"] = database_name
             return JsonResponse({"success": True, "message": "Base de datos actualizada."})
 
         # Obtener empresa de la sesión

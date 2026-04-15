@@ -486,6 +486,19 @@ class BaseView(LoginRequiredMixin, TemplateView):
 
         return context
 
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Sincroniza la sesion con database_select en cualquier POST.
+        Esto garantiza que todas las vistas hijas tengan el database_name
+        correcto en sesion sin necesidad de repetir la logica.
+        """
+        if request.method == "POST":
+            database_name = request.POST.get("database_select")
+            if database_name:
+                request.session["database_name"] = database_name
+                request.session.modified = True
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form_url(self):
         """
         Determina la URL a la que se enviará el formulario de selección de base de datos.

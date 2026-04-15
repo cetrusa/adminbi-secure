@@ -38,7 +38,7 @@ class BimboImportMproductosPage(View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template_name, {})
+        return render(request, self.template_name, {"form_url": "bimbo_app:import_mproductos"})
 
     def post(self, request, *args, **kwargs):
         excel_file = request.FILES.get("excel_file")

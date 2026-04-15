@@ -418,7 +418,8 @@ class HomePanelBimboPage(HomePanelCuboPage):
                         f"{where_clause} "
                         "AND ab.fecha_ultimo_snapshot IS NOT NULL "
                         "ORDER BY ab.fecha_ultimo_snapshot DESC LIMIT 5"
-                    )
+                    ),
+                    ceve_params,
                 ).mappings().all()
 
                 # Datos de preventa consolidados
@@ -526,6 +527,7 @@ class AgregarCevePage(View):
         context = {
             "empresas": empresas,
             "agencias_registradas": agencias_registradas,
+            "form_url": "bimbo_app:agregar_ceve",
         }
         from django.shortcuts import render
         return render(request, self.template_name, context)
